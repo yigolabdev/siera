@@ -1,4 +1,4 @@
-import { Users, Search, Mail, Phone, Briefcase, Award } from 'lucide-react';
+import { Users, Search, Mail, Briefcase, Award } from 'lucide-react';
 import { useState } from 'react';
 
 const Members = () => {
@@ -226,10 +226,6 @@ const Members = () => {
               <div className="flex items-center space-x-2 text-gray-600 text-sm">
                 <Mail className="h-4 w-4" />
                 <span>{member.email}</span>
-              </div>
-              <div className="flex items-center space-x-2 text-gray-600 text-sm">
-                <Phone className="h-4 w-4" />
-                <span>{member.phone}</span>
               </div>
               <div className="flex items-center justify-between pt-2">
                 <span className="text-sm text-gray-500">가입일: {member.joinDate}</span>

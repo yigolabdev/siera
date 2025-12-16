@@ -77,7 +77,7 @@ const Login = () => {
           <div className="text-center text-white px-8">
             <Mountain className="h-20 w-20 mx-auto mb-6 text-primary-400" />
             <h1 className="text-5xl font-bold mb-4">시애라</h1>
-            <p className="text-xl text-gray-300">함께 오르는 산, 함께 나누는 가치</p>
+            <p className="text-xl text-gray-400 italic">시애라 문구 삽입 예정</p>
           </div>
         </div>
       </div>

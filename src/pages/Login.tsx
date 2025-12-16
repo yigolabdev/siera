@@ -245,7 +245,7 @@ const Login = () => {
                   
                   <Link
                     to="/guest-application"
-                    className="btn-secondary w-full"
+                    className="btn-secondary w-full block text-center"
                   >
                     게스트로 산행 신청하기
                   </Link>

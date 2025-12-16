@@ -243,8 +243,8 @@ const EventManagement = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">산행 관리</h1>
-          <p className="text-xl text-gray-600">
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">산행 관리</h1>
+          <p className="text-xl text-slate-600">
             산행 일정을 등록하고 관리할 수 있습니다.
           </p>
         </div>
@@ -261,13 +261,13 @@ const EventManagement = () => {
 
       {isEditing ? (
         <div className="card">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">
             {editingEvent ? '산행 수정' : '새 산행 등록'}
           </h2>
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   산행 제목 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -279,7 +279,7 @@ const EventManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   날짜 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -293,7 +293,7 @@ const EventManagement = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   장소 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -305,7 +305,7 @@ const EventManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   산 이름
                 </label>
                 <input
@@ -320,7 +320,7 @@ const EventManagement = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   고도
                 </label>
                 <input
@@ -332,7 +332,7 @@ const EventManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   난이도 <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -346,7 +346,7 @@ const EventManagement = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   최대 인원 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -357,7 +357,7 @@ const EventManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 font-medium mb-2">
+                <label className="block text-slate-700 font-medium mb-2">
                   비용 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -371,7 +371,7 @@ const EventManagement = () => {
             </div>
 
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
+              <label className="block text-slate-700 font-medium mb-2">
                 설명 <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -385,7 +385,7 @@ const EventManagement = () => {
 
             <div>
               <div className="flex items-center justify-between mb-4">
-                <label className="block text-gray-700 font-medium">
+                <label className="block text-slate-700 font-medium">
                   당일 동선 <span className="text-red-500">*</span>
                 </label>
                 <button
@@ -399,10 +399,10 @@ const EventManagement = () => {
               </div>
               <div className="space-y-3">
                 {formData.schedule.map((item, index) => (
-                  <div key={index} className="relative p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div key={index} className="relative p-4 bg-slate-50 rounded-lg border border-slate-200">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                       <div className="md:col-span-3">
-                        <label className="block text-sm text-gray-600 mb-1">유형</label>
+                        <label className="block text-sm text-slate-600 mb-1">유형</label>
                         <select
                           value={item.type}
                           onChange={(e) => updateScheduleType(index, e.target.value as any)}
@@ -415,7 +415,7 @@ const EventManagement = () => {
                         </select>
                       </div>
                       <div className="md:col-span-3">
-                        <label className="block text-sm text-gray-600 mb-1">시간</label>
+                        <label className="block text-sm text-slate-600 mb-1">시간</label>
                         <input
                           type="time"
                           value={item.time}
@@ -424,7 +424,7 @@ const EventManagement = () => {
                         />
                       </div>
                       <div className="md:col-span-5">
-                        <label className="block text-sm text-gray-600 mb-1">장소</label>
+                        <label className="block text-sm text-slate-600 mb-1">장소</label>
                         <input
                           type="text"
                           value={item.location}
@@ -447,7 +447,7 @@ const EventManagement = () => {
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-slate-500 mt-2">
                 * 최소 1개 이상의 동선 항목이 필요합니다
               </p>
             </div>
@@ -455,7 +455,7 @@ const EventManagement = () => {
             {/* Courses Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <label className="block text-gray-700 font-medium">
+                <label className="block text-slate-700 font-medium">
                   산행 코스 (선택사항)
                 </label>
                 <button
@@ -473,7 +473,7 @@ const EventManagement = () => {
                   {formData.courses.map((course, courseIdx) => (
                     <div key={course.id} className="p-5 bg-green-50 rounded-xl border-2 border-green-200">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-lg font-bold text-gray-900">
+                        <h4 className="text-lg font-bold text-slate-900">
                           코스 {courseIdx + 1}
                         </h4>
                         <button
@@ -488,7 +488,7 @@ const EventManagement = () => {
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
-                          <label className="block text-sm text-gray-700 font-medium mb-1">
+                          <label className="block text-sm text-slate-700 font-medium mb-1">
                             코스명
                           </label>
                           <input
@@ -500,7 +500,7 @@ const EventManagement = () => {
                           />
                         </div>
                         <div className="md:col-span-2">
-                          <label className="block text-sm text-gray-700 font-medium mb-1">
+                          <label className="block text-sm text-slate-700 font-medium mb-1">
                             거리
                           </label>
                           <input
@@ -514,7 +514,7 @@ const EventManagement = () => {
                       </div>
                       
                       <div className="mb-4">
-                        <label className="block text-sm text-gray-700 font-medium mb-1">
+                        <label className="block text-sm text-slate-700 font-medium mb-1">
                           코스 설명
                         </label>
                         <textarea
@@ -528,7 +528,7 @@ const EventManagement = () => {
                       
                       <div>
                         <div className="flex items-center justify-between mb-3">
-                          <label className="block text-sm text-gray-700 font-medium">
+                          <label className="block text-sm text-slate-700 font-medium">
                             코스 일정
                           </label>
                           <button
@@ -586,8 +586,8 @@ const EventManagement = () => {
               )}
               
               {(!formData.courses || formData.courses.length === 0) && (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <p className="text-gray-500">코스가 없습니다. 코스를 추가해주세요.</p>
+                <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+                  <p className="text-slate-500">코스가 없습니다. 코스를 추가해주세요.</p>
                 </div>
               )}
             </div>
@@ -596,11 +596,11 @@ const EventManagement = () => {
             <div className="border-t pt-6">
               <div className="flex items-center space-x-2 mb-4">
                 <CreditCard className="h-6 w-6 text-primary-600" />
-                <h3 className="text-xl font-bold text-gray-900">입금 정보</h3>
+                <h3 className="text-xl font-bold text-slate-900">입금 정보</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">
+                  <label className="block text-slate-700 font-medium mb-2">
                     은행명 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -617,7 +617,7 @@ const EventManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">
+                  <label className="block text-slate-700 font-medium mb-2">
                     계좌번호 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -634,7 +634,7 @@ const EventManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">
+                  <label className="block text-slate-700 font-medium mb-2">
                     예금주 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -651,7 +651,7 @@ const EventManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">
+                  <label className="block text-slate-700 font-medium mb-2">
                     담당자 이름 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -668,7 +668,7 @@ const EventManagement = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">
+                  <label className="block text-slate-700 font-medium mb-2">
                     담당자 연락처 <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -699,7 +699,7 @@ const EventManagement = () => {
             <div className="flex space-x-4 pt-4">
               <button
                 onClick={handleCancel}
-                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium text-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-medium text-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
               >
                 <X className="h-5 w-5" />
                 <span>취소</span>
@@ -720,8 +720,8 @@ const EventManagement = () => {
             <div key={event.id} className="card">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h3>
-                  <div className="flex flex-wrap gap-3 text-gray-600">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">{event.title}</h3>
+                  <div className="flex flex-wrap gap-3 text-slate-600">
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-4 w-4" />
                       <span>{event.date}</span>
@@ -755,9 +755,9 @@ const EventManagement = () => {
                   </button>
                 </div>
               </div>
-              <p className="text-gray-700 mb-4">{event.description}</p>
+              <p className="text-slate-700 mb-4">{event.description}</p>
               <div className="p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-bold text-gray-900 mb-2">당일 동선</h4>
+                <h4 className="font-bold text-slate-900 mb-2">당일 동선</h4>
                 <div className="space-y-1 text-sm">
                   {event.schedule.map((item, index) => (
                     <div key={index}>

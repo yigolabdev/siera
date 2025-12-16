@@ -97,8 +97,8 @@ const Profile = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">프로필 설정</h1>
-        <p className="text-xl text-gray-600">
+        <h1 className="text-4xl font-bold text-slate-900 mb-2">프로필 설정</h1>
+        <p className="text-lg text-slate-600">
           회원 정보를 수정하고 관리하세요.
         </p>
       </div>
@@ -107,7 +107,7 @@ const Profile = () => {
       <div className="card mb-6">
         <div className="flex flex-col items-center">
           <div className="relative group">
-            <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-primary-600 to-blue-600 flex items-center justify-center shadow-lg">
+            <div className="w-32 h-32 rounded-full overflow-hidden bg-primary-600 flex items-center justify-center shadow-card">
               {profileImage ? (
                 <img 
                   src={profileImage} 
@@ -120,7 +120,7 @@ const Profile = () => {
             </div>
             <button
               onClick={handleImageClick}
-              className="absolute bottom-0 right-0 w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center shadow-lg hover:bg-primary-700 transition-colors"
+              className="absolute bottom-0 right-0 w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center shadow-card hover:bg-primary-700 active:scale-95 transition-all"
             >
               <Camera className="h-5 w-5 text-white" />
             </button>
@@ -135,30 +135,28 @@ const Profile = () => {
           />
           
           <div className="mt-4 text-center">
-            <p className="text-gray-700 font-medium text-lg">{user?.name || '게스트'}</p>
-            <p className="text-gray-500 text-sm">{user?.email || 'email@example.com'}</p>
+            <p className="text-slate-900 font-semibold text-lg">{user?.name || '게스트'}</p>
+            <p className="text-slate-600 text-sm">{user?.email || 'email@example.com'}</p>
           </div>
           
           <div className="flex space-x-3 mt-4">
             <button
               onClick={handleImageClick}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center space-x-2"
+              className="btn-primary text-sm"
             >
-              <Camera className="h-4 w-4" />
-              <span>사진 변경</span>
+              사진 변경
             </button>
             {profileImage && (
               <button
                 onClick={handleRemoveImage}
-                className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition-colors flex items-center space-x-2"
+                className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-semibold hover:bg-red-100 active:scale-[0.98] transition-all"
               >
-                <Trash2 className="h-4 w-4" />
-                <span>사진 삭제</span>
+                사진 삭제
               </button>
             )}
           </div>
           
-          <p className="text-xs text-gray-500 mt-3">
+          <p className="text-xs text-slate-500 mt-3">
             JPG, PNG, GIF 형식 지원 (최대 5MB)
           </p>
         </div>
@@ -166,24 +164,16 @@ const Profile = () => {
       
       {/* Profile Information */}
       <div className="card mb-6">
-        <div className="flex items-center space-x-3 mb-6 pb-4 border-b">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-blue-600 rounded-full flex items-center justify-center">
-            <User className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">기본 정보</h2>
-            <p className="text-gray-600">개인 정보를 업데이트하세요</p>
-          </div>
+        <div className="mb-6 pb-4 border-b border-slate-200">
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">기본 정보</h2>
+          <p className="text-slate-600">개인 정보를 업데이트하세요</p>
         </div>
         
         <div className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4" />
-                  <span>이름 <span className="text-red-500">*</span></span>
-                </div>
+              <label className="block text-slate-700 font-medium mb-2">
+                이름 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -195,11 +185,8 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4" />
-                  <span>이메일 <span className="text-red-500">*</span></span>
-                </div>
+              <label className="block text-slate-700 font-medium mb-2">
+                이메일 <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -213,11 +200,8 @@ const Profile = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4" />
-                  <span>연락처 <span className="text-red-500">*</span></span>
-                </div>
+              <label className="block text-slate-700 font-medium mb-2">
+                연락처 <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"
@@ -229,11 +213,8 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                <div className="flex items-center space-x-2">
-                  <Building className="h-4 w-4" />
-                  <span>회사/기관</span>
-                </div>
+              <label className="block text-slate-700 font-medium mb-2">
+                회사/기관
               </label>
               <input
                 type="text"
@@ -247,11 +228,8 @@ const Profile = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                <div className="flex items-center space-x-2">
-                  <Briefcase className="h-4 w-4" />
-                  <span>직업</span>
-                </div>
+              <label className="block text-slate-700 font-medium mb-2">
+                직업
               </label>
               <input
                 type="text"
@@ -263,11 +241,8 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                <div className="flex items-center space-x-2">
-                  <Briefcase className="h-4 w-4" />
-                  <span>직책</span>
-                </div>
+              <label className="block text-slate-700 font-medium mb-2">
+                직책
               </label>
               <input
                 type="text"
@@ -280,33 +255,27 @@ const Profile = () => {
           </div>
         </div>
         
-        <div className="flex justify-end mt-6 pt-6 border-t">
+        <div className="flex justify-end mt-6 pt-6 border-t border-slate-200">
           <button
             onClick={handleSaveProfile}
-            className="btn-primary flex items-center space-x-2"
+            className="btn-primary"
           >
-            <Save className="h-5 w-5" />
-            <span>프로필 저장</span>
+            프로필 저장
           </button>
         </div>
       </div>
       
       {/* Password Change */}
       <div className="card">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-pink-600 rounded-full flex items-center justify-center">
-              <Lock className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">비밀번호 변경</h2>
-              <p className="text-gray-600">보안을 위해 주기적으로 변경하세요</p>
-            </div>
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-1">비밀번호 변경</h2>
+            <p className="text-slate-600">보안을 위해 주기적으로 변경하세요</p>
           </div>
           {!isEditingPassword && (
             <button
               onClick={() => setIsEditingPassword(true)}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-medium hover:bg-slate-200 active:scale-[0.98] transition-all"
             >
               비밀번호 변경
             </button>
@@ -316,7 +285,7 @@ const Profile = () => {
         {isEditingPassword ? (
           <div className="space-y-5">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
+              <label className="block text-slate-700 font-medium mb-2">
                 현재 비밀번호 <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -330,7 +299,7 @@ const Profile = () => {
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
                 >
                   {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -338,7 +307,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
+              <label className="block text-slate-700 font-medium mb-2">
                 새 비밀번호 <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -352,7 +321,7 @@ const Profile = () => {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
                 >
                   {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -360,7 +329,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
+              <label className="block text-slate-700 font-medium mb-2">
                 새 비밀번호 확인 <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -374,16 +343,16 @@ const Profile = () => {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700"
                 >
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
             
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800 font-medium mb-2">비밀번호 안전 수칙</p>
-              <ul className="text-sm text-blue-700 space-y-1">
+            <div className="p-4 bg-slate-100 rounded-xl border border-slate-200">
+              <p className="text-sm text-slate-900 font-medium mb-2">비밀번호 안전 수칙</p>
+              <ul className="text-sm text-slate-700 space-y-1">
                 <li>• 최소 8자 이상</li>
                 <li>• 영문, 숫자, 특수문자 조합 권장</li>
                 <li>• 다른 사이트와 다른 비밀번호 사용</li>
@@ -400,21 +369,20 @@ const Profile = () => {
                     confirmPassword: '',
                   });
                 }}
-                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium text-lg hover:bg-gray-300 transition-colors"
+                className="flex-1 btn-secondary"
               >
                 취소
               </button>
               <button
                 onClick={handleChangePassword}
-                className="flex-1 btn-primary flex items-center justify-center space-x-2"
+                className="flex-1 btn-primary"
               >
-                <Lock className="h-5 w-5" />
-                <span>비밀번호 변경</span>
+                비밀번호 변경
               </button>
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-slate-500">
             비밀번호를 변경하려면 위의 버튼을 클릭하세요
           </div>
         )}
@@ -424,7 +392,7 @@ const Profile = () => {
       <div className="mt-6">
         <button
           onClick={() => navigate(-1)}
-          className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+          className="btn-secondary"
         >
           ← 뒤로 가기
         </button>

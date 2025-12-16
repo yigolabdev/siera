@@ -94,8 +94,8 @@ const MemberManagement = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">회원 관리</h1>
-        <p className="text-xl text-gray-600">
+        <h1 className="text-4xl font-bold text-slate-900 mb-3">회원 관리</h1>
+        <p className="text-xl text-slate-600">
           회원 가입 승인 및 회원 정보를 관리할 수 있습니다.
         </p>
       </div>
@@ -106,8 +106,8 @@ const MemberManagement = () => {
           <div className="flex items-center space-x-4">
             <UserCheck className="h-10 w-10 text-green-600" />
             <div>
-              <p className="text-gray-500 font-medium">승인된 회원</p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-slate-500 font-medium">승인된 회원</p>
+              <p className="text-3xl font-bold text-slate-900">
                 {members.filter(m => m.isApproved).length}명
               </p>
             </div>
@@ -117,8 +117,8 @@ const MemberManagement = () => {
           <div className="flex items-center space-x-4">
             <UserX className="h-10 w-10 text-yellow-600" />
             <div>
-              <p className="text-gray-500 font-medium">승인 대기</p>
-              <p className="text-3xl font-bold text-gray-900">{pendingCount}명</p>
+              <p className="text-slate-500 font-medium">승인 대기</p>
+              <p className="text-3xl font-bold text-slate-900">{pendingCount}명</p>
             </div>
           </div>
         </div>
@@ -126,8 +126,8 @@ const MemberManagement = () => {
           <div className="flex items-center space-x-4">
             <Shield className="h-10 w-10 text-blue-600" />
             <div>
-              <p className="text-gray-500 font-medium">관리자</p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-slate-500 font-medium">관리자</p>
+              <p className="text-3xl font-bold text-slate-900">
                 {members.filter(m => m.role === 'admin').length}명
               </p>
             </div>
@@ -145,7 +145,7 @@ const MemberManagement = () => {
               placeholder="이름, 이메일, 회사명으로 검색..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
+              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
             />
           </div>
           <div className="flex gap-2">
@@ -154,7 +154,7 @@ const MemberManagement = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 filterStatus === 'all'
                   ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
               }`}
             >
               전체
@@ -164,7 +164,7 @@ const MemberManagement = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 filterStatus === 'approved'
                   ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
               }`}
             >
               승인완료
@@ -174,7 +174,7 @@ const MemberManagement = () => {
               className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap relative ${
                 filterStatus === 'pending'
                   ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
               }`}
             >
               승인대기
@@ -195,7 +195,7 @@ const MemberManagement = () => {
             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
               <div className="flex-grow">
                 <div className="flex items-center space-x-3 mb-3">
-                  <h3 className="text-xl font-bold text-gray-900">{member.name}</h3>
+                  <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
                   {member.role === 'admin' && (
                     <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-bold rounded-full">
                       관리자
@@ -208,7 +208,7 @@ const MemberManagement = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-gray-600">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-slate-600">
                   <div className="flex items-center space-x-2">
                     <Mail className="h-4 w-4" />
                     <span>{member.email}</span>
@@ -227,7 +227,7 @@ const MemberManagement = () => {
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-slate-500 mt-2">
                   가입일: {member.joinDate}
                 </p>
               </div>
@@ -255,7 +255,7 @@ const MemberManagement = () => {
                     onClick={() => handleToggleAdmin(member.id)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 whitespace-nowrap ${
                       member.role === 'admin'
-                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        ? 'bg-slate-200 text-slate-700 hover:bg-gray-300'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                   >
@@ -272,7 +272,7 @@ const MemberManagement = () => {
       {filteredMembers.length === 0 && (
         <div className="text-center py-12">
           <UserX className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-xl text-gray-500">검색 결과가 없습니다.</p>
+          <p className="text-xl text-slate-500">검색 결과가 없습니다.</p>
         </div>
       )}
     </div>

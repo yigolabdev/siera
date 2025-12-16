@@ -167,8 +167,8 @@ const TeamManagement = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">조 편성 관리</h1>
-          <p className="text-xl text-gray-600">
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">조 편성 관리</h1>
+          <p className="text-xl text-slate-600">
             산행 참석자를 조별로 편성하고 관리할 수 있습니다.
           </p>
         </div>
@@ -185,12 +185,12 @@ const TeamManagement = () => {
 
       {isEditing ? (
         <div className="card">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">
             {editingTeam ? '조 수정' : '새 조 등록'}
           </h2>
           <div className="space-y-6">
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
+              <label className="block text-slate-700 font-medium mb-2">
                 조 이름 <span className="text-red-500">*</span>
               </label>
               <input
@@ -204,10 +204,10 @@ const TeamManagement = () => {
 
             {/* Leader Selection */}
             <div>
-              <label className="block text-gray-700 font-medium mb-2">
+              <label className="block text-slate-700 font-medium mb-2">
                 조장 선택 <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-4 bg-slate-50 rounded-lg">
                 {registeredMembers.map((member) => (
                   <button
                     key={member.id}
@@ -216,20 +216,20 @@ const TeamManagement = () => {
                     className={`p-3 text-left rounded-lg border-2 transition-all ${
                       formData.leaderId === member.id
                         ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-300'
+                        : 'border-slate-200 hover:border-primary-300'
                     }`}
                   >
-                    <p className="font-bold text-gray-900">{member.name}</p>
-                    <p className="text-sm text-gray-600">{member.occupation}</p>
-                    <p className="text-sm text-gray-500">{member.company}</p>
+                    <p className="font-bold text-slate-900">{member.name}</p>
+                    <p className="text-sm text-slate-600">{member.occupation}</p>
+                    <p className="text-sm text-slate-500">{member.company}</p>
                   </button>
                 ))}
               </div>
               {formData.leaderName && (
                 <div className="mt-3 p-3 bg-primary-50 rounded-lg border border-primary-200">
-                  <p className="text-sm text-gray-600">선택된 조장:</p>
-                  <p className="font-bold text-gray-900">{formData.leaderName}</p>
-                  <p className="text-sm text-gray-600">{formData.leaderOccupation}</p>
+                  <p className="text-sm text-slate-600">선택된 조장:</p>
+                  <p className="font-bold text-slate-900">{formData.leaderName}</p>
+                  <p className="text-sm text-slate-600">{formData.leaderOccupation}</p>
                 </div>
               )}
             </div>
@@ -237,7 +237,7 @@ const TeamManagement = () => {
             {/* Members */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <label className="block text-gray-700 font-medium">
+                <label className="block text-slate-700 font-medium">
                   조원 ({formData.members.length}명)
                 </label>
                 <button
@@ -255,9 +255,9 @@ const TeamManagement = () => {
                     <div className="flex items-center space-x-3">
                       <CheckCircle className="h-5 w-5 text-green-600" />
                       <div>
-                        <p className="font-bold text-gray-900">{member.name}</p>
-                        <p className="text-sm text-gray-600">{member.occupation}</p>
-                        <p className="text-sm text-gray-500">{member.company}</p>
+                        <p className="font-bold text-slate-900">{member.name}</p>
+                        <p className="text-sm text-slate-600">{member.occupation}</p>
+                        <p className="text-sm text-slate-500">{member.company}</p>
                       </div>
                     </div>
                     <button
@@ -270,9 +270,9 @@ const TeamManagement = () => {
                   </div>
                 ))}
                 {formData.members.length === 0 && (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
                     <Users className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">조원을 추가해주세요</p>
+                    <p className="text-slate-500">조원을 추가해주세요</p>
                   </div>
                 )}
               </div>
@@ -281,7 +281,7 @@ const TeamManagement = () => {
             <div className="flex space-x-4 pt-4">
               <button
                 onClick={handleCancel}
-                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium text-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-medium text-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
               >
                 <X className="h-5 w-5" />
                 <span>취소</span>
@@ -306,13 +306,13 @@ const TeamManagement = () => {
                     {team.name}
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">{team.name}</h3>
+                    <h3 className="text-2xl font-bold text-slate-900">{team.name}</h3>
                     <div className="flex items-center space-x-2 mt-1">
                       <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-bold rounded-full">
                         조장
                       </span>
-                      <span className="font-bold text-gray-900">{team.leaderName}</span>
-                      <span className="text-gray-600 text-sm">{team.leaderOccupation}</span>
+                      <span className="font-bold text-slate-900">{team.leaderName}</span>
+                      <span className="text-slate-600 text-sm">{team.leaderOccupation}</span>
                     </div>
                   </div>
                 </div>
@@ -333,18 +333,18 @@ const TeamManagement = () => {
               </div>
 
               <div className="mt-4">
-                <p className="text-gray-600 font-medium mb-3">
+                <p className="text-slate-600 font-medium mb-3">
                   조원 ({team.members.length}명)
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {team.members.map((member) => (
                     <div
                       key={member.id}
-                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      className="p-3 bg-slate-50 rounded-lg border border-slate-200"
                     >
-                      <p className="font-bold text-gray-900">{member.name}</p>
-                      <p className="text-sm text-gray-600">{member.occupation}</p>
-                      <p className="text-sm text-gray-500">{member.company}</p>
+                      <p className="font-bold text-slate-900">{member.name}</p>
+                      <p className="text-sm text-slate-600">{member.occupation}</p>
+                      <p className="text-sm text-slate-500">{member.company}</p>
                     </div>
                   ))}
                 </div>
@@ -355,7 +355,7 @@ const TeamManagement = () => {
           {teams.length === 0 && (
             <div className="text-center py-12">
               <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-xl text-gray-500">등록된 조가 없습니다.</p>
+              <p className="text-xl text-slate-500">등록된 조가 없습니다.</p>
             </div>
           )}
         </div>
@@ -376,16 +376,16 @@ const TeamManagement = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <UserPlus className="h-8 w-8 text-primary-600" />
-                  <h3 className="text-2xl font-bold text-gray-900">조원 선택</h3>
+                  <h3 className="text-2xl font-bold text-slate-900">조원 선택</h3>
                 </div>
                 <button 
                   onClick={() => setShowMemberSelectModal(false)}
-                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
                 >
-                  <X className="h-6 w-6 text-gray-600" />
+                  <X className="h-6 w-6 text-slate-600" />
                 </button>
               </div>
-              <p className="text-gray-600 mt-2">참석 등록된 회원 목록에서 조원을 선택해주세요</p>
+              <p className="text-slate-600 mt-2">참석 등록된 회원 목록에서 조원을 선택해주세요</p>
             </div>
             
             {/* Modal Body */}
@@ -403,12 +403,12 @@ const TeamManagement = () => {
                       disabled={isSelected}
                       className={`p-4 text-left rounded-lg border-2 transition-all ${
                         isSelected
-                          ? 'border-gray-300 bg-gray-100 opacity-50 cursor-not-allowed'
-                          : 'border-gray-200 hover:border-primary-400 hover:bg-primary-50 cursor-pointer'
+                          ? 'border-slate-300 bg-slate-100 opacity-50 cursor-not-allowed'
+                          : 'border-slate-200 hover:border-primary-400 hover:bg-primary-50 cursor-pointer'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <p className="font-bold text-gray-900">{member.name}</p>
+                        <p className="font-bold text-slate-900">{member.name}</p>
                         {isLeader && (
                           <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">
                             조장
@@ -418,8 +418,8 @@ const TeamManagement = () => {
                           <CheckCircle className="h-5 w-5 text-green-600" />
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">{member.occupation}</p>
-                      <p className="text-sm text-gray-500">{member.company}</p>
+                      <p className="text-sm text-slate-600">{member.occupation}</p>
+                      <p className="text-sm text-slate-500">{member.company}</p>
                     </button>
                   );
                 })}
@@ -427,10 +427,10 @@ const TeamManagement = () => {
             </div>
             
             {/* Modal Footer */}
-            <div className="p-6 border-t bg-gray-50">
+            <div className="p-6 border-t bg-slate-50">
               <button 
                 onClick={() => setShowMemberSelectModal(false)}
-                className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold text-lg hover:bg-gray-300 transition-colors"
+                className="w-full px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold text-lg hover:bg-gray-300 transition-colors"
               >
                 닫기
               </button>

@@ -1,13 +1,28 @@
-import { useState, useEffect } from 'react';
-import { Upload, Heart, Download, X, Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Grid3x3, Play, Pause } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Upload, Heart, Download, X, Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Grid3x3, Play, Pause, Folder, Trash2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
+interface UploadFile {
+  id: string;
+  file: File;
+  preview: string;
+  caption: string;
+}
 
 const Gallery = () => {
+  const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'masonry'>('masonry');
   const [zoom, setZoom] = useState(1);
   const [likedPhotos, setLikedPhotos] = useState<Set<number>>(new Set());
   const [isSlideshow, setIsSlideshow] = useState(false);
+  
+  // 업로드 관련 상태
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const months = [
     { id: 'all', name: '전체' },
@@ -37,8 +52,95 @@ const Gallery = () => {
     ? photos 
     : photos.filter(photo => photo.month === selectedEvent);
   
-  const handleUpload = () => {
-    alert('사진 업로드 기능은 백엔드 연동 후 구현됩니다.');
+  // 파일 선택 핸들러
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      handleFiles(Array.from(files));
+    }
+  };
+  
+  // 파일 처리
+  const handleFiles = (files: File[]) => {
+    const newFiles: UploadFile[] = files
+      .filter(file => file.type.startsWith('image/'))
+      .map(file => ({
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        preview: URL.createObjectURL(file),
+        caption: '',
+      }));
+    
+    setUploadFiles(prev => [...prev, ...newFiles]);
+  };
+  
+  // 드래그 앤 드롭 핸들러
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    handleFiles(files);
+  };
+  
+  // 개별 파일 삭제
+  const handleRemoveFile = (id: string) => {
+    setUploadFiles(prev => {
+      const file = prev.find(f => f.id === id);
+      if (file) {
+        URL.revokeObjectURL(file.preview);
+      }
+      return prev.filter(f => f.id !== id);
+    });
+  };
+  
+  // 캡션 업데이트
+  const handleCaptionChange = (id: string, caption: string) => {
+    setUploadFiles(prev =>
+      prev.map(f => f.id === id ? { ...f, caption } : f)
+    );
+  };
+  
+  // 업로드 실행
+  const handleUploadSubmit = () => {
+    if (uploadFiles.length === 0) {
+      alert('업로드할 사진을 선택해주세요.');
+      return;
+    }
+    
+    // TODO: 실제 백엔드 API 연동
+    console.log('업로드할 파일:', uploadFiles);
+    alert(`${uploadFiles.length}개의 사진이 업로드되었습니다!`);
+    
+    // 정리
+    uploadFiles.forEach(f => URL.revokeObjectURL(f.preview));
+    setUploadFiles([]);
+    setShowUploadModal(false);
+  };
+  
+  // 모달 닫기
+  const handleCloseUploadModal = () => {
+    uploadFiles.forEach(f => URL.revokeObjectURL(f.preview));
+    setUploadFiles([]);
+    setShowUploadModal(false);
   };
   
   const handleLike = (photoId: number, e: React.MouseEvent) => {
@@ -141,7 +243,10 @@ const Gallery = () => {
             함께한 산행의 추억을 공유해주세요.
           </p>
         </div>
-        <button onClick={handleUpload} className="btn-primary flex items-center space-x-2">
+        <button 
+          onClick={() => setShowUploadModal(true)} 
+          className="btn-primary flex items-center space-x-2"
+        >
           <Upload className="h-5 w-5" />
           <span>사진 업로드</span>
         </button>
@@ -499,6 +604,161 @@ const Gallery = () => {
                     />
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 사진 업로드 모달 */}
+      {showUploadModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={handleCloseUploadModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 헤더 */}
+            <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-green-50 flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">사진 업로드</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  여러 장의 사진을 선택하거나 드래그하여 업로드하세요
+                </p>
+              </div>
+              <button
+                onClick={handleCloseUploadModal}
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <X className="h-6 w-6 text-gray-600" />
+              </button>
+            </div>
+
+            {/* 본문 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* 드래그 앤 드롭 영역 */}
+              <div
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${
+                  isDragging
+                    ? 'border-primary-600 bg-primary-50'
+                    : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
+                }`}
+              >
+                <Upload className={`h-16 w-16 mx-auto mb-4 ${
+                  isDragging ? 'text-primary-600' : 'text-gray-400'
+                }`} />
+                <h4 className="text-xl font-bold text-gray-900 mb-2">
+                  사진을 여기에 드래그하세요
+                </h4>
+                <p className="text-gray-600 mb-4">
+                  또는 클릭하여 파일을 선택하세요
+                </p>
+                <div className="flex items-center justify-center space-x-3">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn-primary flex items-center space-x-2"
+                  >
+                    <Folder className="h-5 w-5" />
+                    <span>파일 선택</span>
+                  </button>
+                  <span className="text-gray-500">JPG, PNG, GIF (최대 10MB)</span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+
+              {/* 업로드된 파일 미리보기 */}
+              {uploadFiles.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                    <ImageIcon className="h-5 w-5 text-primary-600" />
+                    <span>선택된 사진 ({uploadFiles.length}개)</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {uploadFiles.map((uploadFile) => (
+                      <div
+                        key={uploadFile.id}
+                        className="relative group border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        {/* 미리보기 이미지 */}
+                        <div className="relative aspect-video">
+                          <img
+                            src={uploadFile.preview}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                          {/* 삭제 버튼 */}
+                          <button
+                            onClick={() => handleRemoveFile(uploadFile.id)}
+                            className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            title="삭제"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        
+                        {/* 파일 정보 */}
+                        <div className="p-3">
+                          <p className="text-xs text-gray-500 mb-2 truncate">
+                            {uploadFile.file.name}
+                          </p>
+                          <input
+                            type="text"
+                            placeholder="사진 설명 (선택사항)"
+                            value={uploadFile.caption}
+                            onChange={(e) => handleCaptionChange(uploadFile.id, e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 푸터 */}
+            <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                {uploadFiles.length > 0 ? (
+                  <span className="font-medium text-primary-600">
+                    {uploadFiles.length}개의 사진이 업로드 대기 중입니다
+                  </span>
+                ) : (
+                  <span>사진을 선택해주세요</span>
+                )}
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleCloseUploadModal}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleUploadSubmit}
+                  disabled={uploadFiles.length === 0}
+                  className={`px-6 py-3 rounded-lg font-bold transition-colors flex items-center space-x-2 ${
+                    uploadFiles.length === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-primary-600 text-white hover:bg-primary-700'
+                  }`}
+                >
+                  <Upload className="h-5 w-5" />
+                  <span>업로드 ({uploadFiles.length})</span>
+                </button>
               </div>
             </div>
           </div>

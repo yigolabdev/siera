@@ -313,8 +313,8 @@ const Board = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">게시판</h1>
-        <p className="text-xl text-gray-600">
+        <h1 className="text-4xl font-bold text-slate-900 mb-3">게시판</h1>
+        <p className="text-xl text-slate-600">
           시애라의 공지사항과 커뮤니티를 확인하세요.
         </p>
       </div>
@@ -331,10 +331,7 @@ const Board = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <Bell className="h-5 w-5" />
-                <span>공지사항</span>
-              </div>
+              공지사항
             </button>
             <button
               onClick={() => setActiveTab('community')}
@@ -344,10 +341,7 @@ const Board = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <MessageSquare className="h-5 w-5" />
-                <span>커뮤니티</span>
-              </div>
+              커뮤니티
             </button>
           </nav>
         </div>
@@ -361,25 +355,22 @@ const Board = () => {
             {/* Pinned Notices */}
             {pinnedNotices.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                  <Pin className="h-6 w-6 text-red-600" />
-                  <span>중요 공지</span>
-                </h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">중요 공지</h2>
                 <div className="space-y-4">
                   {pinnedNotices.map((notice) => (
-                    <div key={notice.id} className="card border-l-4 border-red-600 bg-red-50">
+                    <div key={notice.id} className="card border-l-4 border-red-600">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
                             필독
                           </span>
-                          <h3 className="text-xl font-bold text-gray-900">{notice.title}</h3>
+                          <h3 className="text-xl font-bold text-slate-900">{notice.title}</h3>
                         </div>
-                        <span className="text-sm text-gray-500 whitespace-nowrap ml-4">
+                        <span className="text-sm text-slate-500 whitespace-nowrap ml-4">
                           {notice.date}
                         </span>
                       </div>
-                      <p className="text-gray-700 text-base leading-relaxed">{notice.content}</p>
+                      <p className="text-slate-700 leading-relaxed">{notice.content}</p>
                     </div>
                   ))}
                 </div>
@@ -388,20 +379,17 @@ const Board = () => {
             
             {/* Regular Notices */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <Bell className="h-6 w-6 text-primary-600" />
-                <span>일반 공지</span>
-              </h2>
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">일반 공지</h2>
               <div className="space-y-4">
                 {regularNotices.map((notice) => (
-                  <div key={notice.id} className="card hover:shadow-lg transition-shadow">
+                  <div key={notice.id} className="card">
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-xl font-bold text-gray-900">{notice.title}</h3>
-                      <span className="text-sm text-gray-500 whitespace-nowrap ml-4">
+                      <h3 className="text-xl font-bold text-slate-900">{notice.title}</h3>
+                      <span className="text-sm text-slate-500 whitespace-nowrap ml-4">
                         {notice.date}
                       </span>
                     </div>
-                    <p className="text-gray-700 text-base leading-relaxed">{notice.content}</p>
+                    <p className="text-slate-700 leading-relaxed">{notice.content}</p>
                   </div>
                 ))}
               </div>
@@ -411,38 +399,35 @@ const Board = () => {
           {/* Payment Information Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24">
-              <div className="card bg-gradient-to-br from-blue-50 to-primary-50 border-2 border-primary-200">
-                <div className="flex items-center space-x-2 mb-4">
-                  <CreditCard className="h-6 w-6 text-primary-600" />
-                  <h2 className="text-2xl font-bold text-gray-900">회비 안내</h2>
-                </div>
+              <div className="card">
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">회비 안내</h2>
                 
                 <div className="space-y-4">
                   {payments.map((payment) => (
-                    <div key={payment.id} className="p-4 bg-white rounded-lg border border-gray-200">
+                    <div key={payment.id} className="p-4 border border-slate-200 rounded-xl">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-gray-900">{payment.title}</h3>
+                        <h3 className="font-bold text-slate-900">{payment.title}</h3>
                         <span className={`px-2 py-1 rounded text-xs font-bold ${
                           payment.status === 'completed'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-orange-100 text-orange-800'
+                            ? 'bg-slate-100 text-slate-700'
+                            : 'bg-amber-100 text-amber-700'
                         }`}>
                           {payment.status === 'completed' ? '납부완료' : '납부대기'}
                         </span>
                       </div>
                       <div className="space-y-1 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600">금액</span>
-                          <span className="font-bold text-primary-600 text-lg">{payment.amount}</span>
+                          <span className="text-slate-600">금액</span>
+                          <span className="font-bold text-slate-900 text-lg">{payment.amount}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-600">납부기한</span>
-                          <span className="text-gray-900">{payment.dueDate}</span>
+                          <span className="text-slate-600">납부기한</span>
+                          <span className="text-slate-900">{payment.dueDate}</span>
                         </div>
                         {payment.bankInfo && (
-                          <div className="pt-2 mt-2 border-t border-gray-200">
-                            <p className="text-gray-600 text-xs mb-1">입금 계좌</p>
-                            <p className="text-gray-900 font-medium">{payment.bankInfo}</p>
+                          <div className="pt-2 mt-2 border-t border-slate-200">
+                            <p className="text-slate-600 text-xs mb-1">입금 계좌</p>
+                            <p className="text-slate-900 font-medium">{payment.bankInfo}</p>
                           </div>
                         )}
                       </div>
@@ -450,12 +435,12 @@ const Board = () => {
                   ))}
                 </div>
                 
-                <div className="mt-6 p-4 bg-primary-600 text-white rounded-lg">
-                  <p className="text-sm mb-2">💡 입금 시 안내</p>
-                  <ul className="text-xs space-y-1">
-                    <li>• 입금자명은 본인 성함으로 해주세요</li>
-                    <li>• 입금 후 자동으로 확인됩니다</li>
-                    <li>• 문의: 010-1234-5678</li>
+                <div className="mt-6 p-4 bg-slate-50 rounded-xl">
+                  <p className="text-sm font-bold text-slate-900 mb-2">입금 시 안내</p>
+                  <ul className="text-xs text-slate-600 space-y-1">
+                    <li>입금자명은 본인 성함으로 해주세요</li>
+                    <li>입금 후 자동으로 확인됩니다</li>
+                    <li>문의: 010-1234-5678</li>
                   </ul>
                 </div>
               </div>
@@ -467,21 +452,20 @@ const Board = () => {
           {/* Search and Filters */}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <input
                 type="text"
                 placeholder="제목 또는 작성자로 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent"
               />
             </div>
             <button 
               onClick={() => setShowWriteModal(true)}
-              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2 whitespace-nowrap"
+              className="btn-primary whitespace-nowrap"
             >
-              <Plus className="h-5 w-5" />
-              <span>글쓰기</span>
+              글쓰기
             </button>
           </div>
           
@@ -491,10 +475,10 @@ const Board = () => {
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-colors ${
                   selectedCategory === category.id
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-slate-900 text-white'
+                    : 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 {category.name}
@@ -507,37 +491,28 @@ const Board = () => {
             {filteredPosts.map((post) => (
               <div 
                 key={post.id} 
-                className="card hover:shadow-lg transition-shadow cursor-pointer"
+                className="card cursor-pointer hover:border-slate-300 transition-colors"
                 onClick={() => handleViewPost(post)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-2 flex-1">
                     {getCategoryBadge(post.category)}
-                    <h3 className="text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors">
+                    <h3 className="text-xl font-bold text-slate-900">
                       {post.title}
                     </h3>
                   </div>
                 </div>
                 
-                <p className="text-gray-600 mb-4 line-clamp-2">{post.content}</p>
+                <p className="text-slate-600 mb-4 line-clamp-2">{post.content}</p>
                 
-                <div className="flex items-center justify-between text-sm text-gray-500">
+                <div className="flex items-center justify-between text-sm text-slate-500">
                   <div className="flex items-center space-x-4">
-                    <span className="font-medium text-gray-700">{post.author}</span>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{post.date}</span>
-                    </div>
+                    <span className="font-medium text-slate-700">{post.author}</span>
+                    <span>{post.date}</span>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <Eye className="h-4 w-4" />
-                      <span>{post.views}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{post.comments}</span>
-                    </div>
+                    <span>조회 {post.views}</span>
+                    <span>댓글 {post.comments}</span>
                     <button
                       onClick={(e) => handleLikePost(post.id, e)}
                       className="flex items-center space-x-1 hover:text-primary-600 transition-colors"
@@ -557,8 +532,7 @@ const Board = () => {
           
           {filteredPosts.length === 0 && (
             <div className="text-center py-12">
-              <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-xl text-gray-500">검색 결과가 없습니다.</p>
+              <p className="text-xl text-slate-500">검색 결과가 없습니다.</p>
             </div>
           )}
         </div>
@@ -574,26 +548,26 @@ const Board = () => {
             className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-green-50 flex justify-between items-center">
-              <h3 className="text-2xl font-bold text-gray-900">새 글 작성</h3>
+            <div className="p-6 border-b flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-slate-900">새 글 작성</h3>
               <button 
                 onClick={() => setShowWriteModal(false)}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X className="h-6 w-6 text-gray-600" />
+                <X className="h-6 w-6 text-slate-600" />
               </button>
             </div>
             
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
                     카테고리
                   </label>
                   <select
                     value={writeForm.category}
                     onChange={(e) => setWriteForm({ ...writeForm, category: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent"
                   >
                     <option value="general">자유게시판</option>
                     <option value="info">정보공유</option>
@@ -602,7 +576,7 @@ const Board = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
                     제목
                   </label>
                   <input
@@ -610,12 +584,12 @@ const Board = () => {
                     value={writeForm.title}
                     onChange={(e) => setWriteForm({ ...writeForm, title: e.target.value })}
                     placeholder="제목을 입력하세요"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
                     내용
                   </label>
                   <textarea
@@ -623,22 +597,22 @@ const Board = () => {
                     onChange={(e) => setWriteForm({ ...writeForm, content: e.target.value })}
                     placeholder="내용을 입력하세요"
                     rows={12}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-none"
                   />
                 </div>
               </div>
             </div>
             
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3">
+            <div className="p-6 border-t flex justify-end space-x-3">
               <button
                 onClick={() => setShowWriteModal(false)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+                className="px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleWritePost}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors"
+                className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
               >
                 등록
               </button>
@@ -657,59 +631,50 @@ const Board = () => {
             className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-green-50 flex justify-between items-start">
+            <div className="p-6 border-b flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
                   {getCategoryBadge(selectedPost.category)}
-                  <span className="text-sm text-gray-500">{selectedPost.date}</span>
+                  <span className="text-sm text-slate-500">{selectedPost.date}</span>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{selectedPost.title}</h3>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">{selectedPost.title}</h3>
+                <div className="flex items-center space-x-4 text-sm text-slate-600">
                   <span className="font-medium">{selectedPost.author}</span>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-1">
-                      <Eye className="h-4 w-4" />
-                      <span>{selectedPost.views}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{selectedPost.comments}</span>
-                    </div>
-                    <button
-                      onClick={(e) => handleLikePost(selectedPost.id, e)}
-                      className="flex items-center space-x-1 hover:text-primary-600 transition-colors"
-                    >
-                      <ThumbsUp 
-                        className={`h-4 w-4 ${likedPosts.has(selectedPost.id) ? 'fill-primary-600 text-primary-600' : ''}`}
-                      />
-                      <span className={likedPosts.has(selectedPost.id) ? 'text-primary-600 font-bold' : ''}>
-                        {selectedPost.likes}
-                      </span>
-                    </button>
-                  </div>
+                  <span>조회 {selectedPost.views}</span>
+                  <span>댓글 {selectedPost.comments}</span>
+                  <button
+                    onClick={(e) => handleLikePost(selectedPost.id, e)}
+                    className="flex items-center space-x-1 hover:text-primary-600 transition-colors"
+                  >
+                    <ThumbsUp 
+                      className={`h-4 w-4 ${likedPosts.has(selectedPost.id) ? 'fill-primary-600 text-primary-600' : ''}`}
+                    />
+                    <span className={likedPosts.has(selectedPost.id) ? 'text-primary-600 font-bold' : ''}>
+                      {selectedPost.likes}
+                    </span>
+                  </button>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedPost(null)}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X className="h-6 w-6 text-gray-600" />
+                <X className="h-6 w-6 text-slate-600" />
               </button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-6">
               {/* 게시글 내용 */}
               <div className="mb-8">
-                <p className="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap">
+                <p className="text-slate-800 text-lg leading-relaxed whitespace-pre-wrap">
                   {selectedPost.content}
                 </p>
               </div>
               
               {/* 댓글 섹션 */}
               <div className="border-t pt-6">
-                <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                  <MessageSquare className="h-5 w-5 text-primary-600" />
-                  <span>댓글 {comments.filter(c => c.postId === selectedPost.id).length}개</span>
+                <h4 className="text-xl font-bold text-slate-900 mb-4">
+                  댓글 {comments.filter(c => c.postId === selectedPost.id).length}개
                 </h4>
                 
                 {/* 댓글 목록 */}

@@ -222,40 +222,25 @@ const Events = () => {
       </div>
       
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="card">
-          <div className="flex items-center space-x-4">
-            <Calendar className="h-10 w-10 text-blue-600" />
-            <div>
-              <p className="text-gray-500 font-medium">산행 일자</p>
-              <p className="text-2xl font-bold text-gray-900">{currentEvent.date}</p>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="card text-center">
+          <p className="text-slate-600 text-sm mb-2">산행 일자</p>
+          <p className="text-2xl font-bold text-slate-900">{currentEvent.date}</p>
         </div>
-        <div className="card">
-          <div className="flex items-center space-x-4">
-            <Users className="h-10 w-10 text-green-600" />
-            <div>
-              <p className="text-gray-500 font-medium">참가 신청</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {currentEvent.currentParticipants}/{currentEvent.maxParticipants}명
-              </p>
-            </div>
-          </div>
+        <div className="card text-center">
+          <p className="text-slate-600 text-sm mb-2">참가 신청</p>
+          <p className="text-3xl font-bold text-slate-900">
+            {currentEvent.currentParticipants}/{currentEvent.maxParticipants}명
+          </p>
         </div>
-        <div className="card">
-          <div className="flex items-center space-x-4">
-            <TrendingUp className="h-10 w-10 text-purple-600" />
-            <div>
-              <p className="text-gray-500 font-medium">나의 참여율</p>
-              <p className="text-3xl font-bold text-gray-900">85%</p>
-            </div>
-          </div>
+        <div className="card text-center">
+          <p className="text-slate-600 text-sm mb-2">나의 참여율</p>
+          <p className="text-3xl font-bold text-slate-900">85%</p>
         </div>
       </div>
       
       {/* Current Event */}
-      <div className="card mb-8">
+      <div className="card mb-12">
         {/* Hero Image */}
         <div className="relative h-80 rounded-xl overflow-hidden mb-6">
           <img 
@@ -263,71 +248,57 @@ const Events = () => {
             alt={currentEvent.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-            <div className="p-8">
+          <div className="absolute inset-0 bg-black/20 flex items-end">
+            <div className="p-8 w-full bg-gradient-to-t from-black/60 to-transparent">
               <div className="flex items-center space-x-3 mb-2">
                 <h2 className="text-4xl font-bold text-white">{currentEvent.title}</h2>
                 {getDifficultyBadge(currentEvent.difficulty)}
               </div>
-              <p className="text-xl text-gray-200">{currentEvent.location}</p>
+              <p className="text-xl text-white/90">{currentEvent.location}</p>
             </div>
           </div>
         </div>
         
         {/* Event Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">산행 정보</h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 text-gray-700">
-                <Calendar className="h-6 w-6 text-primary-600" />
-                <div>
-                  <p className="text-sm text-gray-500">일정</p>
-                  <p className="text-lg font-medium">{currentEvent.date}</p>
-                </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-4">산행 정보</h3>
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between py-2 border-b border-slate-200">
+                <span className="text-slate-600">일정</span>
+                <span className="font-medium text-slate-900">{currentEvent.date}</span>
               </div>
-              <div className="flex items-center space-x-3 text-gray-700">
-                <MapPin className="h-6 w-6 text-primary-600" />
-                <div>
-                  <p className="text-sm text-gray-500">장소</p>
-                  <p className="text-lg font-medium">{currentEvent.location}</p>
-                </div>
+              <div className="flex justify-between py-2 border-b border-slate-200">
+                <span className="text-slate-600">장소</span>
+                <span className="font-medium text-slate-900">{currentEvent.location}</span>
               </div>
-              <div className="flex items-center space-x-3 text-gray-700">
-                <div className="flex items-center justify-center w-6 h-6 text-primary-600 font-bold text-xl">
-                  ₩
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">참가비</p>
-                  <p className="text-lg font-bold text-primary-600">{currentEvent.cost}</p>
-                </div>
+              <div className="flex justify-between py-2 border-b border-slate-200">
+                <span className="text-slate-600">참가비</span>
+                <span className="font-bold text-primary-600">{currentEvent.cost}</span>
               </div>
             </div>
             
-            <p className="text-gray-700 text-lg leading-relaxed mt-4">
+            <p className="text-slate-700 leading-relaxed">
               {currentEvent.description}
             </p>
           </div>
           
           {/* Schedule */}
           <div>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">당일 일정</h3>
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">당일 일정</h3>
+            <div className="border border-slate-200 rounded-xl p-4">
               <div className="space-y-3">
                 {currentEvent.schedule.map((item, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <Clock className="h-6 w-6 text-blue-600 mt-1" />
+                  <div key={index} className="flex items-start space-x-3 py-2">
+                    <span className="font-bold text-slate-900 min-w-[100px]">{item.time}</span>
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-gray-900 text-lg">{item.time}</span>
-                        <span className="text-gray-700 font-medium">
-                          {item.type === 'departure' && '출발'}
-                          {item.type === 'stop' && '정차'}
-                          {item.type === 'return' && '복귀'}
-                          {item.type === 'arrival' && '도착'}
-                        </span>
-                      </div>
-                      <p className="text-gray-600">{item.location}</p>
+                      <span className="text-slate-700">
+                        {item.type === 'departure' && '출발'}
+                        {item.type === 'stop' && '산행'}
+                        {item.type === 'return' && '복귀'}
+                        {item.type === 'arrival' && '도착'}
+                      </span>
+                      <p className="text-slate-600 text-sm mt-1">{item.location}</p>
                     </div>
                   </div>
                 ))}
@@ -338,40 +309,40 @@ const Events = () => {
         
         {/* Courses Section */}
         {currentEvent.courses && currentEvent.courses.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">산행 코스</h3>
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">산행 코스</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {currentEvent.courses.map((course) => (
-                <div key={course.id} className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+                <div key={course.id} className="p-5 border border-slate-200 rounded-xl">
+                  <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-slate-200">
+                    <div className="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center font-bold">
                       {course.name}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900 text-lg">{course.name} 코스</p>
-                      <p className="text-sm text-gray-600 font-medium">{course.distance}</p>
+                      <p className="font-bold text-slate-900">{course.name} 코스</p>
+                      <p className="text-sm text-slate-600">{course.distance}</p>
                     </div>
                   </div>
                   
                   <div className="mb-4">
-                    <p className="text-sm font-bold text-gray-700 mb-2">코스 안내</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{course.description}</p>
+                    <p className="text-sm font-bold text-slate-700 mb-2">코스 안내</p>
+                    <p className="text-sm text-slate-600 leading-relaxed">{course.description}</p>
                   </div>
                   
                   <div>
-                    <p className="text-sm font-bold text-gray-700 mb-2">상세 일정</p>
+                    <p className="text-sm font-bold text-slate-700 mb-2">상세 일정</p>
                     <div className="space-y-2">
                       {course.schedule.map((item, idx) => (
                         <div key={idx} className="flex items-start space-x-2">
-                          <span className="text-sm font-bold text-green-700 min-w-[60px]">{item.time}</span>
-                          <span className="text-sm text-gray-700">{item.location}</span>
+                          <span className="text-sm font-bold text-slate-900 min-w-[60px]">{item.time}</span>
+                          <span className="text-sm text-slate-600">{item.location}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                   
-                  <div className="mt-4 pt-4 border-t border-green-300">
-                    <p className="text-xs text-gray-600 font-medium">
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-xs text-slate-600">
                       산행시간: {course.name === 'A조' ? '약 5시간' : '약 4.5시간'}
                     </p>
                   </div>
@@ -382,16 +353,16 @@ const Events = () => {
         )}
         
         {/* Progress Bar */}
-        <div className="mb-6">
-          <div className="flex justify-between text-base text-gray-600 mb-2">
-            <span className="font-medium">참가자 현황</span>
-            <span className="font-bold">
-              {Math.round((currentEvent.currentParticipants / currentEvent.maxParticipants) * 100)}% ({currentEvent.currentParticipants}/{currentEvent.maxParticipants}명)
+        <div className="mb-8">
+          <div className="flex justify-between text-slate-600 mb-2">
+            <span>참가자 현황</span>
+            <span className="font-bold text-slate-900">
+              {currentEvent.currentParticipants}/{currentEvent.maxParticipants}명
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-4">
+          <div className="w-full bg-slate-200 rounded-full h-2">
             <div 
-              className="bg-primary-600 h-4 rounded-full transition-all duration-300"
+              className="bg-slate-900 h-2 rounded-full transition-all duration-300"
               style={{ width: `${(currentEvent.currentParticipants / currentEvent.maxParticipants) * 100}%` }}
             />
           </div>
@@ -401,22 +372,20 @@ const Events = () => {
         <div className="flex flex-col md:flex-row gap-4">
           {isRegistered ? (
             <>
-              <button className="flex-1 px-8 py-4 bg-green-600 text-white rounded-lg font-bold text-xl flex items-center justify-center space-x-2 shadow-lg">
-                <CheckCircle className="h-6 w-6" />
-                <span>참석 신청 완료</span>
+              <button className="flex-1 px-8 py-4 bg-slate-900 text-white rounded-xl font-bold text-lg">
+                참석 신청 완료
               </button>
               <button 
                 onClick={handleCancel}
-                className="px-8 py-4 bg-gray-200 text-gray-700 rounded-lg font-bold text-xl hover:bg-gray-300 transition-colors flex items-center space-x-2"
+                className="px-8 py-4 border-2 border-slate-300 text-slate-700 rounded-xl font-bold text-lg hover:bg-slate-50 transition-colors"
               >
-                <XCircle className="h-6 w-6" />
-                <span>신청 취소</span>
+                신청 취소
               </button>
             </>
           ) : (
             <button 
               onClick={handleRegister}
-              className="flex-1 btn-primary text-xl py-4 shadow-lg"
+              className="flex-1 btn-primary text-lg py-4"
               disabled={currentEvent.currentParticipants >= currentEvent.maxParticipants}
             >
               {currentEvent.currentParticipants >= currentEvent.maxParticipants ? '정원 마감' : '참석 신청하기'}
@@ -426,10 +395,9 @@ const Events = () => {
           {/* View Participants Button */}
           <button 
             onClick={() => setShowParticipantsModal(true)}
-            className="px-8 py-4 bg-blue-600 text-white rounded-lg font-bold text-xl hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 shadow-lg"
+            className="px-8 py-4 border-2 border-slate-300 text-slate-900 rounded-xl font-bold text-lg hover:bg-slate-50 transition-colors"
           >
-            <UserCheck className="h-6 w-6" />
-            <span>참석자 명단 ({participants.length}명)</span>
+            참석자 명단 ({participants.length}명)
           </button>
         </div>
       </div>
@@ -445,53 +413,40 @@ const Events = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-green-50">
+            <div className="p-6 border-b">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <UserCheck className="h-8 w-8 text-primary-600" />
-                  <h3 className="text-2xl font-bold text-gray-900">참석자 명단</h3>
-                </div>
+                <h3 className="text-2xl font-bold text-slate-900">참석자 명단</h3>
                 <button 
                   onClick={() => setShowParticipantsModal(false)}
-                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 >
-                  <XCircle className="h-6 w-6 text-gray-600" />
+                  <XCircle className="h-6 w-6 text-slate-600" />
                 </button>
               </div>
               <div className="flex items-center space-x-4 mt-3 text-sm">
-                <span className="flex items-center space-x-1">
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                  <span className="text-gray-700 font-medium">참석 확정: {participants.filter(p => p.status === 'confirmed').length}명</span>
+                <span className="text-slate-600">
+                  참석 확정: <span className="font-bold">{participants.filter(p => p.status === 'confirmed').length}명</span>
                 </span>
-                <span className="flex items-center space-x-1">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                  <span className="text-gray-700 font-medium">대기: {participants.filter(p => p.status === 'pending').length}명</span>
+                <span className="text-slate-600">
+                  대기: <span className="font-bold">{participants.filter(p => p.status === 'pending').length}명</span>
                 </span>
               </div>
             </div>
             
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-200px)]">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {participants.map((participant, index) => (
                   <div 
                     key={participant.id} 
-                    className={`flex items-center space-x-3 p-3 rounded-lg ${
-                      participant.status === 'confirmed' 
-                        ? 'bg-green-50 hover:bg-green-100' 
-                        : 'bg-yellow-50 hover:bg-yellow-100'
-                    } transition-colors`}
+                    className="flex items-center space-x-3 p-3 border-b border-slate-100 last:border-0"
                   >
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-white text-sm ${
-                      participant.status === 'confirmed' ? 'bg-green-500' : 'bg-yellow-500'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <span className="flex-1 text-lg font-medium text-gray-900">{participant.name}</span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    <span className="text-sm text-slate-500 min-w-[24px]">{index + 1}</span>
+                    <span className="flex-1 font-medium text-slate-900">{participant.name}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
                       participant.status === 'confirmed' 
-                        ? 'bg-green-200 text-green-800' 
-                        : 'bg-yellow-200 text-yellow-800'
+                        ? 'bg-slate-100 text-slate-700' 
+                        : 'bg-amber-100 text-amber-700'
                     }`}>
                       {participant.status === 'confirmed' ? '확정' : '대기'}
                     </span>
@@ -501,10 +456,10 @@ const Events = () => {
             </div>
             
             {/* Modal Footer */}
-            <div className="p-6 border-t bg-gray-50">
+            <div className="p-6 border-t">
               <button 
                 onClick={() => setShowParticipantsModal(false)}
-                className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold text-lg hover:bg-gray-300 transition-colors"
+                className="w-full px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors"
               >
                 닫기
               </button>
@@ -514,43 +469,38 @@ const Events = () => {
       )}
       
       {/* Teams Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">이달의 참석자 조 편성</h2>
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">이달의 참석자 조 편성</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teams.map((team) => (
-            <div key={team.id} className="card bg-gradient-to-br from-white to-blue-50 border-2 border-blue-200">
+            <div key={team.id} className="card">
               {/* Team Header */}
-              <div className="flex items-center space-x-3 mb-4 pb-4 border-b-2 border-blue-200">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
+              <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-slate-200">
+                <div className="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center font-bold">
                   {team.name}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded">
-                      조장
-                    </span>
-                    <span className="font-bold text-gray-900 text-lg">{team.leaderName}</span>
+                    <span className="text-xs text-slate-600">조장</span>
+                    <span className="font-bold text-slate-900">{team.leaderName}</span>
                   </div>
-                  <p className="text-sm text-gray-600">{team.leaderOccupation}</p>
+                  <p className="text-sm text-slate-600">{team.leaderOccupation}</p>
                 </div>
               </div>
               
               {/* Team Members */}
               <div>
-                <p className="text-sm text-gray-600 font-bold mb-3">조원 ({team.members.length}명)</p>
+                <p className="text-sm text-slate-600 mb-3">조원 {team.members.length}명</p>
                 <div className="space-y-2">
                   {team.members.map((member, idx) => (
                     <div 
                       key={member.id} 
-                      className="flex items-center space-x-2 p-2 bg-white rounded-lg border border-gray-200 hover:border-primary-300 transition-colors"
+                      className="flex items-start space-x-2 py-2 border-b border-slate-100 last:border-0"
                     >
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold text-gray-600">
-                        {idx + 1}
-                      </div>
+                      <span className="text-xs text-slate-500 mt-0.5">{idx + 1}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 text-sm truncate">{member.name}</p>
-                        <p className="text-xs text-gray-600 truncate">{member.occupation}</p>
-                        <p className="text-xs text-gray-500 truncate">{member.company}</p>
+                        <p className="font-medium text-slate-900 text-sm">{member.name}</p>
+                        <p className="text-xs text-slate-600">{member.occupation} · {member.company}</p>
                       </div>
                     </div>
                   ))}
@@ -563,19 +513,13 @@ const Events = () => {
       
       {/* Past Events */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">지난 산행 기록</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">지난 산행 기록</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {pastEvents.map((event) => (
-            <div key={event.id} className="card hover:shadow-lg transition-shadow">
-              <div className="flex items-center space-x-2 mb-2">
-                <Calendar className="h-5 w-5 text-gray-500" />
-                <span className="text-gray-600">{event.date}</span>
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{event.title}</h3>
-              <div className="flex items-center space-x-2 text-gray-600">
-                <Users className="h-5 w-5" />
-                <span>{event.participants}명 참가</span>
-              </div>
+            <div key={event.id} className="card">
+              <div className="text-sm text-slate-600 mb-2">{event.date}</div>
+              <h3 className="font-bold text-slate-900 mb-2">{event.title}</h3>
+              <div className="text-sm text-slate-600">{event.participants}명 참가</div>
             </div>
           ))}
         </div>
@@ -592,103 +536,97 @@ const Events = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* 헤더 */}
-            <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-green-50">
+            <div className="p-6 border-b">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-8 w-8 text-green-500 fill-green-500" />
-                  <h3 className="text-2xl font-bold text-gray-900">신청 완료!</h3>
-                </div>
+                <h3 className="text-2xl font-bold text-slate-900">신청 완료</h3>
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 >
-                  <X className="h-6 w-6 text-gray-600" />
+                  <X className="h-6 w-6 text-slate-600" />
                 </button>
               </div>
-              <p className="text-gray-600 mt-2">
+              <p className="text-slate-600 mt-2">
                 {currentEvent.title} 산행 신청이 완료되었습니다.
               </p>
             </div>
 
             {/* 본문 */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
-                <p className="text-sm text-yellow-800 font-medium">
-                  ⚠️ 참가비를 입금해주셔야 최종 신청이 완료됩니다.
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-sm text-amber-900 font-medium">
+                  참가비를 입금해주셔야 최종 신청이 완료됩니다.
                 </p>
               </div>
               
               {/* 입금 정보 */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2 mb-4">
-                  <CreditCard className="h-6 w-6 text-primary-600" />
-                  <h4 className="text-xl font-bold text-gray-900">입금 정보</h4>
-                </div>
+                <h4 className="text-xl font-bold text-slate-900 mb-4">입금 정보</h4>
                 
                 {/* 참가비 */}
-                <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
-                  <p className="text-sm text-gray-600 mb-1">참가비</p>
-                  <p className="text-3xl font-bold text-primary-700">{currentEvent.cost}</p>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="text-sm text-slate-600 mb-1">참가비</p>
+                  <p className="text-3xl font-bold text-slate-900">{currentEvent.cost}</p>
                 </div>
                 
                 {/* 계좌 정보 */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600">은행명</p>
-                      <p className="text-lg font-bold text-gray-900">{currentEvent.paymentInfo.bankName}</p>
+                      <p className="text-sm text-slate-600">은행명</p>
+                      <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.bankName}</p>
                     </div>
                     <button
                       onClick={() => handleCopyToClipboard(currentEvent.paymentInfo.bankName, '은행명')}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                       title="복사"
                     >
-                      <Copy className="h-5 w-5 text-gray-600" />
+                      <Copy className="h-5 w-5 text-slate-600" />
                     </button>
                   </div>
                   
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600">계좌번호</p>
-                      <p className="text-lg font-bold text-gray-900">{currentEvent.paymentInfo.accountNumber}</p>
+                      <p className="text-sm text-slate-600">계좌번호</p>
+                      <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.accountNumber}</p>
                     </div>
                     <button
                       onClick={() => handleCopyToClipboard(currentEvent.paymentInfo.accountNumber, '계좌번호')}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                       title="복사"
                     >
-                      <Copy className="h-5 w-5 text-gray-600" />
+                      <Copy className="h-5 w-5 text-slate-600" />
                     </button>
                   </div>
                   
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600">예금주</p>
-                      <p className="text-lg font-bold text-gray-900">{currentEvent.paymentInfo.accountHolder}</p>
+                      <p className="text-sm text-slate-600">예금주</p>
+                      <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.accountHolder}</p>
                     </div>
                     <button
                       onClick={() => handleCopyToClipboard(currentEvent.paymentInfo.accountHolder, '예금주')}
-                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                       title="복사"
                     >
-                      <Copy className="h-5 w-5 text-gray-600" />
+                      <Copy className="h-5 w-5 text-slate-600" />
                     </button>
                   </div>
                 </div>
                 
                 {/* 담당자 정보 */}
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h5 className="text-sm font-bold text-blue-900 mb-3">담당자 문의</h5>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-blue-800">
-                      <UserCheck className="h-5 w-5" />
-                      <span className="font-medium">{currentEvent.paymentInfo.managerName}</span>
+                <div className="mt-6 p-4 border border-slate-200 rounded-xl">
+                  <h5 className="text-sm font-bold text-slate-900 mb-3">담당자 문의</h5>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">이름</span>
+                      <span className="font-medium text-slate-900">{currentEvent.paymentInfo.managerName}</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-blue-800">
-                      <Phone className="h-5 w-5" />
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">연락처</span>
                       <a 
                         href={`tel:${currentEvent.paymentInfo.managerPhone}`}
-                        className="hover:underline"
+                        className="font-medium text-slate-900 hover:underline"
                       >
                         {currentEvent.paymentInfo.managerPhone}
                       </a>
@@ -697,28 +635,28 @@ const Events = () => {
                 </div>
                 
                 {/* 입금 시 주의사항 */}
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h5 className="text-sm font-bold text-gray-900 mb-2">입금 시 주의사항</h5>
-                  <ul className="space-y-1 text-sm text-gray-700">
-                    <li>• 입금자명은 본인 이름으로 해주세요</li>
-                    <li>• 입금 확인 후 참석 확정됩니다</li>
-                    <li>• 문의사항은 담당자에게 연락주세요</li>
+                <div className="mt-4 p-4 bg-slate-50 rounded-xl">
+                  <h5 className="text-sm font-bold text-slate-900 mb-2">입금 시 주의사항</h5>
+                  <ul className="space-y-1 text-sm text-slate-600">
+                    <li>입금자명은 본인 이름으로 해주세요</li>
+                    <li>입금 확인 후 참석 확정됩니다</li>
+                    <li>문의사항은 담당자에게 연락주세요</li>
                   </ul>
                 </div>
                 
                 {copiedText && (
-                  <div className="fixed top-4 right-4 px-4 py-2 bg-green-500 text-white rounded-lg shadow-lg">
-                    ✓ {copiedText} 복사됨
+                  <div className="fixed top-4 right-4 px-4 py-2 bg-slate-900 text-white rounded-lg shadow-lg">
+                    {copiedText} 복사됨
                   </div>
                 )}
               </div>
             </div>
 
             {/* 푸터 */}
-            <div className="p-6 border-t bg-gray-50 flex space-x-3">
+            <div className="p-6 border-t flex space-x-3">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+                className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors"
               >
                 닫기
               </button>
@@ -727,10 +665,9 @@ const Events = () => {
                   setShowPaymentModal(false);
                   alert('입금 정보가 클립보드에 복사되었습니다.');
                 }}
-                className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
               >
-                <Copy className="h-5 w-5" />
-                <span>전체 정보 복사</span>
+                전체 정보 복사
               </button>
             </div>
           </div>

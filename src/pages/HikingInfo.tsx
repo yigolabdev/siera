@@ -246,8 +246,8 @@ const HikingInfo = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">등산 정보</h1>
-        <p className="text-xl text-gray-600">
+        <h1 className="text-4xl font-bold text-slate-900 mb-3">등산 정보</h1>
+        <p className="text-xl text-slate-600">
           안전하고 즐거운 산행을 위한 정보를 확인하세요.
         </p>
       </div>
@@ -256,12 +256,11 @@ const HikingInfo = () => {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
           {/* Today's Weather */}
-          <div className="card bg-gradient-to-r from-blue-50 to-sky-50">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">산행 당일 날씨</h2>
-              <div className="flex items-center space-x-2 px-3 py-1 bg-primary-600 text-white rounded-full text-sm font-bold">
-                <Calendar className="h-4 w-4" />
-                <span>2026년 1월 15일 (수)</span>
+          <div className="card">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">산행 당일 날씨</h2>
+              <div className="text-sm text-slate-600">
+                2026년 1월 15일 (수)
               </div>
             </div>
             
@@ -271,66 +270,45 @@ const HikingInfo = () => {
               </div>
             ) : weather ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="flex items-center space-x-3">
-                    <Thermometer className="h-8 w-8 text-red-500" />
-                    <div>
-                      <p className="text-gray-500 text-sm">기온</p>
-                      <p className="text-xl font-bold text-gray-900">{weather.temperature}°C</p>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+                  <div className="text-center">
+                    <p className="text-slate-600 text-sm mb-1">기온</p>
+                    <p className="text-3xl font-bold text-slate-900">{weather.temperature}°C</p>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Wind className="h-8 w-8 text-blue-500" />
-                    <div>
-                      <p className="text-gray-500 text-sm">풍속</p>
-                      <p className="text-xl font-bold text-gray-900">{weather.windSpeed}m/s</p>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-slate-600 text-sm mb-1">풍속</p>
+                    <p className="text-3xl font-bold text-slate-900">{weather.windSpeed}m/s</p>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Droplets className="h-8 w-8 text-blue-400" />
-                    <div>
-                      <p className="text-gray-500 text-sm">습도</p>
-                      <p className="text-xl font-bold text-gray-900">{weather.humidity}%</p>
-                    </div>
+                  <div className="text-center">
+                    <p className="text-slate-600 text-sm mb-1">습도</p>
+                    <p className="text-3xl font-bold text-slate-900">{weather.humidity}%</p>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Eye className="h-8 w-8 text-gray-500" />
+                  <div className="text-center">
+                    <p className="text-slate-600 text-sm mb-1">가시거리</p>
+                    <p className="text-3xl font-bold text-slate-900">{weather.visibility}km</p>
+                  </div>
+                </div>
+                <div className="pt-6 border-t border-slate-200">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-500 text-sm">가시거리</p>
-                      <p className="text-xl font-bold text-gray-900">{weather.visibility}km</p>
+                      <p className="text-sm text-slate-600 mb-1">현재 날씨</p>
+                      <p className="text-xl font-bold text-slate-900">{weather.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-slate-600 mb-1">체감 온도</p>
+                      <p className="text-xl font-bold text-slate-900">{weather.feelsLike}°C</p>
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-gradient-to-br from-blue-50 to-sky-50 rounded-xl">
-                        {getWeatherIcon(weather.icon)}
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-600 font-medium">현재 날씨</p>
-                        <p className="text-lg font-bold text-slate-900">{weather.description}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-slate-600 font-medium">체감 온도</p>
-                      <p className="text-lg font-bold text-slate-900">{weather.feelsLike}°C</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600">일출: {weather.sunrise}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">일몰: {weather.sunset}</p>
-                    </div>
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>일출: {weather.sunrise}</span>
+                    <span>일몰: {weather.sunset}</span>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-slate-500">
                 날씨 정보를 불러올 수 없습니다.
               </div>
             )}
@@ -338,33 +316,33 @@ const HikingInfo = () => {
           
           {/* Mountains Info */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">추천 산 정보</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">추천 산 정보</h2>
             <div className="grid grid-cols-1 gap-6">
               {mountains.map((mountain, index) => (
                 <div key={index} className="card">
-                  <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex flex-col md:flex-row gap-6">
                     <img 
                       src={mountain.imageUrl}
                       alt={mountain.name}
-                      className="w-full md:w-48 h-48 object-cover rounded-lg"
+                      className="w-full md:w-48 h-48 object-cover rounded-xl"
                     />
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-3">{mountain.name}</h3>
-                      <div className="grid grid-cols-3 gap-3 mb-3">
-                        <div className="text-center p-2 bg-gray-50 rounded">
-                          <p className="text-xs text-gray-500 mb-1">높이</p>
-                          <p className="font-bold text-gray-900">{mountain.altitude}</p>
+                      <h3 className="text-xl font-bold text-slate-900 mb-4">{mountain.name}</h3>
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="text-center">
+                          <p className="text-xs text-slate-600 mb-1">높이</p>
+                          <p className="font-bold text-slate-900">{mountain.altitude}</p>
                         </div>
-                        <div className="text-center p-2 bg-gray-50 rounded">
-                          <p className="text-xs text-gray-500 mb-1">난이도</p>
-                          <p className="font-bold text-gray-900">{mountain.difficulty}</p>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-600 mb-1">난이도</p>
+                          <p className="font-bold text-slate-900">{mountain.difficulty}</p>
                         </div>
-                        <div className="text-center p-2 bg-gray-50 rounded">
-                          <p className="text-xs text-gray-500 mb-1">소요시간</p>
-                          <p className="font-bold text-gray-900">{mountain.duration}</p>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-600 mb-1">소요시간</p>
+                          <p className="font-bold text-slate-900">{mountain.duration}</p>
                         </div>
                       </div>
-                      <p className="text-gray-700 leading-relaxed">{mountain.description}</p>
+                      <p className="text-slate-700 leading-relaxed">{mountain.description}</p>
                     </div>
                   </div>
                 </div>
@@ -374,19 +352,16 @@ const HikingInfo = () => {
           
           {/* Safety Tips */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">안전 수칙</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">안전 수칙</h2>
             <div className="grid grid-cols-1 gap-6">
               {safetyTips.map((section, index) => (
                 <div key={index} className="card">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <section.icon className="h-8 w-8 text-primary-600" />
-                    <h3 className="text-xl font-bold text-gray-900">{section.title}</h3>
-                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">{section.title}</h3>
                   <ul className="space-y-2">
                     {section.tips.map((tip, tipIndex) => (
                       <li key={tipIndex} className="flex items-start space-x-2">
-                        <span className="text-primary-600 mt-1">•</span>
-                        <span className="text-gray-700 text-base">{tip}</span>
+                        <span className="text-slate-400 mt-1">•</span>
+                        <span className="text-slate-700">{tip}</span>
                       </li>
                     ))}
                   </ul>
@@ -397,17 +372,17 @@ const HikingInfo = () => {
           
           {/* Equipment Checklist */}
           <div className="card">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">등산 장비 체크리스트</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">등산 장비 체크리스트</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {equipment.map((item, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div key={index} className="flex items-start space-x-3 p-3 border border-slate-200 rounded-xl">
                   <input 
                     type="checkbox" 
-                    className="mt-1 h-5 w-5 text-primary-600 rounded focus:ring-primary-500"
+                    className="mt-1 h-5 w-5 text-slate-900 rounded focus:ring-slate-500"
                   />
                   <div>
-                    <p className="font-bold text-gray-900 text-lg">{item.name}</p>
-                    <p className="text-gray-600">{item.description}</p>
+                    <p className="font-bold text-slate-900">{item.name}</p>
+                    <p className="text-slate-600 text-sm">{item.description}</p>
                   </div>
                 </div>
               ))}
@@ -419,26 +394,20 @@ const HikingInfo = () => {
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-6">
             {/* Weekly Weather */}
-            <div className="card bg-gradient-to-br from-sky-50 to-blue-50">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <Cloud className="h-6 w-6 text-blue-600" />
-                <span>7일 예보</span>
-              </h2>
+            <div className="card">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">7일 예보</h2>
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {forecast.map((day, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
+                    <div key={index} className="flex items-center justify-between p-3 border-b border-slate-100 last:border-0">
                       <div className="flex items-center space-x-3">
                         <div className="text-center min-w-[40px]">
                           <p className="text-sm font-bold text-slate-900">{day.day}</p>
                           <p className="text-xs text-slate-500">{day.date}</p>
-                        </div>
-                        <div className="p-1.5 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg">
-                          {getWeatherIcon(day.icon)}
                         </div>
                       </div>
                       <div className="text-right">
@@ -449,68 +418,61 @@ const HikingInfo = () => {
                   ))}
                 </div>
               )}
-              <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>안내:</strong> 날씨는 산행 당일 변경될 수 있으니 출발 전 반드시 재확인하세요.
+              <div className="mt-4 p-3 bg-slate-50 rounded-xl">
+                <p className="text-sm text-slate-600">
+                  날씨는 산행 당일 변경될 수 있으니 출발 전 반드시 재확인하세요.
                 </p>
               </div>
             </div>
             
             {/* Payment Info */}
-            <div className="card bg-gradient-to-br from-primary-50 to-green-50">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <CreditCard className="h-6 w-6 text-primary-600" />
-                <span>입금 정보</span>
-              </h2>
+            <div className="card">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">입금 정보</h2>
               
               <div className="space-y-4 mb-6">
                 {payments.map((payment) => (
-                  <div key={payment.id} className="p-4 bg-white rounded-lg border">
+                  <div key={payment.id} className="p-4 border border-slate-200 rounded-xl">
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-gray-900 text-base">{payment.title}</h3>
+                      <h3 className="font-bold text-slate-900 text-base">{payment.title}</h3>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
                         payment.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-slate-100 text-slate-700'
+                          : 'bg-amber-100 text-amber-700'
                       }`}>
                         {payment.status === 'completed' ? '완료' : '대기'}
                       </span>
                     </div>
-                    <div className="space-y-1 text-gray-700">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-base font-bold">₩</span>
-                        <span className="text-base font-bold text-primary-600">{payment.amount}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <Calendar className="h-4 w-4" />
-                        <span>납부기한: {payment.dueDate}</span>
+                    <div className="space-y-1">
+                      <div className="text-xl font-bold text-slate-900">{payment.amount}</div>
+                      <div className="text-sm text-slate-600">
+                        납부기한: {payment.dueDate}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
               
-              <div className="border-t pt-4">
-                <h3 className="font-bold text-gray-900 mb-3">계좌 정보</h3>
-                <div className="space-y-2 text-gray-700 text-sm">
+              <div className="border-t border-slate-200 pt-4">
+                <h3 className="font-bold text-slate-900 mb-3">계좌 정보</h3>
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="font-medium">은행</span>
-                    <span>국민은행</span>
+                    <span className="text-slate-600">은행</span>
+                    <span className="font-medium text-slate-900">국민은행</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-medium">계좌번호</span>
-                    <span>123-456-789012</span>
+                    <span className="text-slate-600">계좌번호</span>
+                    <span className="font-medium text-slate-900">123-456-789012</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-medium">예금주</span>
-                    <span>시애라</span>
+                    <span className="text-slate-600">예금주</span>
+                    <span className="font-medium text-slate-900">시애라</span>
                   </div>
                 </div>
               </div>
               
-              <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-xs text-yellow-800">
-                  <strong>입금 시 주의:</strong> 입금자명에 회원님의 성함을 정확히 기재해주세요.
+              <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                <p className="text-xs text-amber-900">
+                  입금자명에 회원님의 성함을 정확히 기재해주세요.
                 </p>
               </div>
             </div>
@@ -522,4 +484,6 @@ const HikingInfo = () => {
 };
 
 export default HikingInfo;
+
+
 

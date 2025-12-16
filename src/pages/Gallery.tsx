@@ -238,67 +238,51 @@ const Gallery = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">사진 갤러리</h1>
-          <p className="text-xl text-gray-600">
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">사진 갤러리</h1>
+          <p className="text-xl text-slate-600">
             함께한 산행의 추억을 공유해주세요.
           </p>
         </div>
         <button 
           onClick={() => setShowUploadModal(true)} 
-          className="btn-primary flex items-center space-x-2"
+          className="btn-primary"
         >
-          <Upload className="h-5 w-5" />
-          <span>사진 업로드</span>
+          사진 업로드
         </button>
       </div>
       
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="card">
-          <div className="flex items-center space-x-4">
-            <ImageIcon className="h-10 w-10 text-blue-600" />
-            <div>
-              <p className="text-gray-500 font-medium">전체 사진</p>
-              <p className="text-3xl font-bold text-gray-900">{photos.length}장</p>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="card text-center">
+          <p className="text-slate-600 text-sm mb-2">전체 사진</p>
+          <p className="text-3xl font-bold text-slate-900">{photos.length}장</p>
         </div>
-        <div className="card">
-          <div className="flex items-center space-x-4">
-            <Calendar className="h-10 w-10 text-green-600" />
-            <div>
-              <p className="text-gray-500 font-medium">정기 산행</p>
-              <p className="text-3xl font-bold text-gray-900">매월 1회</p>
-            </div>
-          </div>
+        <div className="card text-center">
+          <p className="text-slate-600 text-sm mb-2">정기 산행</p>
+          <p className="text-3xl font-bold text-slate-900">매월 1회</p>
         </div>
-        <div className="card">
-          <div className="flex items-center space-x-4">
-            <Heart className="h-10 w-10 text-red-600" />
-            <div>
-              <p className="text-gray-500 font-medium">총 좋아요</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {photos.reduce((sum, photo) => sum + photo.likes, 0)}
-              </p>
-            </div>
-          </div>
+        <div className="card text-center">
+          <p className="text-slate-600 text-sm mb-2">총 좋아요</p>
+          <p className="text-3xl font-bold text-slate-900">
+            {photos.reduce((sum, photo) => sum + photo.likes, 0)}
+          </p>
         </div>
       </div>
       
       {/* Filter & View Mode */}
-      <div className="mb-6 space-y-4">
+      <div className="mb-8 space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-3">월별 보기</h3>
+            <h3 className="text-sm text-slate-600 mb-3">월별 보기</h3>
             <div className="flex flex-wrap gap-2">
               {months.map((month) => (
                 <button
                   key={month.id}
                   onClick={() => setSelectedEvent(month.id)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-base ${
+                  className={`px-4 py-2 rounded-xl font-medium transition-colors ${
                     selectedEvent === month.id
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      ? 'bg-slate-900 text-white'
+                      : 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   {month.name}
@@ -308,13 +292,13 @@ const Gallery = () => {
           </div>
           
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 font-medium">레이아웃:</span>
+            <span className="text-sm text-slate-600">레이아웃</span>
             <button
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-lg transition-colors ${
                 viewMode === 'grid'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white'
+                  : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
               }`}
               title="그리드 뷰"
             >
@@ -324,8 +308,8 @@ const Gallery = () => {
               onClick={() => setViewMode('masonry')}
               className={`p-2 rounded-lg transition-colors ${
                 viewMode === 'masonry'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white'
+                  : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
               }`}
               title="메이슨리 뷰"
             >
@@ -348,7 +332,7 @@ const Gallery = () => {
           return (
             <div 
               key={photo.id} 
-              className="group relative overflow-hidden rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 bg-white cursor-pointer"
+              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-300 transition-colors"
               onClick={() => setSelectedImage(index)}
               style={viewMode === 'masonry' ? { 
                 gridRowEnd: `span ${Math.floor(Math.random() * 2) + 1}` 
@@ -358,33 +342,15 @@ const Gallery = () => {
                 <img 
                   src={photo.url} 
                   alt={photo.caption}
-                  className={`w-full object-cover transition-transform duration-500 group-hover:scale-110 ${
+                  className={`w-full object-cover ${
                     viewMode === 'grid' ? 'h-64' : 'h-auto'
                   }`}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-white font-bold text-lg mb-1">{photo.caption}</p>
-                    <p className="text-gray-200 text-sm">{photo.author}</p>
-                  </div>
-                  <div className="absolute top-4 right-4 flex space-x-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(photo.url, photo.caption);
-                      }}
-                      className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
-                      title="다운로드"
-                    >
-                      <Download className="h-5 w-5 text-gray-700" />
-                    </button>
-                  </div>
-                </div>
               </div>
               <div className="p-4">
-                <p className="text-primary-600 text-xs font-bold mb-1">{photo.eventTitle}</p>
-                <h3 className="font-bold text-gray-900 mb-1 line-clamp-1">{photo.caption}</h3>
-                <p className="text-gray-500 text-sm mb-3">{photo.author} · {photo.date}</p>
+                <p className="text-primary-600 text-xs mb-1">{photo.eventTitle}</p>
+                <h3 className="font-bold text-slate-900 mb-1 line-clamp-1">{photo.caption}</h3>
+                <p className="text-slate-500 text-sm mb-3">{photo.author} · {photo.date}</p>
                 <div className="flex items-center justify-between">
                   <button 
                     onClick={(e) => handleLike(photo.id, e)}
@@ -394,14 +360,14 @@ const Gallery = () => {
                       className={`h-5 w-5 transition-all ${
                         isLiked 
                           ? 'fill-red-500 text-red-500' 
-                          : 'text-gray-400 hover:text-red-500'
+                          : 'text-slate-400 hover:text-red-500'
                       }`}
                     />
-                    <span className={`font-medium text-sm ${isLiked ? 'text-red-500' : 'text-gray-600'}`}>
+                    <span className={`text-sm ${isLiked ? 'text-red-500 font-bold' : 'text-slate-600'}`}>
                       {displayLikes}
                     </span>
                   </button>
-                  <span className="text-xs text-gray-400">{index + 1} / {filteredPhotos.length}</span>
+                  <span className="text-xs text-slate-400">{index + 1} / {filteredPhotos.length}</span>
                 </div>
               </div>
             </div>
@@ -411,8 +377,7 @@ const Gallery = () => {
       
       {filteredPhotos.length === 0 && (
         <div className="text-center py-16">
-          <ImageIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-xl text-gray-500">선택한 기간에 사진이 없습니다.</p>
+          <p className="text-xl text-slate-500">선택한 기간에 사진이 없습니다.</p>
         </div>
       )}
       
@@ -621,18 +586,18 @@ const Gallery = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* 헤더 */}
-            <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-green-50 flex justify-between items-center">
+            <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-2xl font-bold text-gray-900">사진 업로드</h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <h3 className="text-2xl font-bold text-slate-900">사진 업로드</h3>
+                <p className="text-sm text-slate-600 mt-1">
                   여러 장의 사진을 선택하거나 드래그하여 업로드하세요
                 </p>
               </div>
               <button
                 onClick={handleCloseUploadModal}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X className="h-6 w-6 text-gray-600" />
+                <X className="h-6 w-6 text-slate-600" />
               </button>
             </div>
 
@@ -646,28 +611,24 @@ const Gallery = () => {
                 onDrop={handleDrop}
                 className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${
                   isDragging
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
+                    ? 'border-slate-900 bg-slate-50'
+                    : 'border-slate-300 hover:border-slate-400'
                 }`}
               >
-                <Upload className={`h-16 w-16 mx-auto mb-4 ${
-                  isDragging ? 'text-primary-600' : 'text-gray-400'
-                }`} />
-                <h4 className="text-xl font-bold text-gray-900 mb-2">
+                <h4 className="text-xl font-bold text-slate-900 mb-2">
                   사진을 여기에 드래그하세요
                 </h4>
-                <p className="text-gray-600 mb-4">
+                <p className="text-slate-600 mb-4">
                   또는 클릭하여 파일을 선택하세요
                 </p>
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex flex-col items-center space-y-3">
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="btn-primary flex items-center space-x-2"
+                    className="btn-primary"
                   >
-                    <Folder className="h-5 w-5" />
-                    <span>파일 선택</span>
+                    파일 선택
                   </button>
-                  <span className="text-gray-500">JPG, PNG, GIF (최대 10MB)</span>
+                  <span className="text-slate-500 text-sm">JPG, PNG, GIF (최대 10MB)</span>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -682,9 +643,8 @@ const Gallery = () => {
               {/* 업로드된 파일 미리보기 */}
               {uploadFiles.length > 0 && (
                 <div className="mt-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                    <ImageIcon className="h-5 w-5 text-primary-600" />
-                    <span>선택된 사진 ({uploadFiles.length}개)</span>
+                  <h4 className="text-lg font-bold text-slate-900 mb-4">
+                    선택된 사진 ({uploadFiles.length}개)
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {uploadFiles.map((uploadFile) => (
@@ -730,11 +690,11 @@ const Gallery = () => {
             </div>
 
             {/* 푸터 */}
-            <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
-              <div className="text-sm text-gray-600">
+            <div className="p-6 border-t flex justify-between items-center">
+              <div className="text-sm text-slate-600">
                 {uploadFiles.length > 0 ? (
-                  <span className="font-medium text-primary-600">
-                    {uploadFiles.length}개의 사진이 업로드 대기 중입니다
+                  <span className="font-medium">
+                    {uploadFiles.length}개의 사진이 업로드 대기 중
                   </span>
                 ) : (
                   <span>사진을 선택해주세요</span>
@@ -743,21 +703,20 @@ const Gallery = () => {
               <div className="flex space-x-3">
                 <button
                   onClick={handleCloseUploadModal}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+                  className="px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleUploadSubmit}
                   disabled={uploadFiles.length === 0}
-                  className={`px-6 py-3 rounded-lg font-bold transition-colors flex items-center space-x-2 ${
+                  className={`px-6 py-3 rounded-xl font-bold transition-colors ${
                     uploadFiles.length === 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-primary-600 text-white hover:bg-primary-700'
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                      : 'bg-slate-900 text-white hover:bg-slate-800'
                   }`}
                 >
-                  <Upload className="h-5 w-5" />
-                  <span>업로드 ({uploadFiles.length})</span>
+                  업로드 ({uploadFiles.length})
                 </button>
               </div>
             </div>

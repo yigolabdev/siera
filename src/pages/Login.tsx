@@ -73,31 +73,29 @@ const Login = () => {
           alt="Mountain"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
           <div className="text-center text-white px-8">
-            <Mountain className="h-20 w-20 mx-auto mb-6 text-primary-400" />
-            <h1 className="text-5xl font-bold mb-4">시애라</h1>
-            <p className="text-xl text-gray-400 italic">시애라 문구 삽입 예정</p>
+            <h1 className="text-6xl font-bold mb-4 tracking-tight">시애라</h1>
+            <p className="text-xl text-white/80">시애라 문구 삽입 예정</p>
           </div>
         </div>
       </div>
       
       {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
-            <Mountain className="h-16 w-16 mx-auto mb-4 text-primary-600" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">시애라</h1>
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">시애라</h1>
           </div>
           
           {/* Form Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="bg-white rounded-2xl border border-slate-200 p-8">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="text-3xl font-bold text-slate-900 mb-2">
                 {isLogin ? '로그인' : '회원가입'}
               </h2>
-              <p className="text-gray-600 text-lg">
+              <p className="text-slate-600">
                 {isLogin ? '시애라에 오신 것을 환영합니다' : '회원 승인 후 이용 가능합니다'}
               </p>
             </div>
@@ -106,7 +104,7 @@ const Login = () => {
               {!isLogin && (
                 <>
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2 text-base">
+                    <label className="block text-slate-700 font-medium mb-2">
                       이름
                     </label>
                     <input
@@ -121,7 +119,7 @@ const Login = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2 text-base">
+                    <label className="block text-slate-700 font-medium mb-2">
                       전화번호
                     </label>
                     <input
@@ -136,7 +134,7 @@ const Login = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2 text-base">
+                    <label className="block text-slate-700 font-medium mb-2">
                       직업
                     </label>
                     <input
@@ -151,7 +149,7 @@ const Login = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2 text-base">
+                    <label className="block text-slate-700 font-medium mb-2">
                       회사/기관
                     </label>
                     <input
@@ -168,39 +166,33 @@ const Login = () => {
               )}
               
               <div>
-                <label className="block text-gray-700 font-medium mb-2 text-base">
+                <label className="block text-slate-700 font-medium mb-2">
                   이메일
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="input-field pl-10"
-                    placeholder="example@email.com"
-                    required
-                  />
-                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="input-field"
+                  placeholder="example@email.com"
+                  required
+                />
               </div>
               
               <div>
-                <label className="block text-gray-700 font-medium mb-2 text-base">
+                <label className="block text-slate-700 font-medium mb-2">
                   비밀번호
                 </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="input-field pl-10"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="input-field"
+                  placeholder="••••••••"
+                  required
+                />
               </div>
               
               {isLogin && (
@@ -210,34 +202,24 @@ const Login = () => {
                     id="rememberMe"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2 cursor-pointer"
+                    className="w-4 h-4 text-slate-900 bg-slate-100 border-slate-300 rounded focus:ring-slate-500 focus:ring-2 cursor-pointer"
                   />
-                  <label htmlFor="rememberMe" className="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
+                  <label htmlFor="rememberMe" className="ml-2 text-sm font-medium text-slate-700 cursor-pointer">
                     로그인 정보 저장
                   </label>
                 </div>
               )}
               
               {!isLogin && (
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <p className="text-sm text-yellow-800">
-                    <strong>안내:</strong> 회원가입 신청 후 관리자 승인이 필요합니다. 
-                    승인 완료 시 이메일로 안내드립니다.
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <p className="text-sm text-amber-900">
+                    회원가입 신청 후 관리자 승인이 필요합니다. 승인 완료 시 이메일로 안내드립니다.
                   </p>
                 </div>
               )}
               
-              <button type="submit" className="btn-primary w-full flex items-center justify-center space-x-2">
-                {isLogin ? (
-                  <>
-                    <span>로그인</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-5 w-5" />
-                    <span>가입 신청</span>
-                  </>
-                )}
+              <button type="submit" className="btn-primary w-full">
+                {isLogin ? '로그인' : '가입 신청'}
               </button>
             </form>
             
@@ -245,7 +227,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-primary-600 hover:text-primary-700 font-medium text-base block w-full"
+                className="text-slate-600 hover:text-slate-900 font-medium block w-full"
               >
                 {isLogin ? '회원가입 하기' : '로그인으로 돌아가기'}
               </button>
@@ -254,23 +236,22 @@ const Login = () => {
                 <>
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300"></div>
+                      <div className="w-full border-t border-slate-300"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-gray-500">또는</span>
+                      <span className="px-2 bg-white text-slate-500">또는</span>
                     </div>
                   </div>
                   
                   <Link
                     to="/guest-application"
-                    className="btn-secondary w-full flex items-center justify-center space-x-2"
+                    className="btn-secondary w-full"
                   >
-                    <Users className="h-5 w-5" />
-                    <span>게스트로 산행 신청하기</span>
+                    게스트로 산행 신청하기
                   </Link>
                   
                   <div className="mt-4 text-center">
-                    <a href="#" className="text-gray-600 hover:text-gray-900 text-sm">
+                    <a href="#" className="text-slate-600 hover:text-slate-900 text-sm">
                       비밀번호를 잊으셨나요?
                     </a>
                   </div>
@@ -281,9 +262,9 @@ const Login = () => {
           
           {/* Development Quick Login - Only show in login mode */}
           {isLogin && (
-            <div className="mt-8 p-4 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
-              <p className="text-xs text-gray-600 mb-3 text-center font-medium">
-                🔧 개발용 임시 로그인
+            <div className="mt-8 p-4 bg-slate-100 rounded-xl border border-slate-300">
+              <p className="text-xs text-slate-600 mb-3 text-center font-medium">
+                개발용 임시 로그인
               </p>
               <div className="flex gap-2">
                 <button
@@ -292,7 +273,7 @@ const Login = () => {
                     const success = await login('admin@siera.com', 'admin123');
                     if (success) navigate('/');
                   }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors"
                 >
                   관리자 로그인
                 </button>
@@ -302,7 +283,7 @@ const Login = () => {
                     const success = await login('test@example.com', 'test123');
                     if (success) navigate('/');
                   }}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                  className="flex-1 px-4 py-2 border-2 border-slate-300 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
                 >
                   일반회원 로그인
                 </button>
@@ -310,7 +291,7 @@ const Login = () => {
             </div>
           )}
           
-          <p className="text-center text-gray-500 mt-8 text-sm">
+          <p className="text-center text-slate-500 mt-8 text-sm">
             &copy; 2026 시애라. All rights reserved.
           </p>
         </div>

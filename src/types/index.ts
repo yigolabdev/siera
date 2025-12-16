@@ -42,6 +42,14 @@ export interface Course {
   schedule: ScheduleItem[];
 }
 
+export interface PaymentInfo {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  managerName: string;
+  managerPhone: string;
+}
+
 export interface HikingEvent {
   id: string;
   title: string;
@@ -58,6 +66,7 @@ export interface HikingEvent {
   schedule: ScheduleItem[];
   courses?: Course[];
   teams?: Team[];
+  paymentInfo?: PaymentInfo;
 }
 
 // ==================== Team Types ====================

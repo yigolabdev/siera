@@ -1,7 +1,12 @@
-import { Calendar, MapPin, Users, TrendingUp, CheckCircle, XCircle, Clock, Navigation, UserCheck, Phone, Mail } from 'lucide-react';
+import { Calendar, MapPin, Users, TrendingUp, CheckCircle, XCircle, Clock, Navigation, UserCheck, Phone, Mail, CreditCard, Copy, X } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Events = () => {
+  const { user } = useAuth();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [copiedText, setCopiedText] = useState('');
+  
   // 한 달에 한 번 정기 산행 - 현재 예정된 산행
   const currentEvent = {
     id: '1',
@@ -17,6 +22,13 @@ const Events = () => {
     cost: '60,000원',
     imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop',
     isRegistered: false,
+    paymentInfo: {
+      bankName: '국민은행',
+      accountNumber: '123-456-789012',
+      accountHolder: '시애라',
+      managerName: '김산행',
+      managerPhone: '010-1234-5678',
+    },
     schedule: [
       { time: '07:15', location: '종합운동장역 6번 출구 앞 집결 및 출발', type: 'departure' },
       { time: '08:30-13:30', location: '산행코스 (A조)', type: 'stop' },
@@ -185,7 +197,13 @@ const Events = () => {
   const handleRegister = () => {
     // TODO: 실제 등록 로직
     setIsRegistered(true);
-    alert('산행 신청이 완료되었습니다!');
+    setShowPaymentModal(true);
+  };
+  
+  const handleCopyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(label);
+    setTimeout(() => setCopiedText(''), 2000);
   };
   
   const handleCancel = () => {
@@ -562,6 +580,162 @@ const Events = () => {
           ))}
         </div>
       </div>
+      
+      {/* 입금 정보 모달 */}
+      {showPaymentModal && currentEvent.paymentInfo && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPaymentModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 헤더 */}
+            <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-green-50">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-8 w-8 text-green-500 fill-green-500" />
+                  <h3 className="text-2xl font-bold text-gray-900">신청 완료!</h3>
+                </div>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <X className="h-6 w-6 text-gray-600" />
+                </button>
+              </div>
+              <p className="text-gray-600 mt-2">
+                {currentEvent.title} 산행 신청이 완료되었습니다.
+              </p>
+            </div>
+
+            {/* 본문 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
+                <p className="text-sm text-yellow-800 font-medium">
+                  ⚠️ 참가비를 입금해주셔야 최종 신청이 완료됩니다.
+                </p>
+              </div>
+              
+              {/* 입금 정보 */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <CreditCard className="h-6 w-6 text-primary-600" />
+                  <h4 className="text-xl font-bold text-gray-900">입금 정보</h4>
+                </div>
+                
+                {/* 참가비 */}
+                <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                  <p className="text-sm text-gray-600 mb-1">참가비</p>
+                  <p className="text-3xl font-bold text-primary-700">{currentEvent.cost}</p>
+                </div>
+                
+                {/* 계좌 정보 */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600">은행명</p>
+                      <p className="text-lg font-bold text-gray-900">{currentEvent.paymentInfo.bankName}</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopyToClipboard(currentEvent.paymentInfo.bankName, '은행명')}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      title="복사"
+                    >
+                      <Copy className="h-5 w-5 text-gray-600" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600">계좌번호</p>
+                      <p className="text-lg font-bold text-gray-900">{currentEvent.paymentInfo.accountNumber}</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopyToClipboard(currentEvent.paymentInfo.accountNumber, '계좌번호')}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      title="복사"
+                    >
+                      <Copy className="h-5 w-5 text-gray-600" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600">예금주</p>
+                      <p className="text-lg font-bold text-gray-900">{currentEvent.paymentInfo.accountHolder}</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopyToClipboard(currentEvent.paymentInfo.accountHolder, '예금주')}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      title="복사"
+                    >
+                      <Copy className="h-5 w-5 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* 담당자 정보 */}
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h5 className="text-sm font-bold text-blue-900 mb-3">담당자 문의</h5>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 text-blue-800">
+                      <UserCheck className="h-5 w-5" />
+                      <span className="font-medium">{currentEvent.paymentInfo.managerName}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-blue-800">
+                      <Phone className="h-5 w-5" />
+                      <a 
+                        href={`tel:${currentEvent.paymentInfo.managerPhone}`}
+                        className="hover:underline"
+                      >
+                        {currentEvent.paymentInfo.managerPhone}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 입금 시 주의사항 */}
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h5 className="text-sm font-bold text-gray-900 mb-2">입금 시 주의사항</h5>
+                  <ul className="space-y-1 text-sm text-gray-700">
+                    <li>• 입금자명은 본인 이름으로 해주세요</li>
+                    <li>• 입금 확인 후 참석 확정됩니다</li>
+                    <li>• 문의사항은 담당자에게 연락주세요</li>
+                  </ul>
+                </div>
+                
+                {copiedText && (
+                  <div className="fixed top-4 right-4 px-4 py-2 bg-green-500 text-white rounded-lg shadow-lg">
+                    ✓ {copiedText} 복사됨
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 푸터 */}
+            <div className="p-6 border-t bg-gray-50 flex space-x-3">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+              >
+                닫기
+              </button>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  alert('입금 정보가 클립보드에 복사되었습니다.');
+                }}
+                className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <Copy className="h-5 w-5" />
+                <span>전체 정보 복사</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

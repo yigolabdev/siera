@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Calendar, MapPin, Users, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, MapPin, Users, Save, X, CreditCard, Phone } from 'lucide-react';
+
+interface PaymentInfo {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  managerName: string;
+  managerPhone: string;
+}
 
 interface Event {
   id: string;
@@ -14,6 +22,7 @@ interface Event {
   cost: string;
   schedule: ScheduleItem[];
   courses?: Course[];
+  paymentInfo?: PaymentInfo;
 }
 
 interface ScheduleItem {
@@ -70,6 +79,13 @@ const EventManagement = () => {
       { time: '', location: '', type: 'arrival' },
     ],
     courses: [],
+    paymentInfo: {
+      bankName: '',
+      accountNumber: '',
+      accountHolder: '',
+      managerName: '',
+      managerPhone: '',
+    },
   });
 
   const handleEdit = (event: Event) => {
@@ -574,6 +590,110 @@ const EventManagement = () => {
                   <p className="text-gray-500">코스가 없습니다. 코스를 추가해주세요.</p>
                 </div>
               )}
+            </div>
+
+            {/* 입금 정보 */}
+            <div className="border-t pt-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <CreditCard className="h-6 w-6 text-primary-600" />
+                <h3 className="text-xl font-bold text-gray-900">입금 정보</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    은행명 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.paymentInfo?.bankName || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        paymentInfo: { ...formData.paymentInfo!, bankName: e.target.value },
+                      })
+                    }
+                    className="input-field"
+                    placeholder="국민은행"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    계좌번호 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.paymentInfo?.accountNumber || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        paymentInfo: { ...formData.paymentInfo!, accountNumber: e.target.value },
+                      })
+                    }
+                    className="input-field"
+                    placeholder="123-456-789012"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    예금주 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.paymentInfo?.accountHolder || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        paymentInfo: { ...formData.paymentInfo!, accountHolder: e.target.value },
+                      })
+                    }
+                    className="input-field"
+                    placeholder="시애라"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    담당자 이름 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.paymentInfo?.managerName || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        paymentInfo: { ...formData.paymentInfo!, managerName: e.target.value },
+                      })
+                    }
+                    className="input-field"
+                    placeholder="김산행"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    담당자 연락처 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={formData.paymentInfo?.managerPhone || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          paymentInfo: { ...formData.paymentInfo!, managerPhone: e.target.value },
+                        })
+                      }
+                      className="input-field pl-10"
+                      placeholder="010-1234-5678"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-900">
+                  <strong>안내:</strong> 참석자들은 산행 신청 후 이 입금 정보를 확인할 수 있습니다. 
+                  정확한 정보를 입력해주세요.
+                </p>
+              </div>
             </div>
 
             <div className="flex space-x-4 pt-4">

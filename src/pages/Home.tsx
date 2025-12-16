@@ -1,8 +1,16 @@
-import { Calendar, Image, Users, TrendingUp, Bell, MapPin, Mountain } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, Image, Users, TrendingUp, Bell, MapPin, Mountain, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home = () => {
+  const { user } = useAuth();
+  
+  // 참석 여부 상태 (실제로는 백엔드에서 가져와야 함)
+  const [myParticipationStatus, setMyParticipationStatus] = useState<'attending' | 'not-attending' | 'pending' | null>('attending');
+  
   const upcomingEvent = {
+    id: '1',
     title: '앙봉산 정상 등반',
     mountain: '앙봉산',
     altitude: '737.2m',
@@ -144,6 +152,32 @@ const Home = () => {
                   />
                 </div>
               </div>
+              
+              {/* 내 참석 여부 */}
+              {user && myParticipationStatus && (
+                <div className="mb-4 p-4 rounded-lg border-2 bg-white">
+                  <p className="text-sm text-gray-600 mb-2 font-medium">내 참석 여부</p>
+                  {myParticipationStatus === 'attending' && (
+                    <div className="flex items-center space-x-2 text-green-700">
+                      <CheckCircle className="h-6 w-6 fill-green-500" />
+                      <span className="text-lg font-bold">참석 신청 완료</span>
+                    </div>
+                  )}
+                  {myParticipationStatus === 'pending' && (
+                    <div className="flex items-center space-x-2 text-yellow-700">
+                      <Clock className="h-6 w-6" />
+                      <span className="text-lg font-bold">승인 대기 중</span>
+                    </div>
+                  )}
+                  {myParticipationStatus === 'not-attending' && (
+                    <div className="flex items-center space-x-2 text-gray-600">
+                      <XCircle className="h-6 w-6" />
+                      <span className="text-lg font-bold">불참</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <Link to="/events" className="btn-primary w-full block text-center">
                 자세히 보기 및 신청하기
               </Link>

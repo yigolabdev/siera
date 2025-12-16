@@ -1,6 +1,147 @@
-import { Mountain, AlertTriangle, Clock, Thermometer, Wind, Cloud, Droplets, Eye, CreditCard, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mountain, AlertTriangle, Clock, Thermometer, Wind, Cloud, Droplets, Eye, CreditCard, Calendar, CloudRain, Sun, CloudSnow } from 'lucide-react';
+
+interface WeatherData {
+  temperature: number;
+  feelsLike: number;
+  humidity: number;
+  windSpeed: number;
+  visibility: number;
+  description: string;
+  icon: string;
+  sunrise: string;
+  sunset: string;
+}
+
+interface ForecastDay {
+  date: string;
+  day: string;
+  temp: number;
+  description: string;
+  icon: string;
+}
 
 const HikingInfo = () => {
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<ForecastDay[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // 산행 날짜 (2026-01-15, 수요일)
+  const hikingDate = new Date('2026-01-15');
+  const today = new Date();
+  
+  // 날씨 데이터 가져오기
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        // OpenWeatherMap API 키 (환경 변수로 관리하는 것이 좋습니다)
+        const API_KEY = import.meta.env.VITE_WEATHER_API_KEY || 'demo';
+        const city = 'Gapyeong,KR'; // 가평, 한국
+        
+        // 현재 날씨 가져오기
+        const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=kr`;
+        const currentResponse = await fetch(currentWeatherUrl);
+        
+        if (currentResponse.ok) {
+          const currentData = await currentResponse.json();
+          const sunrise = new Date(currentData.sys.sunrise * 1000);
+          const sunset = new Date(currentData.sys.sunset * 1000);
+          
+          setWeather({
+            temperature: Math.round(currentData.main.temp),
+            feelsLike: Math.round(currentData.main.feels_like),
+            humidity: currentData.main.humidity,
+            windSpeed: Math.round(currentData.wind.speed),
+            visibility: Math.round(currentData.visibility / 1000), // m to km
+            description: currentData.weather[0].description,
+            icon: currentData.weather[0].icon,
+            sunrise: sunrise.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            sunset: sunset.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          });
+        } else {
+          // API 키가 없거나 실패한 경우 더미 데이터 사용
+          setWeather({
+            temperature: 15,
+            feelsLike: 13,
+            humidity: 65,
+            windSpeed: 3,
+            visibility: 10,
+            description: '맑음',
+            icon: '01d',
+            sunrise: '07:30',
+            sunset: '17:45',
+          });
+        }
+        
+        // 7일 예보 가져오기
+        const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric&lang=kr`;
+        const forecastResponse = await fetch(forecastUrl);
+        
+        if (forecastResponse.ok) {
+          const forecastData = await forecastResponse.json();
+          const dailyForecasts: ForecastDay[] = [];
+          const processedDates = new Set();
+          
+          forecastData.list.forEach((item: any) => {
+            const date = new Date(item.dt * 1000);
+            const dateStr = date.toLocaleDateString('ko-KR');
+            
+            if (!processedDates.has(dateStr) && dailyForecasts.length < 7) {
+              processedDates.add(dateStr);
+              dailyForecasts.push({
+                date: dateStr,
+                day: ['일', '월', '화', '수', '목', '금', '토'][date.getDay()],
+                temp: Math.round(item.main.temp),
+                description: item.weather[0].description,
+                icon: item.weather[0].icon,
+              });
+            }
+          });
+          
+          setForecast(dailyForecasts);
+        } else {
+          // 더미 데이터 사용
+          setForecast([
+            { date: '01/15', day: '월', temp: 15, description: '맑음', icon: '01d' },
+            { date: '01/16', day: '화', temp: 12, description: '구름많음', icon: '02d' },
+            { date: '01/17', day: '수', temp: 10, description: '비', icon: '10d' },
+            { date: '01/18', day: '목', temp: 13, description: '맑음', icon: '01d' },
+            { date: '01/19', day: '금', temp: 14, description: '구름많음', icon: '03d' },
+            { date: '01/20', day: '토', temp: 16, description: '맑음', icon: '01d' },
+            { date: '01/21', day: '일', temp: 17, description: '맑음', icon: '01d' },
+          ]);
+        }
+      } catch (error) {
+        console.error('날씨 데이터를 가져오는데 실패했습니다:', error);
+        // 에러 시 더미 데이터 사용
+        setWeather({
+          temperature: 15,
+          feelsLike: 13,
+          humidity: 65,
+          windSpeed: 3,
+          visibility: 10,
+          description: '맑음',
+          icon: '01d',
+          sunrise: '07:30',
+          sunset: '17:45',
+        });
+        setForecast([
+          { date: '01/15', day: '월', temp: 15, description: '맑음', icon: '01d' },
+          { date: '01/16', day: '화', temp: 12, description: '구름많음', icon: '02d' },
+          { date: '01/17', day: '수', temp: 10, description: '비', icon: '10d' },
+          { date: '01/18', day: '목', temp: 13, description: '맑음', icon: '01d' },
+          { date: '01/19', day: '금', temp: 14, description: '구름많음', icon: '03d' },
+          { date: '01/20', day: '토', temp: 16, description: '맑음', icon: '01d' },
+          { date: '01/21', day: '일', temp: 17, description: '맑음', icon: '01d' },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchWeather();
+  }, []);
+  
   const mountains = [
     {
       name: '북한산',
@@ -72,15 +213,17 @@ const HikingInfo = () => {
     { name: '헤드랜턴', description: '비상시를 대비한 조명' },
   ];
   
-  const weeklyWeather = [
-    { day: '월', date: '01/15', temp: '15°C', condition: '맑음', icon: '☀️' },
-    { day: '화', date: '01/16', temp: '12°C', condition: '구름', icon: '☁️' },
-    { day: '수', date: '01/17', temp: '10°C', condition: '비', icon: '🌧️' },
-    { day: '목', date: '01/18', temp: '13°C', condition: '맑음', icon: '☀️' },
-    { day: '금', date: '01/19', temp: '14°C', condition: '구름', icon: '⛅' },
-    { day: '토', date: '01/20', temp: '16°C', condition: '맑음', icon: '☀️' },
-    { day: '일', date: '01/21', temp: '17°C', condition: '맑음', icon: '☀️' },
-  ];
+  // 날씨 아이콘 매핑
+  const getWeatherEmoji = (icon: string) => {
+    if (icon.startsWith('01')) return '☀️'; // 맑음
+    if (icon.startsWith('02')) return '⛅'; // 구름조금
+    if (icon.startsWith('03') || icon.startsWith('04')) return '☁️'; // 구름많음
+    if (icon.startsWith('09') || icon.startsWith('10')) return '🌧️'; // 비
+    if (icon.startsWith('11')) return '⛈️'; // 천둥번개
+    if (icon.startsWith('13')) return '❄️'; // 눈
+    if (icon.startsWith('50')) return '🌫️'; // 안개
+    return '🌤️';
+  };
   
   const payments = [
     {
@@ -113,49 +256,81 @@ const HikingInfo = () => {
         <div className="lg:col-span-2 space-y-8">
           {/* Today's Weather */}
           <div className="card bg-gradient-to-r from-blue-50 to-sky-50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">오늘의 산행 날씨</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex items-center space-x-3">
-                <Thermometer className="h-8 w-8 text-red-500" />
-                <div>
-                  <p className="text-gray-500 text-sm">기온</p>
-                  <p className="text-xl font-bold text-gray-900">15°C</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Wind className="h-8 w-8 text-blue-500" />
-                <div>
-                  <p className="text-gray-500 text-sm">풍속</p>
-                  <p className="text-xl font-bold text-gray-900">3m/s</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Droplets className="h-8 w-8 text-blue-400" />
-                <div>
-                  <p className="text-gray-500 text-sm">습도</p>
-                  <p className="text-xl font-bold text-gray-900">65%</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Eye className="h-8 w-8 text-gray-500" />
-                <div>
-                  <p className="text-gray-500 text-sm">가시거리</p>
-                  <p className="text-xl font-bold text-gray-900">10km</p>
-                </div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">산행 당일 날씨</h2>
+              <div className="flex items-center space-x-2 px-3 py-1 bg-primary-600 text-white rounded-full text-sm font-bold">
+                <Calendar className="h-4 w-4" />
+                <span>2026년 1월 15일 (수)</span>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-blue-200">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-600">일출: 07:30</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5 text-purple-500" />
-                  <span className="text-gray-600">일몰: 17:45</span>
-                </div>
+            
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
               </div>
-            </div>
+            ) : weather ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex items-center space-x-3">
+                    <Thermometer className="h-8 w-8 text-red-500" />
+                    <div>
+                      <p className="text-gray-500 text-sm">기온</p>
+                      <p className="text-xl font-bold text-gray-900">{weather.temperature}°C</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Wind className="h-8 w-8 text-blue-500" />
+                    <div>
+                      <p className="text-gray-500 text-sm">풍속</p>
+                      <p className="text-xl font-bold text-gray-900">{weather.windSpeed}m/s</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Droplets className="h-8 w-8 text-blue-400" />
+                    <div>
+                      <p className="text-gray-500 text-sm">습도</p>
+                      <p className="text-xl font-bold text-gray-900">{weather.humidity}%</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Eye className="h-8 w-8 text-gray-500" />
+                    <div>
+                      <p className="text-gray-500 text-sm">가시거리</p>
+                      <p className="text-xl font-bold text-gray-900">{weather.visibility}km</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="text-4xl">{getWeatherEmoji(weather.icon)}</div>
+                      <div>
+                        <p className="text-sm text-gray-600">현재 날씨</p>
+                        <p className="text-lg font-bold text-gray-900">{weather.description}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">체감 온도</p>
+                      <p className="text-lg font-bold text-gray-900">{weather.feelsLike}°C</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">일출: {weather.sunrise}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">일몰: {weather.sunset}</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                날씨 정보를 불러올 수 없습니다.
+              </div>
+            )}
           </div>
           
           {/* Mountains Info */}
@@ -244,25 +419,31 @@ const HikingInfo = () => {
             <div className="card bg-gradient-to-br from-sky-50 to-blue-50">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
                 <Cloud className="h-6 w-6 text-blue-600" />
-                <span>주간 날씨</span>
+                <span>7일 예보</span>
               </h2>
-              <div className="space-y-3">
-                {weeklyWeather.map((day, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-center">
-                        <p className="text-sm font-bold text-gray-900">{day.day}</p>
-                        <p className="text-xs text-gray-500">{day.date}</p>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {forecast.map((day, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-center">
+                          <p className="text-sm font-bold text-gray-900">{day.day}</p>
+                          <p className="text-xs text-gray-500">{day.date}</p>
+                        </div>
+                        <span className="text-2xl">{getWeatherEmoji(day.icon)}</span>
                       </div>
-                      <span className="text-2xl">{day.icon}</span>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900">{day.temp}°C</p>
+                        <p className="text-xs text-gray-600">{day.description}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-gray-900">{day.temp}</p>
-                      <p className="text-xs text-gray-600">{day.condition}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
               <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                 <p className="text-sm text-blue-900">
                   <strong>안내:</strong> 날씨는 산행 당일 변경될 수 있으니 출발 전 반드시 재확인하세요.

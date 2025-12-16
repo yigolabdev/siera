@@ -33,6 +33,14 @@
 - ✅ 좋아요 기능
 - ✅ 사진 갤러리 (그리드/메이슨리 뷰)
 - ✅ 이미지 뷰어 (확대/축소/슬라이드쇼)
+- ✅ 다중 사진 업로드 (드래그 앤 드롭)
+
+### 등산 정보
+- ✅ 실시간 날씨 정보 (OpenWeatherMap API)
+- ✅ 7일 예보
+- ✅ 산행 당일 날씨 상세 정보
+- ✅ 추천 산 정보
+- ✅ 안전 수칙 및 준비물
 
 ### 회원 관리
 - ✅ 회원명부 (이름, 직업, 직책)
@@ -87,12 +95,28 @@ GitHub Actions 탭에서 "Deploy to S3" workflow를 수동으로 실행할 수 �
 
 ## 🔐 환경 변수
 
+### GitHub Secrets (배포용)
 GitHub Secrets에 다음 변수를 설정해야 합니다:
 
 - `AWS_ACCESS_KEY_ID`: AWS IAM 액세스 키
 - `AWS_SECRET_ACCESS_KEY`: AWS IAM 비밀 키
 - `AWS_S3_BUCKET`: S3 버킷 이름
 - `AWS_REGION`: AWS 리전 (예: ap-northeast-2)
+
+### 로컬 환경 변수 (선택사항)
+프로젝트 루트에 `.env` 파일을 생성하여 날씨 API를 사용할 수 있습니다:
+
+```bash
+# .env 파일 생성
+VITE_WEATHER_API_KEY=your_openweathermap_api_key
+```
+
+**OpenWeatherMap API 키 발급 방법:**
+1. https://openweathermap.org 회원가입
+2. API Keys 메뉴에서 무료 API 키 생성
+3. `.env` 파일에 키 추가
+
+> **참고**: API 키가 없어도 더미 데이터로 정상 작동합니다.
 
 ## 📱 임시 로그인 정보
 

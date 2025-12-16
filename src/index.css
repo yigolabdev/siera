@@ -4,24 +4,64 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 font-sans;
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+  }
+  
+  h1 {
+    @apply text-slate-900 font-bold tracking-tight;
+  }
+  
+  h2, h3, h4, h5, h6 {
+    @apply text-slate-900 font-semibold tracking-tight;
+  }
+  
+  p {
+    @apply text-slate-700 leading-relaxed;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors duration-200 text-lg;
+    @apply px-6 py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-md;
   }
   
   .btn-secondary {
-    @apply px-6 py-3 bg-white text-primary-600 border-2 border-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors duration-200 text-lg;
+    @apply px-6 py-3 bg-white text-slate-700 border border-slate-300 rounded-xl font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.98] transition-all duration-200 shadow-sm;
+  }
+  
+  .btn-secondary-outline {
+    @apply px-6 py-3 bg-transparent text-white border-2 border-white/30 rounded-xl font-semibold hover:bg-white/10 hover:border-white/50 backdrop-blur-sm transition-all duration-200;
   }
   
   .card {
-    @apply bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-200;
+    @apply bg-white rounded-card shadow-card p-6 border border-slate-100 hover:shadow-elevated transition-all duration-300;
   }
   
   .input-field {
-    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg;
+    @apply w-full px-4 py-3 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 text-slate-900 placeholder:text-slate-400;
+  }
+  
+  /* 커스텀 스크롤바 */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+    border-radius: 9999px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7);
   }
 }

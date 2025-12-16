@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mountain, AlertTriangle, Clock, Thermometer, Wind, Cloud, Droplets, Eye, CreditCard, Calendar, CloudRain, Sun, CloudSnow } from 'lucide-react';
+import { Mountain, AlertTriangle, Clock, Thermometer, Wind, Cloud, Droplets, Eye, CreditCard, Calendar, CloudRain, Sun, CloudSnow, CloudDrizzle, CloudFog } from 'lucide-react';
 
 interface WeatherData {
   temperature: number;
@@ -214,15 +214,16 @@ const HikingInfo = () => {
   ];
   
   // 날씨 아이콘 매핑
-  const getWeatherEmoji = (icon: string) => {
-    if (icon.startsWith('01')) return '☀️'; // 맑음
-    if (icon.startsWith('02')) return '⛅'; // 구름조금
-    if (icon.startsWith('03') || icon.startsWith('04')) return '☁️'; // 구름많음
-    if (icon.startsWith('09') || icon.startsWith('10')) return '🌧️'; // 비
-    if (icon.startsWith('11')) return '⛈️'; // 천둥번개
-    if (icon.startsWith('13')) return '❄️'; // 눈
-    if (icon.startsWith('50')) return '🌫️'; // 안개
-    return '🌤️';
+  const getWeatherIcon = (icon: string) => {
+    const iconClass = "h-8 w-8";
+    if (icon.startsWith('01')) return <Sun className={`${iconClass} text-amber-500`} />; // 맑음
+    if (icon.startsWith('02')) return <Cloud className={`${iconClass} text-sky-400`} />; // 구름조금
+    if (icon.startsWith('03') || icon.startsWith('04')) return <Cloud className={`${iconClass} text-slate-400`} />; // 구름많음
+    if (icon.startsWith('09') || icon.startsWith('10')) return <CloudRain className={`${iconClass} text-blue-500`} />; // 비
+    if (icon.startsWith('11')) return <CloudDrizzle className={`${iconClass} text-indigo-500`} />; // 천둥번개
+    if (icon.startsWith('13')) return <CloudSnow className={`${iconClass} text-cyan-400`} />; // 눈
+    if (icon.startsWith('50')) return <CloudFog className={`${iconClass} text-gray-400`} />; // 안개
+    return <Sun className={`${iconClass} text-amber-400`} />;
   };
   
   const payments = [
@@ -300,18 +301,20 @@ const HikingInfo = () => {
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-blue-200">
+                <div className="mt-4 pt-4 border-t border-slate-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="text-4xl">{getWeatherEmoji(weather.icon)}</div>
+                      <div className="p-2 bg-gradient-to-br from-blue-50 to-sky-50 rounded-xl">
+                        {getWeatherIcon(weather.icon)}
+                      </div>
                       <div>
-                        <p className="text-sm text-gray-600">현재 날씨</p>
-                        <p className="text-lg font-bold text-gray-900">{weather.description}</p>
+                        <p className="text-sm text-slate-600 font-medium">현재 날씨</p>
+                        <p className="text-lg font-bold text-slate-900">{weather.description}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-600">체감 온도</p>
-                      <p className="text-lg font-bold text-gray-900">{weather.feelsLike}°C</p>
+                      <p className="text-sm text-slate-600 font-medium">체감 온도</p>
+                      <p className="text-lg font-bold text-slate-900">{weather.feelsLike}°C</p>
                     </div>
                   </div>
                 </div>
@@ -428,17 +431,19 @@ const HikingInfo = () => {
               ) : (
                 <div className="space-y-3">
                   {forecast.map((day, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
                       <div className="flex items-center space-x-3">
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-gray-900">{day.day}</p>
-                          <p className="text-xs text-gray-500">{day.date}</p>
+                        <div className="text-center min-w-[40px]">
+                          <p className="text-sm font-bold text-slate-900">{day.day}</p>
+                          <p className="text-xs text-slate-500">{day.date}</p>
                         </div>
-                        <span className="text-2xl">{getWeatherEmoji(day.icon)}</span>
+                        <div className="p-1.5 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg">
+                          {getWeatherIcon(day.icon)}
+                        </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-900">{day.temp}°C</p>
-                        <p className="text-xs text-gray-600">{day.description}</p>
+                        <p className="font-bold text-slate-900">{day.temp}°C</p>
+                        <p className="text-xs text-slate-600">{day.description}</p>
                       </div>
                     </div>
                   ))}

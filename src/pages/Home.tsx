@@ -1,14 +1,32 @@
-import { Calendar, Image, Users, TrendingUp, Bell } from 'lucide-react';
+import { Calendar, Image, Users, TrendingUp, Bell, MapPin, Mountain } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Home = () => {
   const upcomingEvent = {
     title: '앙봉산 정상 등반',
+    mountain: '앙봉산',
+    altitude: '737.2m',
+    difficulty: '중급' as const,
     date: '2026년 1월 15일',
     location: '경기도 가평군',
     participants: 18,
     maxParticipants: 25,
     daysLeft: 7,
+    description: '아름다운 경치와 함께하는 겨울 산행',
+  };
+  
+  // 난이도별 색상
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case '초급':
+        return 'bg-green-500';
+      case '중급':
+        return 'bg-yellow-500';
+      case '상급':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
   };
   
   const recentNotices = [
@@ -34,12 +52,42 @@ const Home = () => {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/30 flex items-center">
-          <div className="px-12">
-            <h1 className="text-5xl font-bold text-white mb-4">시애라</h1>
-            <p className="text-2xl text-gray-200 mb-6">함께 오르는 산, 함께 나누는 가치</p>
-            <Link to="/events" className="btn-primary inline-block">
-              다음 산행 신청하기
-            </Link>
+          <div className="px-12 max-w-3xl">
+            <div className="flex items-center space-x-3 mb-2">
+              <span className="px-3 py-1 bg-primary-600 text-white text-sm font-bold rounded-full flex items-center space-x-1">
+                <Calendar className="h-4 w-4" />
+                <span>D-{upcomingEvent.daysLeft}</span>
+              </span>
+              <span className={`px-3 py-1 ${getDifficultyColor(upcomingEvent.difficulty)} text-white text-sm font-bold rounded-full flex items-center space-x-1`}>
+                <Mountain className="h-4 w-4" />
+                <span>{upcomingEvent.difficulty}</span>
+              </span>
+            </div>
+            <h1 className="text-6xl font-bold text-white mb-3">
+              {upcomingEvent.mountain}
+            </h1>
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="flex items-center space-x-2 text-2xl text-gray-200">
+                <TrendingUp className="h-6 w-6" />
+                <span>{upcomingEvent.altitude}</span>
+              </div>
+              <span className="text-gray-400">•</span>
+              <div className="flex items-center space-x-2 text-2xl text-gray-200">
+                <MapPin className="h-6 w-6" />
+                <span>{upcomingEvent.location}</span>
+              </div>
+            </div>
+            <p className="text-xl text-gray-300 mb-6">
+              {upcomingEvent.description}
+            </p>
+            <div className="flex items-center space-x-4">
+              <Link to="/events" className="btn-primary inline-block">
+                산행 신청하기 ({upcomingEvent.participants}/{upcomingEvent.maxParticipants}명)
+              </Link>
+              <Link to="/events" className="px-6 py-3 bg-white/10 backdrop-blur-sm text-white rounded-lg font-bold hover:bg-white/20 transition-colors inline-block">
+                자세히 보기
+              </Link>
+            </div>
           </div>
         </div>
       </div>

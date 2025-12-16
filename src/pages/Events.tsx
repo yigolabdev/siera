@@ -5,13 +5,13 @@ const Events = () => {
   // 한 달에 한 번 정기 산행 - 현재 예정된 산행
   const currentEvent = {
     id: '1',
-    title: '북한산 백운대 등반',
+    title: '앙봉산 정상 등반',
     date: '2026-01-15',
-    location: '북한산 국립공원',
+    location: '경기도 가평군',
     mountain: '앙봉산',
     altitude: '737.2m',
     difficulty: 'medium' as const,
-    description: '백운대 정상을 목표로 하는 1월 정기 산행입니다.',
+    description: '앙봉산 정상(737.2m)을 목표로 하는 1월 정기 산행입니다.',
     maxParticipants: 25,
     currentParticipants: 18,
     cost: '60,000원',
@@ -155,7 +155,7 @@ const Events = () => {
     },
     {
       id: 'past-3',
-      title: '북한산 백운대 등반',
+      title: '설악산 대청봉 등반',
       date: '2025-10-18',
       participants: 20,
     },

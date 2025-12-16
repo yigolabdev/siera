@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 
 const Home = () => {
   const upcomingEvent = {
-    title: '북한산 백운대 등반',
+    title: '앙봉산 정상 등반',
     date: '2026년 1월 15일',
-    location: '북한산 국립공원',
+    location: '경기도 가평군',
     participants: 18,
     maxParticipants: 25,
     daysLeft: 7,

@@ -16,9 +16,9 @@ const GuestApplication = () => {
   // 이번 달 정기 산행
   const currentEvent = {
     id: '1',
-    title: '북한산 백운대 등반',
+    title: '앙봉산 정상 등반',
     date: '2026-01-15',
-    location: '북한산 국립공원',
+    location: '경기도 가평군',
     cost: '60,000원',
   };
 

@@ -33,63 +33,53 @@ const Header = () => {
   };
   
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <Mountain className="h-10 w-10 text-primary-600" />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">시애라</h1>
-            </div>
+          <Link to="/" className="flex items-center">
+            <h1 className="text-xl font-bold text-slate-900">시애라</h1>
           </Link>
           
           {/* User Menu */}
-          <div className="flex items-center space-x-4">
-            {isAdmin && (
-              <div className="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-lg">
-                <Shield className="h-4 w-4" />
-                <span className="text-sm font-bold">관리자</span>
-              </div>
-            )}
+          <div className="flex items-center space-x-6">
             <Link 
               to="/profile"
-              className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+              className="flex items-center space-x-2 hover:text-slate-900 transition-colors cursor-pointer"
             >
               {user?.profileImage ? (
                 <img 
                   src={user.profileImage} 
                   alt="Profile" 
-                  className="w-8 h-8 rounded-full object-cover border-2 border-primary-600"
+                  className="w-7 h-7 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-blue-600 rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
+                <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-slate-600" />
                 </div>
               )}
-              <span className="text-gray-700 font-medium">{user?.name || '게스트'} 님</span>
+              <span className="text-slate-700 text-sm font-medium">{user?.name || '게스트'}</span>
             </Link>
             <button 
               onClick={handleLogout}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium"
             >
-              <LogOut className="h-5 w-5" />
-              <span className="font-medium">로그아웃</span>
+              로그아웃
             </button>
           </div>
         </div>
         
         {/* Navigation */}
-        <nav className="flex justify-between items-center pb-3 overflow-x-auto">
+        <nav className="flex justify-between items-center border-t border-slate-100 overflow-x-auto">
           <div className="flex space-x-1">
             {navigation.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors text-base ${
+                className={`px-4 py-3 font-medium whitespace-nowrap transition-colors text-sm border-b-2 ${
                   isActive(item.path)
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'border-slate-900 text-slate-900'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
                 }`}
               >
                 {item.name}
@@ -99,20 +89,18 @@ const Header = () => {
           
           {/* Admin Navigation */}
           {isAdmin && (
-            <div className="flex items-center space-x-1 ml-4">
-              <div className="border-l border-gray-300 h-8 mx-2"></div>
+            <div className="flex items-center space-x-1 ml-4 pl-4 border-l border-slate-200">
               {adminNavigation.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors text-base flex items-center space-x-1 ${
+                  className={`px-4 py-3 font-medium whitespace-nowrap transition-colors text-sm border-b-2 ${
                     isActive(item.path)
-                      ? 'bg-blue-600 text-white'
-                      : 'text-blue-600 hover:bg-blue-50'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-600 hover:text-blue-600 hover:border-blue-300'
                   }`}
                 >
-                  <Shield className="h-4 w-4" />
-                  <span>{item.name}</span>
+                  {item.name}
                 </Link>
               ))}
             </div>

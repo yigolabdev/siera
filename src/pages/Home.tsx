@@ -51,48 +51,39 @@ const Home = () => {
   ];
   
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Hero Section */}
-      <div className="relative h-96 rounded-2xl overflow-hidden mb-8 shadow-xl">
+      <div className="relative h-[500px] rounded-2xl overflow-hidden mb-16 bg-slate-900">
         <img 
-          src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=400&fit=crop" 
+          src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=500&fit=crop" 
           alt="Mountain" 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover opacity-40"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/30 flex items-center">
-          <div className="px-12 max-w-3xl">
-            <div className="flex items-center space-x-3 mb-2">
-              <span className="px-3 py-1 bg-primary-600 text-white text-sm font-bold rounded-full flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>D-{upcomingEvent.daysLeft}</span>
-              </span>
-              <span className={`px-3 py-1 ${getDifficultyColor(upcomingEvent.difficulty)} text-white text-sm font-bold rounded-full flex items-center space-x-1`}>
-                <Mountain className="h-4 w-4" />
-                <span>{upcomingEvent.difficulty}</span>
-              </span>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center px-8 max-w-4xl">
+            <div className="inline-block px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-white text-sm mb-6 border border-white/20">
+              D-{upcomingEvent.daysLeft} · {upcomingEvent.difficulty}
             </div>
-            <h1 className="text-6xl font-bold text-white mb-3">
+            <h1 className="text-7xl font-bold text-white mb-4 tracking-tight">
               {upcomingEvent.mountain}
             </h1>
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="flex items-center space-x-2 text-2xl text-gray-200">
-                <TrendingUp className="h-6 w-6" />
-                <span>{upcomingEvent.altitude}</span>
-              </div>
-              <span className="text-gray-400">•</span>
-              <div className="flex items-center space-x-2 text-2xl text-gray-200">
-                <MapPin className="h-6 w-6" />
-                <span>{upcomingEvent.location}</span>
-              </div>
-            </div>
-            <p className="text-xl text-gray-300 mb-6">
-              {upcomingEvent.description}
+            <p className="text-2xl text-white/90 mb-2 font-light">
+              {upcomingEvent.altitude} · {upcomingEvent.location}
             </p>
-            <div className="flex items-center space-x-4">
-              <Link to="/events" className="btn-primary inline-block">
-                산행 신청하기 ({upcomingEvent.participants}/{upcomingEvent.maxParticipants}명)
+            <p className="text-lg text-white/70 mb-10 font-light">
+              {upcomingEvent.date}
+            </p>
+            <div className="flex items-center justify-center space-x-4">
+              <Link 
+                to="/events" 
+                className="px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold hover:bg-white/90 transition-all inline-block"
+              >
+                산행 신청하기
               </Link>
-              <Link to="/events" className="px-6 py-3 bg-white/10 backdrop-blur-sm text-white rounded-lg font-bold hover:bg-white/20 transition-colors inline-block">
+              <Link 
+                to="/events" 
+                className="px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-xl font-semibold hover:bg-white/20 transition-all inline-block"
+              >
                 자세히 보기
               </Link>
             </div>
@@ -101,142 +92,109 @@ const Home = () => {
       </div>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
         {stats.map((stat, index) => (
-          <div key={index} className="card">
-            <div className="flex items-center space-x-4">
-              <div className={`${stat.color} p-3 rounded-lg`}>
-                <stat.icon className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            </div>
+          <div key={index} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors">
+            <p className="text-slate-500 text-sm font-medium mb-1">{stat.label}</p>
+            <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
           </div>
         ))}
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Event */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-6 w-6 text-primary-600" />
-              <h2 className="text-2xl font-bold text-gray-900">이번 달 정기 산행</h2>
-            </div>
-            <span className="px-4 py-2 bg-primary-600 text-white text-lg font-bold rounded-lg">
-              D-{upcomingEvent.daysLeft}
-            </span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold text-slate-900">이번 달 정기 산행</h2>
+            <span className="text-sm text-slate-500">D-{upcomingEvent.daysLeft}</span>
           </div>
-          <div className="space-y-4">
-            <div className="p-6 bg-gradient-to-r from-primary-50 to-green-50 rounded-lg border-l-4 border-primary-600">
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">{upcomingEvent.title}</h3>
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center space-x-2 text-gray-700">
-                  <Calendar className="h-5 w-5" />
-                  <span className="text-lg">{upcomingEvent.date}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-gray-700">
-                  <Users className="h-5 w-5" />
-                  <span className="text-lg">
-                    {upcomingEvent.participants}/{upcomingEvent.maxParticipants}명 신청중
-                  </span>
-                </div>
+          <div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-4">{upcomingEvent.title}</h3>
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between text-slate-600">
+                <span>일정</span>
+                <span className="font-medium text-slate-900">{upcomingEvent.date}</span>
               </div>
-              <div className="mb-4">
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div 
-                    className="bg-primary-600 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${(upcomingEvent.participants / upcomingEvent.maxParticipants) * 100}%` }}
-                  />
-                </div>
+              <div className="flex justify-between text-slate-600">
+                <span>신청 인원</span>
+                <span className="font-medium text-slate-900">
+                  {upcomingEvent.participants}/{upcomingEvent.maxParticipants}명
+                </span>
               </div>
-              
-              {/* 내 참석 여부 */}
-              {user && myParticipationStatus && (
-                <div className="mb-4 p-4 rounded-lg border-2 bg-white">
-                  <p className="text-sm text-gray-600 mb-2 font-medium">내 참석 여부</p>
-                  {myParticipationStatus === 'attending' && (
-                    <div className="flex items-center space-x-2 text-green-700">
-                      <CheckCircle className="h-6 w-6 fill-green-500" />
-                      <span className="text-lg font-bold">참석 신청 완료</span>
-                    </div>
-                  )}
-                  {myParticipationStatus === 'pending' && (
-                    <div className="flex items-center space-x-2 text-yellow-700">
-                      <Clock className="h-6 w-6" />
-                      <span className="text-lg font-bold">승인 대기 중</span>
-                    </div>
-                  )}
-                  {myParticipationStatus === 'not-attending' && (
-                    <div className="flex items-center space-x-2 text-gray-600">
-                      <XCircle className="h-6 w-6" />
-                      <span className="text-lg font-bold">불참</span>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              <Link to="/events" className="btn-primary w-full block text-center">
-                자세히 보기 및 신청하기
-              </Link>
             </div>
+            
+            <div className="mb-6">
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div 
+                  className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(upcomingEvent.participants / upcomingEvent.maxParticipants) * 100}%` }}
+                />
+              </div>
+            </div>
+            
+            {/* 내 참석 여부 */}
+            {user && myParticipationStatus && (
+              <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-sm text-slate-600 mb-2">내 참석 여부</p>
+                {myParticipationStatus === 'attending' && (
+                  <p className="text-sm font-semibold text-primary-600">참석 신청 완료</p>
+                )}
+                {myParticipationStatus === 'pending' && (
+                  <p className="text-sm font-semibold text-amber-600">승인 대기 중</p>
+                )}
+                {myParticipationStatus === 'not-attending' && (
+                  <p className="text-sm font-semibold text-slate-600">불참</p>
+                )}
+              </div>
+            )}
+            
+            <Link to="/events" className="btn-primary w-full block text-center">
+              자세히 보기
+            </Link>
           </div>
         </div>
         
         {/* Recent Notices */}
-        <div className="card">
-          <div className="flex items-center space-x-2 mb-4">
-            <Bell className="h-6 w-6 text-primary-600" />
-            <h2 className="text-2xl font-bold text-gray-900">최근 공지사항</h2>
-          </div>
-          <div className="space-y-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8">
+          <h2 className="text-2xl font-semibold text-slate-900 mb-6">최근 공지사항</h2>
+          <div className="space-y-4">
             {recentNotices.map((notice) => (
               <Link
                 key={notice.id}
                 to="/board"
-                className="block p-4 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100"
+                className="block p-4 hover:bg-slate-50 rounded-xl transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      {notice.isPinned && (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">
-                          필독
-                        </span>
-                      )}
-                      <h3 className="font-medium text-gray-900 text-lg">{notice.title}</h3>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">{notice.date}</p>
+                    <h3 className="font-medium text-slate-900 mb-1">{notice.title}</h3>
+                    <p className="text-sm text-slate-500">{notice.date}</p>
                   </div>
+                  {notice.isPinned && (
+                    <span className="w-2 h-2 bg-primary-600 rounded-full mt-2"></span>
+                  )}
                 </div>
               </Link>
             ))}
-            <Link to="/board" className="block text-center text-primary-600 hover:text-primary-700 font-medium text-lg mt-4">
-              전체 공지사항 보기 →
+            <Link to="/board" className="block text-center text-primary-600 hover:text-primary-700 font-medium pt-4">
+              전체 보기 →
             </Link>
           </div>
         </div>
       </div>
       
       {/* Quick Links */}
-      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link to="/gallery" className="card hover:bg-primary-50 transition-colors text-center">
-          <Image className="h-12 w-12 text-primary-600 mx-auto mb-2" />
-          <h3 className="font-bold text-gray-900 text-lg">사진 갤러리</h3>
+      <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link to="/gallery" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+          <h3 className="font-semibold text-slate-900">사진 갤러리</h3>
         </Link>
-        <Link to="/info" className="card hover:bg-primary-50 transition-colors text-center">
-          <Calendar className="h-12 w-12 text-primary-600 mx-auto mb-2" />
-          <h3 className="font-bold text-gray-900 text-lg">등산 정보</h3>
+        <Link to="/info" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+          <h3 className="font-semibold text-slate-900">등산 정보</h3>
         </Link>
-        <Link to="/board" className="card hover:bg-primary-50 transition-colors text-center">
-          <Users className="h-12 w-12 text-primary-600 mx-auto mb-2" />
-          <h3 className="font-bold text-gray-900 text-lg">게시판</h3>
+        <Link to="/board" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+          <h3 className="font-semibold text-slate-900">게시판</h3>
         </Link>
-        <Link to="/members" className="card hover:bg-primary-50 transition-colors text-center">
-          <Users className="h-12 w-12 text-primary-600 mx-auto mb-2" />
-          <h3 className="font-bold text-gray-900 text-lg">회원명부</h3>
+        <Link to="/members" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+          <h3 className="font-semibold text-slate-900">회원명부</h3>
         </Link>
       </div>
     </div>

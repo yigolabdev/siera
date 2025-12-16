@@ -19,8 +19,8 @@ const Header = () => {
   
   const adminNavigation = [
     { name: '산행 관리', path: '/admin/events' },
-    { name: '회원 관리', path: '/admin/members' },
     { name: '조 편성 관리', path: '/admin/teams' },
+    { name: '회원 관리', path: '/admin/members' },
   ];
   
   const isActive = (path: string) => {
@@ -80,25 +80,27 @@ const Header = () => {
         </div>
         
         {/* Navigation */}
-        <nav className="flex space-x-1 pb-3 overflow-x-auto">
-          {navigation.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors text-base ${
-                isActive(item.path)
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {item.name}
-            </Link>
-          ))}
+        <nav className="flex justify-between items-center pb-3 overflow-x-auto">
+          <div className="flex space-x-1">
+            {navigation.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors text-base ${
+                  isActive(item.path)
+                    ? 'bg-primary-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </div>
           
           {/* Admin Navigation */}
           {isAdmin && (
-            <>
-              <div className="border-l border-gray-300 mx-2"></div>
+            <div className="flex items-center space-x-1 ml-4">
+              <div className="border-l border-gray-300 h-8 mx-2"></div>
               {adminNavigation.map((item) => (
                 <Link
                   key={item.path}
@@ -113,7 +115,7 @@ const Header = () => {
                   <span>{item.name}</span>
                 </Link>
               ))}
-            </>
+            </div>
           )}
         </nav>
       </div>

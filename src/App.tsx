@@ -12,6 +12,7 @@ import Attendance from './pages/Attendance';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import GuestApplication from './pages/GuestApplication';
+import QuickEventApply from './pages/QuickEventApply';
 import EventManagement from './pages/Admin/EventManagement';
 import MemberManagement from './pages/Admin/MemberManagement';
 import TeamManagement from './pages/Admin/TeamManagement';
@@ -23,6 +24,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/guest-application" element={<GuestApplication />} />
+          <Route path="/quick-apply" element={<QuickEventApply />} />
           
           <Route path="/" element={
             <ProtectedRoute>

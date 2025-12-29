@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mountain, Mail, Lock, UserPlus, Users } from 'lucide-react';
+import { Mountain, Mail, Lock, UserPlus, Users, CalendarCheck } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -248,6 +248,14 @@ const Login = () => {
                     className="btn-secondary w-full block text-center"
                   >
                     게스트로 산행 신청하기
+                  </Link>
+                  
+                  <Link
+                    to="/quick-apply"
+                    className="btn-primary w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <CalendarCheck className="w-5 h-5" />
+                    간편 산행 신청
                   </Link>
                   
                   <div className="mt-4 text-center">

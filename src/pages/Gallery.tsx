@@ -34,6 +34,23 @@ const Gallery = () => {
     { id: '2025-11', name: '2025년 11월' },
   ];
   
+  const photos = [
+    { id: 1, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '앙봉산 정상에서', author: '김산행', date: '2026-01-15', likes: 24 },
+    { id: 2, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=800&h=600&fit=crop', caption: '함께한 순간들', author: '이등산', date: '2026-01-15', likes: 18 },
+    { id: 3, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&h=600&fit=crop', caption: '구름 위의 산', author: '박트레킹', date: '2026-01-15', likes: 32 },
+    { id: 4, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=1000&fit=crop', caption: '아침 햇살', author: '최하이킹', date: '2026-01-15', likes: 45 },
+    { id: 5, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop', caption: '등산로 풍경', author: '정봉우리', date: '2026-01-15', likes: 15 },
+    { id: 6, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800&h=600&fit=crop', caption: '정상 인증샷', author: '홍정상', date: '2026-01-15', likes: 28 },
+    { id: 7, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '설악산의 아름다운 풍경', author: '강백운', date: '2025-12-15', likes: 38 },
+    { id: 8, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=1000&fit=crop', caption: '대청봉에서 본 일출', author: '윤설악', date: '2025-12-15', likes: 52 },
+    { id: 9, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1454391304352-2bf4678b1a7a?w=800&h=600&fit=crop', caption: '겨울 설악의 매력', author: '임지리', date: '2025-12-15', likes: 41 },
+    { id: 10, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop', caption: '눈 덮인 능선', author: '조한라', date: '2025-12-15', likes: 36 },
+    { id: 11, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '노고단 운해', author: '문북한', date: '2025-11-20', likes: 44 },
+    { id: 12, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '가을 단풍', author: '신계룡', date: '2025-11-20', likes: 39 },
+    { id: 13, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=1000&fit=crop', caption: '지리산 능선길', author: '장태백', date: '2025-11-20', likes: 47 },
+    { id: 14, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop', caption: '단체 기념 촬영', author: '권덕유', date: '2025-11-20', likes: 55 },
+  ];
+  
   // 각 월별/이벤트별 사진 개수 계산
   const getPhotoCountByMonth = (monthId: string) => {
     if (monthId === 'all') return photos.length;
@@ -55,23 +72,6 @@ const Gallery = () => {
       return { month, eventTitle, photoCount };
     })
     .sort((a, b) => b.month.localeCompare(a.month));
-  
-  const photos = [
-    { id: 1, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '앙봉산 정상에서', author: '김산행', date: '2026-01-15', likes: 24 },
-    { id: 2, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=800&h=600&fit=crop', caption: '함께한 순간들', author: '이등산', date: '2026-01-15', likes: 18 },
-    { id: 3, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&h=600&fit=crop', caption: '구름 위의 산', author: '박트레킹', date: '2026-01-15', likes: 32 },
-    { id: 4, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=1000&fit=crop', caption: '아침 햇살', author: '최하이킹', date: '2026-01-15', likes: 45 },
-    { id: 5, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop', caption: '등산로 풍경', author: '정봉우리', date: '2026-01-15', likes: 15 },
-    { id: 6, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800&h=600&fit=crop', caption: '정상 인증샷', author: '홍정상', date: '2026-01-15', likes: 28 },
-    { id: 7, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '설악산의 아름다운 풍경', author: '강백운', date: '2025-12-15', likes: 38 },
-    { id: 8, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=1000&fit=crop', caption: '대청봉에서 본 일출', author: '윤설악', date: '2025-12-15', likes: 52 },
-    { id: 9, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1454391304352-2bf4678b1a7a?w=800&h=600&fit=crop', caption: '겨울 설악의 매력', author: '임지리', date: '2025-12-15', likes: 41 },
-    { id: 10, month: '2025-12', eventTitle: '설악산 대청봉 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop', caption: '눈 덮인 능선', author: '조한라', date: '2025-12-15', likes: 36 },
-    { id: 11, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '노고단 운해', author: '문북한', date: '2025-11-20', likes: 44 },
-    { id: 12, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '가을 단풍', author: '신계룡', date: '2025-11-20', likes: 39 },
-    { id: 13, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=1000&fit=crop', caption: '지리산 능선길', author: '장태백', date: '2025-11-20', likes: 47 },
-    { id: 14, month: '2025-11', eventTitle: '지리산 노고단 산행', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop', caption: '단체 기념 촬영', author: '권덕유', date: '2025-11-20', likes: 55 },
-  ];
   
   const filteredPhotos = selectedEvent === 'all' 
     ? photos 

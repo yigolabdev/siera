@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Calendar, MapPin, Users, Save, X, CreditCard, Phone, UserPlus, CheckCircle, Shield, AlertCircle, Lock, Mountain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -1275,7 +1275,7 @@ const EventManagement = () => {
                   );
                   
                   return acc;
-                }, { sections: [] as JSX.Element[], past: false }).sections}
+                }, { sections: [] as React.JSX.Element[], past: false }).sections}
               
               {events.length === 0 && (
                 <Card className="text-center py-12">

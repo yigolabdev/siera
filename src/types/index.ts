@@ -1,5 +1,5 @@
 // ==================== User Types ====================
-export type UserRole = 'admin' | 'member' | 'guest';
+export type UserRole = 'admin' | 'staff' | 'member' | 'guest';
 
 export interface User {
   id: string;
@@ -22,6 +22,20 @@ export interface RegisterData {
   phoneNumber: string;
   occupation: string;
   company: string;
+}
+
+export interface PendingUser {
+  id: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  occupation: string;
+  company: string;
+  referredBy?: string;
+  hikingLevel: string;
+  applicationMessage?: string;
+  appliedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 // ==================== Event Types ====================

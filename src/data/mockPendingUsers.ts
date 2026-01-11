@@ -1,0 +1,41 @@
+import { PendingUser } from '../types';
+
+export const mockPendingUsers: PendingUser[] = [
+  {
+    id: 'pending-1',
+    name: '김철수',
+    email: 'kim.cs@example.com',
+    phoneNumber: '010-1234-5678',
+    occupation: '회사 대표이사',
+    company: '테크컴퍼니',
+    referredBy: '이영희',
+    hikingLevel: 'intermediate',
+    applicationMessage: '안녕하세요. 건강한 네트워킹과 산행을 통한 심신 단련을 위해 시애라에 가입하고 싶습니다.',
+    appliedAt: '2026-01-10T09:30:00',
+    status: 'pending',
+  },
+  {
+    id: 'pending-2',
+    name: '박지훈',
+    email: 'park.jh@example.com',
+    phoneNumber: '010-2345-6789',
+    occupation: '변호사',
+    company: '법무법인 정의',
+    hikingLevel: 'beginner',
+    applicationMessage: '산행 경험은 많지 않지만, 건강한 취미 생활과 좋은 분들과의 교류를 원합니다.',
+    appliedAt: '2026-01-09T14:20:00',
+    status: 'pending',
+  },
+  {
+    id: 'pending-3',
+    name: '최민지',
+    email: 'choi.mj@example.com',
+    phoneNumber: '010-3456-7890',
+    occupation: '교수',
+    company: '서울대학교',
+    referredBy: '강민수',
+    hikingLevel: 'advanced',
+    appliedAt: '2026-01-08T16:45:00',
+    status: 'pending',
+  },
+];

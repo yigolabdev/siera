@@ -75,13 +75,13 @@ const Home = () => {
             </p>
             <div className="flex items-center justify-center space-x-4">
               <Link 
-                to="/events" 
+                to="/home/events" 
                 className="px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold hover:bg-white/90 transition-all inline-block"
               >
                 산행 신청하기
               </Link>
               <Link 
-                to="/events" 
+                to="/home/events" 
                 className="px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-xl font-semibold hover:bg-white/20 transition-all inline-block"
               >
                 자세히 보기
@@ -148,7 +148,7 @@ const Home = () => {
               </div>
             )}
             
-            <Link to="/events" className="btn-primary w-full block text-center">
+            <Link to="/home/events" className="btn-primary w-full block text-center">
               자세히 보기
             </Link>
           </div>
@@ -161,7 +161,7 @@ const Home = () => {
             {recentNotices.map((notice) => (
               <Link
                 key={notice.id}
-                to="/board"
+                to="/home/board"
                 className="block p-4 hover:bg-slate-50 rounded-xl transition-colors"
               >
                 <div className="flex items-start justify-between">
@@ -175,7 +175,7 @@ const Home = () => {
                 </div>
               </Link>
             ))}
-            <Link to="/board" className="block text-center text-primary-600 hover:text-primary-700 font-medium pt-4">
+            <Link to="/home/board" className="block text-center text-primary-600 hover:text-primary-700 font-medium pt-4">
               전체 보기 →
             </Link>
           </div>
@@ -184,16 +184,16 @@ const Home = () => {
       
       {/* Quick Links */}
       <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link to="/gallery" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+        <Link to="/home/gallery" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
           <h3 className="font-semibold text-slate-900">사진 갤러리</h3>
         </Link>
-        <Link to="/info" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+        <Link to="/home/info" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
           <h3 className="font-semibold text-slate-900">등산 정보</h3>
         </Link>
-        <Link to="/board" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+        <Link to="/home/board" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
           <h3 className="font-semibold text-slate-900">게시판</h3>
         </Link>
-        <Link to="/members" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
+        <Link to="/home/members" className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 transition-colors text-center">
           <h3 className="font-semibold text-slate-900">회원명부</h3>
         </Link>
       </div>

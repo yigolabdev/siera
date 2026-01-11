@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mountain, User, Mail, Phone, Briefcase, Building, UserPlus, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -12,6 +12,11 @@ const GuestApplication = () => {
     company: '',
     referredBy: '',
   });
+
+  // 페이지 로드 시 맨 위로 스크롤
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // 이번 달 정기 산행
   const currentEvent = {
@@ -175,7 +180,7 @@ const GuestApplication = () => {
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-slate-600">
-                  * 참가비는 당일 현장에서 납부하시면 됩니다
+                  * 신청 후 참가비 입금이 완료되어야 최종 신청이 확정됩니다. 입금 계좌는 승인 후 안내드립니다.
                 </p>
               </div>
             </div>
@@ -186,7 +191,8 @@ const GuestApplication = () => {
                 <strong>게스트 신청 안내</strong>
                 <br />• 시애라는 매월 한 번 정기 산행을 진행합니다
                 <br />• 게스트 신청 후 담당자 확인이 필요합니다
-                <br />• 승인 완료 시 연락드리며, 산행 비용은 당일 현장에서 납부하시면 됩니다
+                <br />• <strong>승인 후 참가비 입금이 완료되어야 최종 신청이 확정됩니다</strong>
+                <br />• 입금 계좌 및 금액은 승인 시 문자/이메일로 안내드립니다
                 <br />• 정회원 가입을 원하시면 로그인 페이지에서 회원가입을 진행해주세요
               </p>
             </div>

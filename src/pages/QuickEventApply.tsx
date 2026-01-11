@@ -20,7 +20,6 @@ export default function QuickEventApply() {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApplicationResult | null>(null);
-  const [showParticipants, setShowParticipants] = useState(false);
 
   // 이번 달 산행 (월 1회만 있음)
   const currentEvent = useMemo(() => {
@@ -278,12 +277,16 @@ export default function QuickEventApply() {
                   {result.message}
                 </p>
                 {result.success && result.userName && result.eventTitle && (
-                  <div className="mt-3 text-sm text-green-600 bg-white rounded p-3">
+                  <div className="mt-3 text-sm text-green-600 bg-white rounded p-3 space-y-2">
                     <p>
                       <strong>{result.userName}</strong>님의 <strong>{result.eventTitle}</strong> 신청이
                       접수되었습니다.
                     </p>
                     <p className="mt-1">자세한 내용은 등록하신 연락처로 안내드립니다.</p>
+                    <div className="pt-2 border-t border-green-200">
+                      <p className="font-semibold text-green-700">⚠️ 중요: 입금 완료 후 신청 확정</p>
+                      <p className="mt-1">참가비 입금이 완료되어야 최종 신청이 확정됩니다. 입금 계좌는 문자/이메일로 안내드립니다.</p>
+                    </div>
                   </div>
                 )}
                 {result.success && (
@@ -300,6 +303,18 @@ export default function QuickEventApply() {
         {!result?.success && (
           <Card className="mb-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">산행 신청하기</h3>
+            
+            {/* 입금 안내 박스 */}
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold mb-1">입금 완료 후 신청 확정</p>
+                  <p>신청 후 안내받으신 계좌로 참가비를 입금해야 최종 신청이 확정됩니다.</p>
+                </div>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Input
@@ -333,24 +348,15 @@ export default function QuickEventApply() {
           </Card>
         )}
 
-        {/* 신청자 리스트 */}
+        {/* 신청자 통계 (리스트는 보안상 비공개) */}
         {participants.length > 0 && (
           <Card className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-green-600" />
-                <h3 className="font-semibold text-lg">신청자 리스트</h3>
-              </div>
-              <Button
-                onClick={() => setShowParticipants(!showParticipants)}
-                variant="ghost"
-                size="sm"
-              >
-                {showParticipants ? '숨기기' : '보기'}
-              </Button>
+            <div className="flex items-center gap-2 mb-4">
+              <UserCheck className="w-5 h-5 text-green-600" />
+              <h3 className="font-semibold text-lg">현재 신청 현황</h3>
             </div>
 
-            {/* 신청 통계 */}
+            {/* 신청 통계만 표시 */}
             <div className="flex gap-2 mb-4">
               <Badge variant="success">
                 확정: {participantStats.confirmed}명
@@ -363,44 +369,16 @@ export default function QuickEventApply() {
               </Badge>
             </div>
 
-            {/* 신청자 목록 */}
-            {showParticipants && (
-              <div className="space-y-2">
-                <div className="max-h-96 overflow-y-auto">
-                  {participants.map((participant, index) => (
-                    <div
-                      key={participant.id}
-                      className={`p-3 rounded-lg border ${
-                        participant.status === 'confirmed'
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-yellow-50 border-yellow-200'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900">
-                              {index + 1}. {participant.name}
-                            </span>
-                            <Badge
-                              variant={
-                                participant.status === 'confirmed' ? 'success' : 'warning'
-                              }
-                            >
-                              {participant.status === 'confirmed' ? '확정' : '대기'}
-                            </Badge>
-                          </div>
-                          <div className="mt-1 text-sm text-gray-600">
-                            <p>{participant.occupation}</p>
-                            <p>{participant.phone}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* 개인정보 보호 안내 */}
+            <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold">개인정보 보호</span><br />
+                  신청자 명단은 회원 보호를 위해 비공개입니다. 로그인 후 회원 전용 페이지에서 확인하실 수 있습니다.
+                </p>
               </div>
-            )}
+            </div>
           </Card>
         )}
 
@@ -413,7 +391,8 @@ export default function QuickEventApply() {
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• 등록된 회원만 신청 가능합니다.</li>
             <li>• 이름은 동호회에 등록된 정확한 이름을 입력해주세요.</li>
-            <li>• 신청 후 연락처로 참가비 입금 안내가 발송됩니다.</li>
+            <li>• <strong>신청 후 참가비 입금이 완료되어야 최종 신청이 확정됩니다.</strong></li>
+            <li>• 입금 계좌 및 금액은 신청 후 등록하신 연락처로 안내드립니다.</li>
             <li>• 문의사항은 동호회 관리자에게 연락주세요.</li>
           </ul>
         </div>

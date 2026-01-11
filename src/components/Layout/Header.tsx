@@ -8,16 +8,17 @@ const Header = () => {
   const { user, logout, isAdmin } = useAuth();
   
   const navigation = [
-    { name: '홈', path: '/' },
-    { name: '산행 일정', path: '/events' },
-    { name: '사진 갤러리', path: '/gallery' },
-    { name: '등산 정보', path: '/info' },
-    { name: '게시판', path: '/board' },
-    { name: '회원명부', path: '/members' },
-    { name: '참여율', path: '/attendance' },
+    { name: '홈', path: '/home' },
+    { name: '산행 일정', path: '/home/events' },
+    { name: '사진 갤러리', path: '/home/gallery' },
+    { name: '등산 정보', path: '/home/info' },
+    { name: '게시판', path: '/home/board' },
+    { name: '회원명부', path: '/home/members' },
+    { name: '참여율', path: '/home/attendance' },
   ];
   
   const adminNavigation = [
+    { name: '가입 승인', path: '/admin/approval' },
     { name: '산행 관리', path: '/admin/events' },
     { name: '조 편성 관리', path: '/admin/teams' },
     { name: '회원 관리', path: '/admin/members' },
@@ -37,14 +38,14 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
+          <Link to="/home" className="flex items-center">
             <h1 className="text-xl font-bold text-slate-900">시애라</h1>
           </Link>
           
           {/* User Menu */}
           <div className="flex items-center space-x-6">
             <Link 
-              to="/profile"
+              to="/home/profile"
               className="flex items-center space-x-2 hover:text-slate-900 transition-colors cursor-pointer"
             >
               {user?.profileImage ? (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Mountain, User, Mail, Phone, Briefcase, Building, UserPlus, ArrowLeft } from 'lucide-react';
+import { Mountain, User, Mail, Phone, Briefcase, Building, UserPlus, ArrowLeft, Clock, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
 
 const GuestApplication = () => {
   const navigate = useNavigate();
@@ -36,11 +37,23 @@ const GuestApplication = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 마감일 확인
+    if (isApplicationClosed(currentEvent.date)) {
+      alert('신청 기간이 마감되었습니다.');
+      return;
+    }
+    
     // TODO: 실제 API 호출로 대체
     console.log('게스트 신청:', formData);
     alert('산행 신청이 완료되었습니다!\n담당자 확인 후 연락드리겠습니다.');
-    navigate('/login');
+    navigate('/');
   };
+  
+  // 신청 마감일 정보 계산
+  const applicationDeadline = formatDeadline(currentEvent.date);
+  const daysUntilDeadline = getDaysUntilDeadline(currentEvent.date);
+  const applicationClosed = isApplicationClosed(currentEvent.date);
 
   return (
     <div className="min-h-screen bg-slate-50 py-12">
@@ -166,14 +179,53 @@ const GuestApplication = () => {
             {/* Event Information */}
             <div className="pt-6 border-t border-slate-200">
               <h3 className="text-xl font-bold text-slate-900 mb-4">이번 달 정기 산행</h3>
+              
+              {/* 신청 마감일 안내 */}
+              {applicationClosed ? (
+                <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-lg font-bold text-red-900">신청 마감</h4>
+                      <p className="text-sm text-red-700 mt-1">
+                        신청 기간이 종료되었습니다. ({applicationDeadline} 마감)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : daysUntilDeadline <= 3 ? (
+                <div className="mb-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-6 h-6 text-amber-600 flex-shrink-0 animate-pulse" />
+                    <div>
+                      <h4 className="text-lg font-bold text-amber-900">마감 임박!</h4>
+                      <p className="text-sm text-amber-700 mt-1">
+                        신청 마감까지 <strong>{daysUntilDeadline}일</strong> 남았습니다. ({applicationDeadline})
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="flex items-center gap-2 text-sm text-blue-800">
+                    <Clock className="w-5 h-5 flex-shrink-0" />
+                    <span>
+                      신청 마감: <strong className="text-blue-900">{applicationDeadline}</strong>
+                      <span className="text-blue-600 ml-2">(출발일 10일 전)</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+              
               <div className="p-6 bg-primary-50 rounded-xl border border-primary-200">
                 <h4 className="text-2xl font-bold text-slate-900 mb-3">{currentEvent.title}</h4>
                 <div className="space-y-2 text-slate-700">
                   <div className="flex items-center space-x-2">
+                    <Mountain className="w-5 h-5" />
                     <span className="text-base">{currentEvent.location}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-base">{currentEvent.date}</span>
+                    <span className="text-base">{formatDate(currentEvent.date)}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-base font-bold text-primary-600">참가비: {currentEvent.cost}</span>
@@ -186,27 +238,53 @@ const GuestApplication = () => {
             </div>
 
             {/* Notice */}
-            <div className="p-4 bg-slate-100 rounded-xl border border-slate-200">
-              <p className="text-sm text-slate-700">
-                <strong>게스트 신청 안내</strong>
-                <br />• 시애라는 매월 한 번 정기 산행을 진행합니다
-                <br />• 게스트 신청 후 담당자 확인이 필요합니다
-                <br />• <strong>승인 후 참가비 입금이 완료되어야 최종 신청이 확정됩니다</strong>
-                <br />• 입금 계좌 및 금액은 승인 시 문자/이메일로 안내드립니다
-                <br />• 정회원 가입을 원하시면 로그인 페이지에서 회원가입을 진행해주세요
-              </p>
+            <div className="p-6 bg-amber-50 rounded-xl border-2 border-amber-300">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="flex-shrink-0 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">!</span>
+                </div>
+                <h4 className="text-lg font-bold text-amber-900">게스트 신청 승인 절차 안내</h4>
+              </div>
+              <div className="ml-9 space-y-2 text-sm text-amber-900">
+                <p className="font-semibold text-base">
+                  ✓ 관리자 승인이 필요합니다
+                </p>
+                <p>
+                  • 게스트 신청서를 제출하시면 <strong>운영진이 검토 후 승인</strong>합니다
+                </p>
+                <p>
+                  • 승인은 통상 <strong>1~2일 이내</strong>에 처리됩니다
+                </p>
+                <p>
+                  • 승인 완료 시 <strong>입금 계좌 및 금액을 문자/이메일로 안내</strong>드립니다
+                </p>
+                <p>
+                  • <strong>입금 확인 후 최종 신청이 확정</strong>되며, 산행 세부 일정을 안내드립니다
+                </p>
+                <p className="pt-2 border-t border-amber-200 mt-3">
+                  💡 정회원 가입을 원하시면 홈페이지에서 회원가입을 진행해주세요
+                </p>
+              </div>
             </div>
 
             {/* Buttons */}
             <div className="flex space-x-4 pt-4">
               <Link
-                to="/login"
+                to="/"
                 className="flex-1 btn-secondary text-center"
               >
                 돌아가기
               </Link>
-              <button type="submit" className="flex-1 btn-primary">
-                신청하기
+              <button 
+                type="submit" 
+                disabled={applicationClosed}
+                className={`flex-1 font-bold py-3 rounded-xl transition-all ${
+                  applicationClosed
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'btn-primary'
+                }`}
+              >
+                {applicationClosed ? '신청 마감' : '신청하기'}
               </button>
             </div>
           </form>

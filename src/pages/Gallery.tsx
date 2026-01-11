@@ -22,6 +22,9 @@ const Gallery = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadEventTitle, setUploadEventTitle] = useState('');
+  const [uploadEventYear, setUploadEventYear] = useState('2026');
+  const [uploadEventMonth, setUploadEventMonth] = useState('01');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const months = [
@@ -30,6 +33,28 @@ const Gallery = () => {
     { id: '2025-12', name: '2025년 12월' },
     { id: '2025-11', name: '2025년 11월' },
   ];
+  
+  // 각 월별/이벤트별 사진 개수 계산
+  const getPhotoCountByMonth = (monthId: string) => {
+    if (monthId === 'all') return photos.length;
+    return photos.filter(photo => photo.month === monthId).length;
+  };
+  
+  // 이벤트별 사진 개수 계산
+  const eventPhotoCounts = photos.reduce((acc, photo) => {
+    const key = `${photo.month}-${photo.eventTitle}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // 고유한 이벤트 목록 추출
+  const uniqueEvents = Array.from(new Set(photos.map(p => `${p.month}|||${p.eventTitle}`)))
+    .map(key => {
+      const [month, eventTitle] = key.split('|||');
+      const photoCount = eventPhotoCounts[`${month}-${eventTitle}`];
+      return { month, eventTitle, photoCount };
+    })
+    .sort((a, b) => b.month.localeCompare(a.month));
   
   const photos = [
     { id: 1, month: '2026-01', eventTitle: '앙봉산 정상 등반', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: '앙봉산 정상에서', author: '김산행', date: '2026-01-15', likes: 24 },
@@ -126,13 +151,26 @@ const Gallery = () => {
       return;
     }
     
+    if (!uploadEventTitle.trim()) {
+      alert('이벤트 제목을 입력해주세요.');
+      return;
+    }
+    
     // TODO: 실제 백엔드 API 연동
-    console.log('업로드할 파일:', uploadFiles);
-    alert(`${uploadFiles.length}개의 사진이 업로드되었습니다!`);
+    const uploadData = {
+      eventTitle: uploadEventTitle,
+      eventMonth: `${uploadEventYear}-${uploadEventMonth}`,
+      files: uploadFiles,
+    };
+    console.log('업로드할 데이터:', uploadData);
+    alert(`"${uploadEventTitle}" 이벤트에 ${uploadFiles.length}개의 사진이 업로드되었습니다!`);
     
     // 정리
     uploadFiles.forEach(f => URL.revokeObjectURL(f.preview));
     setUploadFiles([]);
+    setUploadEventTitle('');
+    setUploadEventYear('2026');
+    setUploadEventMonth('01');
     setShowUploadModal(false);
   };
   
@@ -140,6 +178,9 @@ const Gallery = () => {
   const handleCloseUploadModal = () => {
     uploadFiles.forEach(f => URL.revokeObjectURL(f.preview));
     setUploadFiles([]);
+    setUploadEventTitle('');
+    setUploadEventYear('2026');
+    setUploadEventMonth('01');
     setShowUploadModal(false);
   };
   
@@ -272,22 +313,34 @@ const Gallery = () => {
       {/* Filter & View Mode */}
       <div className="mb-8 space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
+          <div className="w-full md:w-auto">
             <h3 className="text-sm text-slate-600 mb-3">월별 보기</h3>
             <div className="flex flex-wrap gap-2">
-              {months.map((month) => (
-                <button
-                  key={month.id}
-                  onClick={() => setSelectedEvent(month.id)}
-                  className={`px-4 py-2 rounded-xl font-medium transition-colors ${
-                    selectedEvent === month.id
-                      ? 'bg-slate-900 text-white'
-                      : 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {month.name}
-                </button>
-              ))}
+              {months.map((month) => {
+                const photoCount = getPhotoCountByMonth(month.id);
+                return (
+                  <button
+                    key={month.id}
+                    onClick={() => setSelectedEvent(month.id)}
+                    className={`px-4 py-2 rounded-xl font-medium transition-colors ${
+                      selectedEvent === month.id
+                        ? 'bg-slate-900 text-white'
+                        : 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{month.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        selectedEvent === month.id
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {photoCount}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
           
@@ -317,6 +370,67 @@ const Gallery = () => {
             </button>
           </div>
         </div>
+        
+        {/* 이벤트별 사진 개수 표시 */}
+        {selectedEvent !== 'all' && (
+          <div className="mt-6">
+            <h3 className="text-sm text-slate-600 mb-3 flex items-center gap-2">
+              <Folder className="h-4 w-4" />
+              이벤트별 사진
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {uniqueEvents
+                .filter(event => event.month === selectedEvent)
+                .map((event, index) => (
+                  <div
+                    key={index}
+                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-slate-600" />
+                      <span className="text-sm font-medium text-slate-900">{event.eventTitle}</span>
+                      <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-bold">
+                        {event.photoCount}장
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+        
+        {/* 전체 보기일 때 모든 이벤트 표시 */}
+        {selectedEvent === 'all' && (
+          <div className="mt-6">
+            <h3 className="text-sm text-slate-600 mb-3 flex items-center gap-2">
+              <Folder className="h-4 w-4" />
+              전체 이벤트별 사진
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {uniqueEvents.map((event, index) => (
+                <div
+                  key={index}
+                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-2 flex-1">
+                      <ImageIcon className="h-4 w-4 text-slate-600 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{event.eventTitle}</p>
+                        <p className="text-xs text-slate-500">
+                          {months.find(m => m.id === event.month)?.name || event.month}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-bold whitespace-nowrap ml-2">
+                      {event.photoCount}장
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Photo Grid */}
@@ -603,6 +717,68 @@ const Gallery = () => {
 
             {/* 본문 */}
             <div className="flex-1 overflow-y-auto p-6">
+              {/* 이벤트 정보 입력 */}
+              <div className="mb-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    이벤트 제목 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadEventTitle}
+                    onChange={(e) => setUploadEventTitle(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900"
+                    placeholder="예: 북한산 백운대 등반"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    산행 일자 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <select
+                        value={uploadEventYear}
+                        onChange={(e) => setUploadEventYear(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900 font-medium"
+                      >
+                        {Array.from({ length: 5 }, (_, i) => {
+                          const year = new Date().getFullYear() - i;
+                          return (
+                            <option key={year} value={year}>
+                              {year}년
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <div>
+                      <select
+                        value={uploadEventMonth}
+                        onChange={(e) => setUploadEventMonth(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900 font-medium"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => {
+                          const month = String(i + 1).padStart(2, '0');
+                          return (
+                            <option key={month} value={month}>
+                              {i + 1}월
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-500 mt-2">
+                    선택한 날짜: {uploadEventYear}년 {uploadEventMonth}월
+                  </p>
+                </div>
+              </div>
+              
+              {/* 구분선 */}
+              <div className="border-t border-slate-200 mb-6"></div>
+              
               {/* 드래그 앤 드롭 영역 */}
               <div
                 onDragEnter={handleDragEnter}
@@ -690,14 +866,26 @@ const Gallery = () => {
             </div>
 
             {/* 푸터 */}
-            <div className="p-6 border-t flex justify-between items-center">
-              <div className="text-sm text-slate-600">
+            <div className="p-6 border-t flex justify-between items-center bg-slate-50">
+              <div className="text-sm">
                 {uploadFiles.length > 0 ? (
-                  <span className="font-medium">
-                    {uploadFiles.length}개의 사진이 업로드 대기 중
-                  </span>
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      {uploadFiles.length}개의 사진이 업로드 대기 중
+                    </p>
+                    {uploadEventTitle && (
+                      <p className="text-slate-600 text-xs mt-1">
+                        이벤트: {uploadEventTitle} ({uploadEventYear}년 {uploadEventMonth}월)
+                      </p>
+                    )}
+                  </div>
                 ) : (
-                  <span>사진을 선택해주세요</span>
+                  <div>
+                    <p className="text-slate-600">사진을 선택해주세요</p>
+                    <p className="text-slate-500 text-xs mt-1">
+                      이벤트 정보를 입력하고 사진을 업로드하세요
+                    </p>
+                  </div>
                 )}
               </div>
               <div className="flex space-x-3">

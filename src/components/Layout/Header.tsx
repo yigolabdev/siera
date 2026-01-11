@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mountain, User, LogOut, Shield } from 'lucide-react';
+import { Mountain, User, LogOut, Shield, Code } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Header = () => {
@@ -10,17 +10,16 @@ const Header = () => {
   const navigation = [
     { name: '홈', path: '/home' },
     { name: '산행 일정', path: '/home/events' },
-    { name: '사진 갤러리', path: '/home/gallery' },
     { name: '등산 정보', path: '/home/info' },
+    { name: '사진 갤러리', path: '/home/gallery' },
     { name: '게시판', path: '/home/board' },
     { name: '회원명부', path: '/home/members' },
     { name: '참여율', path: '/home/attendance' },
   ];
   
   const adminNavigation = [
-    { name: '가입 승인', path: '/admin/approval' },
+    { name: '입금 관리', path: '/admin/payment' },
     { name: '산행 관리', path: '/admin/events' },
-    { name: '조 편성 관리', path: '/admin/teams' },
     { name: '회원 관리', path: '/admin/members' },
   ];
   
@@ -30,7 +29,7 @@ const Header = () => {
   
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
   };
   
   return (
@@ -39,7 +38,9 @@ const Header = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/home" className="flex items-center">
-            <h1 className="text-xl font-bold text-slate-900">시애라</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
+              시애라 (<span className="text-primary-600">Sierra</span>)
+            </h1>
           </Link>
           
           {/* User Menu */}
@@ -104,6 +105,19 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
+              
+              {/* 라우팅 테스트 버튼 */}
+              <Link
+                to="/dev/routing-test"
+                className={`px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
+                  isActive('/dev/routing-test')
+                    ? 'bg-purple-100 text-purple-700 border-2 border-purple-300'
+                    : 'bg-slate-100 text-slate-600 hover:bg-purple-50 hover:text-purple-600 border-2 border-transparent'
+                }`}
+              >
+                <Code className="w-3.5 h-3.5" />
+                DEV
+              </Link>
             </div>
           )}
         </nav>

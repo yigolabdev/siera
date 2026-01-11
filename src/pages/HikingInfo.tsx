@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Mountain, AlertTriangle, Clock, Thermometer, Wind, Cloud, Droplets, Eye, CreditCard, Calendar, CloudRain, Sun, CloudSnow, CloudDrizzle, CloudFog } from 'lucide-react';
+import { Mountain, AlertTriangle, Clock, Thermometer, Wind, Cloud, Droplets, Eye, Calendar, CloudRain, Sun, CloudSnow, CloudDrizzle, CloudFog, MapPin, TrendingUp, Check } from 'lucide-react';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 interface WeatherData {
   temperature: number;
@@ -147,6 +149,7 @@ const HikingInfo = () => {
       name: '북한산',
       altitude: '836m',
       difficulty: '중급',
+      difficultyVariant: 'warning' as const,
       duration: '4-5시간',
       description: '서울 근교의 대표적인 산으로 백운대, 인수봉, 만경대 등의 명소가 있습니다.',
       imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
@@ -155,6 +158,7 @@ const HikingInfo = () => {
       name: '설악산',
       altitude: '1,708m',
       difficulty: '상급',
+      difficultyVariant: 'danger' as const,
       duration: '8-10시간',
       description: '국내 최고의 명산으로 대청봉을 중심으로 다양한 등산 코스가 있습니다.',
       imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
@@ -163,6 +167,7 @@ const HikingInfo = () => {
       name: '지리산',
       altitude: '1,915m',
       difficulty: '상급',
+      difficultyVariant: 'danger' as const,
       duration: '1박2일',
       description: '한반도의 지붕이라 불리는 명산으로 장엄한 산세를 자랑합니다.',
       imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
@@ -172,6 +177,8 @@ const HikingInfo = () => {
   const safetyTips = [
     {
       icon: AlertTriangle,
+      iconColor: 'text-red-600',
+      bgColor: 'bg-red-50',
       title: '등산 전 준비사항',
       tips: [
         '일기예보를 꼭 확인하세요',
@@ -182,6 +189,8 @@ const HikingInfo = () => {
     },
     {
       icon: Mountain,
+      iconColor: 'text-green-600',
+      bgColor: 'bg-green-50',
       title: '등산 중 주의사항',
       tips: [
         '자신의 체력에 맞는 페이스를 유지하세요',
@@ -192,6 +201,8 @@ const HikingInfo = () => {
     },
     {
       icon: Thermometer,
+      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-50',
       title: '기상 변화 대응',
       tips: [
         '보온 의류를 여벌로 준비하세요',
@@ -203,14 +214,14 @@ const HikingInfo = () => {
   ];
   
   const equipment = [
-    { name: '등산화', description: '발목을 보호하고 미끄럼 방지 기능이 있는 등산화' },
-    { name: '등산복', description: '땀 배출이 좋고 보온성이 우수한 기능성 의류' },
-    { name: '배낭', description: '20-30L 용량의 편안한 배낭' },
-    { name: '등산 스틱', description: '무릎 보호와 균형 유지를 위한 스틱' },
-    { name: '물', description: '1.5L 이상의 충분한 식수' },
-    { name: '간식', description: '초콜릿, 견과류 등 고칼로리 간식' },
-    { name: '구급약', description: '밴드, 소독약, 진통제 등' },
-    { name: '헤드랜턴', description: '비상시를 대비한 조명' },
+    { name: '등산화', description: '발목을 보호하고 미끄럼 방지 기능이 있는 등산화', icon: '👟' },
+    { name: '등산복', description: '땀 배출이 좋고 보온성이 우수한 기능성 의류', icon: '👕' },
+    { name: '배낭', description: '20-30L 용량의 편안한 배낭', icon: '🎒' },
+    { name: '등산 스틱', description: '무릎 보호와 균형 유지를 위한 스틱', icon: '🥾' },
+    { name: '물', description: '1.5L 이상의 충분한 식수', icon: '💧' },
+    { name: '간식', description: '초콜릿, 견과류 등 고칼로리 간식', icon: '🍫' },
+    { name: '구급약', description: '밴드, 소독약, 진통제 등', icon: '🏥' },
+    { name: '헤드랜턴', description: '비상시를 대비한 조명', icon: '🔦' },
   ];
   
   // 날씨 아이콘 매핑
@@ -226,23 +237,6 @@ const HikingInfo = () => {
     return <Sun className={`${iconClass} text-amber-400`} />;
   };
   
-  const payments = [
-    {
-      id: 1,
-      title: '2026년 연회비',
-      amount: '200,000원',
-      dueDate: '2026-01-31',
-      status: 'pending' as const,
-    },
-    {
-      id: 2,
-      title: '1월 정기산행 회비',
-      amount: '50,000원',
-      dueDate: '2026-01-10',
-      status: 'completed' as const,
-    },
-  ];
-  
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
@@ -256,12 +250,13 @@ const HikingInfo = () => {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
           {/* Today's Weather */}
-          <div className="card">
+          <Card className="hover:shadow-xl transition-all">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">산행 당일 날씨</h2>
-              <div className="text-sm text-slate-600">
-                2026년 1월 15일 (수)
-              </div>
+              <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <Cloud className="w-7 h-7 text-blue-600" />
+                산행 당일 날씨
+              </h2>
+              <Badge variant="info">2026년 1월 15일 (수)</Badge>
             </div>
             
             {loading ? (
@@ -271,19 +266,23 @@ const HikingInfo = () => {
             ) : weather ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-                  <div className="text-center">
+                  <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl">
+                    <Thermometer className="w-6 h-6 mx-auto mb-2 text-orange-600" />
                     <p className="text-slate-600 text-sm mb-1">기온</p>
                     <p className="text-3xl font-bold text-slate-900">{weather.temperature}°C</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl">
+                    <Wind className="w-6 h-6 mx-auto mb-2 text-blue-600" />
                     <p className="text-slate-600 text-sm mb-1">풍속</p>
                     <p className="text-3xl font-bold text-slate-900">{weather.windSpeed}m/s</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center p-4 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl">
+                    <Droplets className="w-6 h-6 mx-auto mb-2 text-teal-600" />
                     <p className="text-slate-600 text-sm mb-1">습도</p>
                     <p className="text-3xl font-bold text-slate-900">{weather.humidity}%</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl">
+                    <Eye className="w-6 h-6 mx-auto mb-2 text-purple-600" />
                     <p className="text-slate-600 text-sm mb-1">가시거리</p>
                     <p className="text-3xl font-bold text-slate-900">{weather.visibility}km</p>
                   </div>
@@ -301,9 +300,9 @@ const HikingInfo = () => {
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-slate-200">
-                  <div className="flex justify-between text-sm text-slate-600">
-                    <span>일출: {weather.sunrise}</span>
-                    <span>일몰: {weather.sunset}</span>
+                  <div className="flex justify-between text-sm">
+                    <Badge variant="warning">일출: {weather.sunrise}</Badge>
+                    <Badge variant="info">일몰: {weather.sunset}</Badge>
                   </div>
                 </div>
               </>
@@ -312,32 +311,40 @@ const HikingInfo = () => {
                 날씨 정보를 불러올 수 없습니다.
               </div>
             )}
-          </div>
+          </Card>
           
           {/* Mountains Info */}
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">추천 산 정보</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <Mountain className="w-7 h-7 text-green-600" />
+              추천 산 정보
+            </h2>
             <div className="grid grid-cols-1 gap-6">
               {mountains.map((mountain, index) => (
-                <div key={index} className="card">
+                <Card key={index} className="hover:shadow-xl hover:border-primary-600 transition-all">
                   <div className="flex flex-col md:flex-row gap-6">
-                    <img 
-                      src={mountain.imageUrl}
-                      alt={mountain.name}
-                      className="w-full md:w-48 h-48 object-cover rounded-xl"
-                    />
+                    <div className="relative overflow-hidden rounded-xl w-full md:w-48 h-48 flex-shrink-0">
+                      <img 
+                        src={mountain.imageUrl}
+                        alt={mountain.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <Badge variant={mountain.difficultyVariant}>{mountain.difficulty}</Badge>
+                      </div>
+                    </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-slate-900 mb-4">{mountain.name}</h3>
+                      <h3 className="text-2xl font-bold text-slate-900 mb-4">{mountain.name}</h3>
                       <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="text-center">
+                        <div className="text-center p-3 bg-slate-50 rounded-lg">
                           <p className="text-xs text-slate-600 mb-1">높이</p>
                           <p className="font-bold text-slate-900">{mountain.altitude}</p>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center p-3 bg-slate-50 rounded-lg">
                           <p className="text-xs text-slate-600 mb-1">난이도</p>
                           <p className="font-bold text-slate-900">{mountain.difficulty}</p>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center p-3 bg-slate-50 rounded-lg">
                           <p className="text-xs text-slate-600 mb-1">소요시간</p>
                           <p className="font-bold text-slate-900">{mountain.duration}</p>
                         </div>
@@ -345,57 +352,71 @@ const HikingInfo = () => {
                       <p className="text-slate-700 leading-relaxed">{mountain.description}</p>
                     </div>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           </div>
           
           {/* Safety Tips */}
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">안전 수칙</h2>
-            <div className="grid grid-cols-1 gap-6">
-              {safetyTips.map((section, index) => (
-                <div key={index} className="card">
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">{section.title}</h3>
-                  <ul className="space-y-2">
-                    {section.tips.map((tip, tipIndex) => (
-                      <li key={tipIndex} className="flex items-start space-x-2">
-                        <span className="text-slate-400 mt-1">•</span>
-                        <span className="text-slate-700">{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <AlertTriangle className="w-7 h-7 text-red-600" />
+              안전 수칙
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {safetyTips.map((section, index) => {
+                const Icon = section.icon;
+                return (
+                  <Card key={index} className={`${section.bgColor} border-2 hover:shadow-lg transition-all`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`p-2 bg-white rounded-lg`}>
+                        <Icon className={`w-6 h-6 ${section.iconColor}`} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900">{section.title}</h3>
+                    </div>
+                    <ul className="space-y-2">
+                      {section.tips.map((tip, tipIndex) => (
+                        <li key={tipIndex} className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-slate-700 text-sm">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                );
+              })}
             </div>
           </div>
           
           {/* Equipment Checklist */}
-          <div className="card">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">등산 장비 체크리스트</h2>
+          <Card className="hover:shadow-xl transition-all">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <TrendingUp className="w-7 h-7 text-purple-600" />
+              등산 장비 체크리스트
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {equipment.map((item, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 border border-slate-200 rounded-xl">
-                  <input 
-                    type="checkbox" 
-                    className="mt-1 h-5 w-5 text-slate-900 rounded focus:ring-slate-500"
-                  />
-                  <div>
+                <div key={index} className="flex items-start gap-3 p-4 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-primary-600 hover:shadow-md transition-all">
+                  <div className="text-2xl">{item.icon}</div>
+                  <div className="flex-1">
                     <p className="font-bold text-slate-900">{item.name}</p>
-                    <p className="text-slate-600 text-sm">{item.description}</p>
+                    <p className="text-slate-600 text-sm mt-1">{item.description}</p>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
         
-        {/* Sidebar - Weather & Payment Info */}
+        {/* Sidebar - Weather Info */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-6">
             {/* Weekly Weather */}
-            <div className="card">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">7일 예보</h2>
+            <Card className="hover:shadow-xl transition-all">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-primary-600" />
+                7일 예보
+              </h2>
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -403,8 +424,8 @@ const HikingInfo = () => {
               ) : (
                 <div className="space-y-2">
                   {forecast.map((day, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border-b border-slate-100 last:border-0">
-                      <div className="flex items-center space-x-3">
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-3">
                         <div className="text-center min-w-[40px]">
                           <p className="text-sm font-bold text-slate-900">{day.day}</p>
                           <p className="text-xs text-slate-500">{day.date}</p>
@@ -418,64 +439,12 @@ const HikingInfo = () => {
                   ))}
                 </div>
               )}
-              <div className="mt-4 p-3 bg-slate-50 rounded-xl">
-                <p className="text-sm text-slate-600">
-                  날씨는 산행 당일 변경될 수 있으니 출발 전 반드시 재확인하세요.
+              <div className="mt-4 p-3 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                <p className="text-sm text-amber-900 font-medium">
+                  ⚠️ 날씨는 산행 당일 변경될 수 있으니 출발 전 반드시 재확인하세요.
                 </p>
               </div>
-            </div>
-            
-            {/* Payment Info */}
-            <div className="card">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">입금 정보</h2>
-              
-              <div className="space-y-4 mb-6">
-                {payments.map((payment) => (
-                  <div key={payment.id} className="p-4 border border-slate-200 rounded-xl">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-slate-900 text-base">{payment.title}</h3>
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        payment.status === 'completed'
-                          ? 'bg-slate-100 text-slate-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {payment.status === 'completed' ? '완료' : '대기'}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-xl font-bold text-slate-900">{payment.amount}</div>
-                      <div className="text-sm text-slate-600">
-                        납부기한: {payment.dueDate}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="border-t border-slate-200 pt-4">
-                <h3 className="font-bold text-slate-900 mb-3">계좌 정보</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">은행</span>
-                    <span className="font-medium text-slate-900">국민은행</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">계좌번호</span>
-                    <span className="font-medium text-slate-900">123-456-789012</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">예금주</span>
-                    <span className="font-medium text-slate-900">시애라</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
-                <p className="text-xs text-amber-900">
-                  입금자명에 회원님의 성함을 정확히 기재해주세요.
-                </p>
-              </div>
-            </div>
+            </Card>
           </div>
         </div>
       </div>
@@ -484,6 +453,3 @@ const HikingInfo = () => {
 };
 
 export default HikingInfo;
-
-
-

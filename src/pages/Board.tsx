@@ -1,6 +1,8 @@
 import { Bell, Pin, CreditCard, MessageSquare, ThumbsUp, Eye, Calendar, Search, Plus, X, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 interface Comment {
   id: number;
@@ -117,6 +119,7 @@ const Board = () => {
     { id: 'general', name: '자유게시판' },
     { id: 'info', name: '정보공유' },
     { id: 'question', name: '질문' },
+    { id: 'poem', name: '시(詩)' },
   ];
   
   const [posts, setPosts] = useState<Post[]>([
@@ -174,6 +177,17 @@ const Board = () => {
       comments: 0,
       likes: 38,
       content: '산행 후 근육통 예방을 위한 스트레칭 방법입니다. 하산 직후와 귀가 후 스트레칭을 꼭 해주세요!',
+    },
+    {
+      id: 6,
+      category: 'poem',
+      title: '산을 오르며',
+      author: '강시인',
+      date: '2026-01-11',
+      views: 145,
+      comments: 0,
+      likes: 28,
+      content: `한 걸음 한 걸음\n돌계단을 오를 때마다\n숨이 차오르고\n\n하지만 멈추지 않네\n정상을 향한 발걸음\n\n구름 사이로 보이는\n아득한 세상\n\n여기 산 위에서\n나는 비로소 나를 만난다`,
     },
   ]);
   
@@ -297,17 +311,18 @@ const Board = () => {
   };
   
   const getCategoryBadge = (category: string) => {
-    const badges: { [key: string]: { bg: string; text: string; label: string } } = {
-      general: { bg: 'bg-blue-100', text: 'text-blue-800', label: '자유' },
-      info: { bg: 'bg-green-100', text: 'text-green-800', label: '정보' },
-      question: { bg: 'bg-orange-100', text: 'text-orange-800', label: '질문' },
-    };
-    const badge = badges[category] || badges.general;
-    return (
-      <span className={`px-2 py-1 rounded text-sm font-bold ${badge.bg} ${badge.text}`}>
-        {badge.label}
-      </span>
-    );
+    switch (category) {
+      case 'general':
+        return <Badge variant="info">자유</Badge>;
+      case 'info':
+        return <Badge variant="success">정보</Badge>;
+      case 'question':
+        return <Badge variant="warning">질문</Badge>;
+      case 'poem':
+        return <Badge variant="primary">시</Badge>;
+      default:
+        return <Badge variant="info">자유</Badge>;
+    }
   };
   
   return (
@@ -349,29 +364,27 @@ const Board = () => {
       
       {/* Content */}
       {activeTab === 'notice' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div>
           {/* Notices */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             {/* Pinned Notices */}
             {pinnedNotices.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">중요 공지</h2>
                 <div className="space-y-4">
                   {pinnedNotices.map((notice) => (
-                    <div key={notice.id} className="card border-l-4 border-red-600">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
-                            필독
-                          </span>
+                    <Card key={notice.id} className="border-l-4 border-red-600 hover:shadow-lg transition-all">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="danger">필독</Badge>
                           <h3 className="text-xl font-bold text-slate-900">{notice.title}</h3>
                         </div>
-                        <span className="text-sm text-slate-500 whitespace-nowrap ml-4">
+                        <span className="text-sm text-slate-500 whitespace-nowrap">
                           {notice.date}
                         </span>
                       </div>
                       <p className="text-slate-700 leading-relaxed">{notice.content}</p>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>
@@ -382,67 +395,16 @@ const Board = () => {
               <h2 className="text-2xl font-bold text-slate-900 mb-4">일반 공지</h2>
               <div className="space-y-4">
                 {regularNotices.map((notice) => (
-                  <div key={notice.id} className="card">
-                    <div className="flex items-start justify-between mb-2">
+                  <Card key={notice.id} className="hover:shadow-lg transition-all">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-2">
                       <h3 className="text-xl font-bold text-slate-900">{notice.title}</h3>
-                      <span className="text-sm text-slate-500 whitespace-nowrap ml-4">
+                      <span className="text-sm text-slate-500 whitespace-nowrap">
                         {notice.date}
                       </span>
                     </div>
                     <p className="text-slate-700 leading-relaxed">{notice.content}</p>
-                  </div>
+                  </Card>
                 ))}
-              </div>
-            </div>
-          </div>
-          
-          {/* Payment Information Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <div className="card">
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">회비 안내</h2>
-                
-                <div className="space-y-4">
-                  {payments.map((payment) => (
-                    <div key={payment.id} className="p-4 border border-slate-200 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-slate-900">{payment.title}</h3>
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          payment.status === 'completed'
-                            ? 'bg-slate-100 text-slate-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {payment.status === 'completed' ? '납부완료' : '납부대기'}
-                        </span>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-600">금액</span>
-                          <span className="font-bold text-slate-900 text-lg">{payment.amount}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-600">납부기한</span>
-                          <span className="text-slate-900">{payment.dueDate}</span>
-                        </div>
-                        {payment.bankInfo && (
-                          <div className="pt-2 mt-2 border-t border-slate-200">
-                            <p className="text-slate-600 text-xs mb-1">입금 계좌</p>
-                            <p className="text-slate-900 font-medium">{payment.bankInfo}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-6 p-4 bg-slate-50 rounded-xl">
-                  <p className="text-sm font-bold text-slate-900 mb-2">입금 시 안내</p>
-                  <ul className="text-xs text-slate-600 space-y-1">
-                    <li>입금자명은 본인 성함으로 해주세요</li>
-                    <li>입금 후 자동으로 확인됩니다</li>
-                    <li>문의: 010-1234-5678</li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>
@@ -452,20 +414,21 @@ const Board = () => {
           {/* Search and Filters */}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <input
                 type="text"
                 placeholder="제목 또는 작성자로 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                className="input-field pl-12"
               />
             </div>
             <button 
               onClick={() => setShowWriteModal(true)}
-              className="btn-primary whitespace-nowrap"
+              className="btn-primary whitespace-nowrap flex items-center gap-2"
             >
-              글쓰기
+              <Plus className="w-5 h-5" />
+              <span>글쓰기</span>
             </button>
           </div>
           
@@ -475,10 +438,10 @@ const Board = () => {
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-colors ${
+                className={`px-4 py-2 rounded-xl font-semibold whitespace-nowrap transition-all ${
                   selectedCategory === category.id
-                    ? 'bg-slate-900 text-white'
-                    : 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50'
+                    ? 'bg-primary-600 text-white shadow-md'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
                 {category.name}
@@ -489,13 +452,13 @@ const Board = () => {
           {/* Posts List */}
           <div className="space-y-4">
             {filteredPosts.map((post) => (
-              <div 
+              <Card
                 key={post.id} 
-                className="card cursor-pointer hover:border-slate-300 transition-colors"
+                className="cursor-pointer hover:shadow-lg hover:border-primary-600 transition-all"
                 onClick={() => handleViewPost(post)}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-2 flex-1">
+                <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap flex-1">
                     {getCategoryBadge(post.category)}
                     <h3 className="text-xl font-bold text-slate-900">
                       {post.title}
@@ -505,17 +468,23 @@ const Board = () => {
                 
                 <p className="text-slate-600 mb-4 line-clamp-2">{post.content}</p>
                 
-                <div className="flex items-center justify-between text-sm text-slate-500">
-                  <div className="flex items-center space-x-4">
-                    <span className="font-medium text-slate-700">{post.author}</span>
+                <div className="flex items-center justify-between text-sm text-slate-500 flex-wrap gap-3">
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold text-slate-700">{post.author}</span>
                     <span>{post.date}</span>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <span>조회 {post.views}</span>
-                    <span>댓글 {post.comments}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      <span>{post.views}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{post.comments}</span>
+                    </div>
                     <button
                       onClick={(e) => handleLikePost(post.id, e)}
-                      className="flex items-center space-x-1 hover:text-primary-600 transition-colors"
+                      className="flex items-center gap-1 hover:text-primary-600 transition-colors"
                     >
                       <ThumbsUp 
                         className={`h-4 w-4 ${likedPosts.has(post.id) ? 'fill-primary-600 text-primary-600' : ''}`}
@@ -526,14 +495,14 @@ const Board = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
           
           {filteredPosts.length === 0 && (
-            <div className="text-center py-12">
+            <Card className="text-center py-12">
               <p className="text-xl text-slate-500">검색 결과가 없습니다.</p>
-            </div>
+            </Card>
           )}
         </div>
       )}
@@ -572,6 +541,7 @@ const Board = () => {
                     <option value="general">자유게시판</option>
                     <option value="info">정보공유</option>
                     <option value="question">질문</option>
+                    <option value="poem">시(詩)</option>
                   </select>
                 </div>
                 

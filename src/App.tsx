@@ -18,8 +18,8 @@ import GuestApplication from './pages/GuestApplication';
 import QuickEventApply from './pages/QuickEventApply';
 import EventManagement from './pages/Admin/EventManagement';
 import MemberManagement from './pages/Admin/MemberManagement';
-import TeamManagement from './pages/Admin/TeamManagement';
-import MembershipApproval from './pages/Admin/MembershipApproval';
+import PaymentManagement from './pages/Admin/PaymentManagement';
+import RoutingTest from './pages/RoutingTest';
 
 function App() {
   return (
@@ -56,11 +56,19 @@ function App() {
               <Layout />
             </ProtectedRoute>
           }>
-            <Route index element={<Navigate to="/admin/approval" replace />} />
-            <Route path="approval" element={<MembershipApproval />} />
-            <Route path="events" element={<EventManagement />} />
+            <Route index element={<Navigate to="/admin/members" replace />} />
             <Route path="members" element={<MemberManagement />} />
-            <Route path="teams" element={<TeamManagement />} />
+            <Route path="payment" element={<PaymentManagement />} />
+            <Route path="events" element={<EventManagement />} />
+          </Route>
+          
+          {/* Dev Tools - 개발용 라우팅 테스트 */}
+          <Route path="/dev" element={
+            <ProtectedRoute requireAdmin>
+              <Layout />
+            </ProtectedRoute>
+          }>
+            <Route path="routing-test" element={<RoutingTest />} />
           </Route>
           
           {/* Catch all */}

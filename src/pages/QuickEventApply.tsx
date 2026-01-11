@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Calendar, MapPin, Users, AlertCircle, CheckCircle, Mountain, UserCheck } from 'lucide-react';
+import { Calendar, MapPin, Users, AlertCircle, CheckCircle, Mountain, UserCheck, Clock } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Badge from '../components/ui/Badge';
 import { mockEvents, mockParticipants } from '../data/mockEvents';
 import { mockUsers } from '../data/mockUsers';
-import { formatDate } from '../utils/format';
+import { formatDate, formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
 
 interface ApplicationResult {
   success: boolean;
@@ -65,6 +65,15 @@ export default function QuickEventApply() {
       setResult({
         success: false,
         message: '현재 신청 가능한 산행이 없습니다.',
+      });
+      return;
+    }
+
+    // 신청 마감 확인
+    if (isApplicationClosed(currentEvent.date)) {
+      setResult({
+        success: false,
+        message: `신청 기간이 마감되었습니다. (${formatDeadline(currentEvent.date)} 마감)`,
       });
       return;
     }
@@ -218,14 +227,39 @@ export default function QuickEventApply() {
             )}
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5 text-gray-500" />
-              <div className="flex items-center gap-2">
-                <span>
-                  {currentEvent.currentParticipants}/{currentEvent.maxParticipants}명 신청
-                </span>
+              <span>
+                {currentEvent.currentParticipants} / {currentEvent.maxParticipants}명 신청
                 {currentEvent.currentParticipants >= currentEvent.maxParticipants && (
-                  <Badge variant="danger">마감</Badge>
+                  <Badge variant="danger" className="ml-2">정원 마감</Badge>
                 )}
-              </div>
+              </span>
+            </div>
+            
+            {/* 신청 마감일 정보 */}
+            <div className="pt-3 border-t border-gray-200">
+              {isApplicationClosed(currentEvent.date) ? (
+                <div className="flex items-center gap-2 text-red-700 bg-red-50 p-3 rounded-lg">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-semibold">
+                    신청 마감됨 ({formatDeadline(currentEvent.date)} 마감)
+                  </span>
+                </div>
+              ) : getDaysUntilDeadline(currentEvent.date) <= 3 ? (
+                <div className="flex items-center gap-2 text-amber-700 bg-amber-50 p-3 rounded-lg">
+                  <Clock className="w-5 h-5 flex-shrink-0 animate-pulse" />
+                  <span className="font-semibold">
+                    마감 {getDaysUntilDeadline(currentEvent.date)}일 전 · {formatDeadline(currentEvent.date)}까지
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-blue-700 bg-blue-50 p-3 rounded-lg">
+                  <Clock className="w-5 h-5 flex-shrink-0" />
+                  <span>
+                    신청 마감: <strong>{formatDeadline(currentEvent.date)}</strong>
+                    <span className="text-blue-600 text-sm ml-2">(출발일 10일 전)</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -332,7 +366,12 @@ export default function QuickEventApply() {
 
               <Button
                 type="submit"
-                disabled={isLoading || !name.trim() || currentEvent.currentParticipants >= currentEvent.maxParticipants}
+                disabled={
+                  isLoading || 
+                  !name.trim() || 
+                  currentEvent.currentParticipants >= currentEvent.maxParticipants ||
+                  isApplicationClosed(currentEvent.date)
+                }
                 className="w-full py-3 text-lg"
               >
                 {isLoading ? (
@@ -340,6 +379,10 @@ export default function QuickEventApply() {
                     <LoadingSpinner size="sm" />
                     처리 중...
                   </span>
+                ) : isApplicationClosed(currentEvent.date) ? (
+                  '신청 마감'
+                ) : currentEvent.currentParticipants >= currentEvent.maxParticipants ? (
+                  '정원 마감'
                 ) : (
                   '신청하기'
                 )}

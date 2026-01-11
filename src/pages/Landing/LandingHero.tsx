@@ -102,9 +102,9 @@ export const LandingHero: React.FC = () => {
           {/* Right: Login Form */}
           <FadeIn delay={1000} className="w-full lg:w-auto flex flex-col gap-6">
             {/* Main Login Box */}
-            <div className="bg-slate-900/95 backdrop-blur-sm rounded-3xl p-10 md:p-12 shadow-2xl max-w-2xl w-full border border-slate-700">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            <div className="bg-slate-900/95 backdrop-blur-sm rounded-3xl p-8 md:p-10 lg:px-16 lg:py-8 shadow-2xl max-w-3xl w-full border border-slate-700">
+              <div className="text-center mb-6">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
                   회원 로그인
                 </h2>
                 <p className="text-white/90 text-base">
@@ -112,7 +112,7 @@ export const LandingHero: React.FC = () => {
                 </p>
               </div>
 
-              <form onSubmit={handleLoginSubmit} className="space-y-5">
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
                   <label className="block text-white font-semibold mb-2 text-sm">
                     이메일
@@ -122,7 +122,7 @@ export const LandingHero: React.FC = () => {
                     name="email"
                     value={loginFormData.email}
                     onChange={handleLoginChange}
-                    className="w-full px-5 py-4 rounded-xl border-2 border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-400/20 outline-none transition-all text-base"
+                    className="w-full px-5 py-3.5 rounded-xl border-2 border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-400/20 outline-none transition-all text-base"
                     placeholder="example@email.com"
                     required
                   />
@@ -137,7 +137,7 @@ export const LandingHero: React.FC = () => {
                     name="password"
                     value={loginFormData.password}
                     onChange={handleLoginChange}
-                    className="w-full px-5 py-4 rounded-xl border-2 border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-400/20 outline-none transition-all text-base"
+                    className="w-full px-5 py-3.5 rounded-xl border-2 border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-400/20 outline-none transition-all text-base"
                     placeholder="••••••••"
                     required
                   />
@@ -164,7 +164,7 @@ export const LandingHero: React.FC = () => {
                 
                 <button 
                   type="submit" 
-                  className="w-full bg-white text-slate-900 py-4 rounded-xl font-bold text-lg hover:bg-slate-100 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full bg-white text-slate-900 py-3.5 rounded-xl font-bold text-lg hover:bg-slate-100 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg"
                 >
                   <LogIn className="w-6 h-6" />
                   로그인
@@ -201,16 +201,13 @@ export const LandingHero: React.FC = () => {
 
             {/* Development Quick Login Section */}
             <div className="p-5 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl border-2 border-dashed border-orange-300 shadow-inner max-w-2xl w-full">
-              <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="flex items-center justify-center gap-2 mb-4">
                 <AlertCircle className="w-5 h-5 text-orange-600" />
                 <p className="text-sm text-orange-900 font-bold uppercase tracking-wider">
                   ⚠️ 개발용 임시 로그인 ⚠️
                 </p>
                 <AlertCircle className="w-5 h-5 text-orange-600" />
               </div>
-              <p className="text-xs text-orange-700 text-center mb-4 font-medium">
-                프로덕션 배포 전 반드시 제거하세요
-              </p>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"

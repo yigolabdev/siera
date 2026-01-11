@@ -1,4 +1,6 @@
-import { TrendingUp, Award, Calendar, Users, BarChart3 } from 'lucide-react';
+import { TrendingUp, Award, Calendar, Users, BarChart3, Target, Trophy, Medal } from 'lucide-react';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 
 const Attendance = () => {
   const attendanceData = [
@@ -75,20 +77,43 @@ const Attendance = () => {
   
   const getRankBadge = (rank: number) => {
     if (rank === 1) {
-      return <Award className="h-7 w-7 text-yellow-500" />;
+      return (
+        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full shadow-lg">
+          <Trophy className="h-6 w-6 text-white" />
+        </div>
+      );
     } else if (rank === 2) {
-      return <Award className="h-7 w-7 text-slate-400" />;
+      return (
+        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-slate-300 to-slate-500 rounded-full shadow-lg">
+          <Medal className="h-6 w-6 text-white" />
+        </div>
+      );
     } else if (rank === 3) {
-      return <Award className="h-7 w-7 text-orange-500" />;
+      return (
+        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full shadow-lg">
+          <Award className="h-6 w-6 text-white" />
+        </div>
+      );
     }
-    return <span className="text-xl font-bold text-slate-400">{rank}</span>;
+    return (
+      <div className="flex items-center justify-center w-12 h-12 bg-slate-100 rounded-full">
+        <span className="text-xl font-bold text-slate-600">{rank}</span>
+      </div>
+    );
   };
   
   const getProgressColor = (rate: number) => {
-    if (rate >= 90) return 'bg-primary-600';
-    if (rate >= 80) return 'bg-mountain-600';
+    if (rate >= 90) return 'bg-green-500';
+    if (rate >= 80) return 'bg-blue-500';
     if (rate >= 70) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+  
+  const getRateBadge = (rate: number) => {
+    if (rate >= 90) return <Badge variant="success">{rate.toFixed(1)}%</Badge>;
+    if (rate >= 80) return <Badge variant="info">{rate.toFixed(1)}%</Badge>;
+    if (rate >= 70) return <Badge variant="warning">{rate.toFixed(1)}%</Badge>;
+    return <Badge variant="danger">{rate.toFixed(1)}%</Badge>;
   };
   
   const totalEvents = 48;
@@ -99,76 +124,98 @@ const Attendance = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">참여율 현황</h1>
-        <p className="text-lg text-slate-600">
+        <h1 className="text-4xl font-bold text-slate-900 mb-3">참여율 현황</h1>
+        <p className="text-xl text-slate-600">
           회원님들의 산행 참여율을 확인하세요.
         </p>
       </div>
       
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="card">
+        <Card className="text-center hover:shadow-lg transition-all">
+          <div className="flex items-center justify-center mb-2">
+            <Calendar className="w-6 h-6 text-blue-600" />
+          </div>
           <p className="text-sm text-slate-600 mb-1">총 산행 횟수</p>
           <p className="text-3xl font-bold text-slate-900">{totalEvents}회</p>
-        </div>
-        <div className="card">
+        </Card>
+        <Card className="text-center hover:shadow-lg transition-all">
+          <div className="flex items-center justify-center mb-2">
+            <Users className="w-6 h-6 text-green-600" />
+          </div>
           <p className="text-sm text-slate-600 mb-1">평균 참가자</p>
           <p className="text-3xl font-bold text-slate-900">35명</p>
-        </div>
-        <div className="card">
+        </Card>
+        <Card className="text-center hover:shadow-lg transition-all">
+          <div className="flex items-center justify-center mb-2">
+            <Target className="w-6 h-6 text-purple-600" />
+          </div>
           <p className="text-sm text-slate-600 mb-1">평균 참여율</p>
           <p className="text-3xl font-bold text-slate-900">{avgAttendanceRate}%</p>
-        </div>
-        <div className="card">
+        </Card>
+        <Card className="text-center hover:shadow-lg transition-all">
+          <div className="flex items-center justify-center mb-2">
+            <Trophy className="w-6 h-6 text-yellow-600" />
+          </div>
           <p className="text-sm text-slate-600 mb-1">최고 참여율</p>
           <p className="text-3xl font-bold text-slate-900">
             {Math.max(...attendanceData.map(m => m.rate)).toFixed(1)}%
           </p>
-        </div>
+        </Card>
       </div>
       
       {/* Monthly Trend */}
-      <div className="card mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">월별 참여 추이</h2>
+      <Card className="mb-8 hover:shadow-xl transition-all">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+          <BarChart3 className="w-7 h-7 text-primary-600" />
+          월별 참여 추이
+        </h2>
         <div className="space-y-4">
           {monthlyStats.map((stat, index) => (
-            <div key={index} className="flex items-center space-x-4">
-              <span className="text-slate-600 font-medium w-24 text-base">
-                {stat.month}
-              </span>
-              <div className="flex-grow">
-                <div className="flex justify-between text-sm text-slate-600 mb-1">
-                  <span>평균 {stat.avgAttendance}명 참석</span>
-                  <span>{Math.round((stat.avgAttendance / 45) * 100)}%</span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-2.5">
-                  <div 
-                    className="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
-                    style={{ width: `${(stat.avgAttendance / 45) * 100}%` }}
-                  />
+            <div key={index} className="p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+              <div className="flex items-center gap-4">
+                <Badge variant="info">{stat.month}</Badge>
+                <div className="flex-grow">
+                  <div className="flex justify-between text-sm text-slate-600 mb-2">
+                    <span>평균 {stat.avgAttendance}명 참석</span>
+                    <span className="font-bold">{Math.round((stat.avgAttendance / 45) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-3">
+                    <div 
+                      className="bg-primary-600 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${(stat.avgAttendance / 45) * 100}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
       
       {/* Ranking Table */}
-      <div className="card">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">회원별 참여율 순위</h2>
+      <Card className="hover:shadow-xl transition-all">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+          <TrendingUp className="w-7 h-7 text-primary-600" />
+          회원별 참여율 순위
+        </h2>
         
         <div className="space-y-4">
           {attendanceData.map((member) => (
             <div 
               key={member.id} 
-              className={`flex items-center space-x-4 p-4 rounded-xl border transition-all ${
-                member.rank <= 3 
-                  ? 'bg-primary-50 border-primary-200' 
-                  : 'bg-slate-50 border-slate-200'
+              className={`flex items-center gap-4 p-5 rounded-xl border-2 transition-all hover:shadow-lg ${
+                member.rank === 1
+                  ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300'
+                  : member.rank === 2
+                  ? 'bg-gradient-to-r from-slate-50 to-gray-50 border-slate-300'
+                  : member.rank === 3
+                  ? 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-300'
+                  : 'bg-white border-slate-200 hover:border-primary-600'
               }`}
             >
-              {/* Rank */}
-              <div className="flex items-center justify-center w-12">
+              {/* Rank Badge */}
+              <div className="flex-shrink-0">
                 {getRankBadge(member.rank)}
               </div>
               
@@ -176,52 +223,56 @@ const Attendance = () => {
               <img 
                 src={member.profileImage}
                 alt={member.name}
-                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm"
+                className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md flex-shrink-0"
               />
               
               {/* Info */}
-              <div className="flex-grow">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h3 className="text-lg font-bold text-slate-900">{member.name}</h3>
-                  <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-xs font-medium rounded">
-                    {member.position}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-4 text-sm text-slate-600 mb-2">
-                  <span>전체 {member.totalEvents}회</span>
-                  <span>참석 {member.attended}회</span>
-                  <span>불참 {member.totalEvents - member.attended}회</span>
+              <div className="flex-grow min-w-0">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
+                  <Badge variant="primary">{member.position}</Badge>
                 </div>
                 
-                {/* Progress Bar */}
-                <div className="flex items-center space-x-3">
-                  <div className="flex-grow">
-                    <div className="w-full bg-slate-200 rounded-full h-2.5">
-                      <div 
-                        className={`h-2.5 rounded-full transition-all duration-300 ${getProgressColor(member.rate)}`}
-                        style={{ width: `${member.rate}%` }}
-                      />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Left: Attendance Count */}
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-slate-500" />
+                    <span className="text-sm text-slate-600">
+                      <span className="font-bold text-lg text-slate-900">{member.attended}</span>
+                      <span className="text-slate-500">/{member.totalEvents}회 참석</span>
+                    </span>
+                  </div>
+                  
+                  {/* Right: Attendance Rate */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-grow">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-slate-600">참여율</span>
+                        {getRateBadge(member.rate)}
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2.5">
+                        <div 
+                          className={`h-2.5 rounded-full transition-all duration-500 ${getProgressColor(member.rate)}`}
+                          style={{ width: `${member.rate}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <span className="text-lg font-bold text-slate-900 w-16 text-right">
-                    {member.rate.toFixed(1)}%
-                  </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
       
       {/* Info Box */}
-      <div className="mt-6 p-4 bg-slate-100 rounded-xl border border-slate-200">
-        <p className="text-slate-700 text-sm">
-          <strong>참고:</strong> 참여율은 가입 이후 진행된 전체 산행 대비 참석한 산행의 비율입니다.
+      <Card className="mt-6 bg-blue-50 border-2 border-blue-200">
+        <p className="text-slate-700">
+          <strong className="text-blue-900">참고:</strong> 참여율은 가입 이후 진행된 전체 산행 대비 참석한 산행의 비율입니다.
         </p>
-      </div>
+      </Card>
     </div>
   );
 };
 
 export default Attendance;
-

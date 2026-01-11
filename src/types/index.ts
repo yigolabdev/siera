@@ -13,6 +13,7 @@ export interface User {
   joinDate?: string;
   isApproved: boolean;
   profileImage?: string;
+  bio?: string;
 }
 
 export interface RegisterData {

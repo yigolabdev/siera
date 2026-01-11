@@ -90,3 +90,48 @@ export const getDDayText = (targetDate: string): string => {
   return `D+${Math.abs(dDay)}`;
 };
 
+/**
+ * 산행 신청 마감일 계산 (출발일 기준 10일 전)
+ */
+export const calculateApplicationDeadline = (eventDate: string): Date => {
+  const deadline = new Date(eventDate);
+  deadline.setDate(deadline.getDate() - 10);
+  deadline.setHours(23, 59, 59, 999); // 마감일 23:59:59까지
+  return deadline;
+};
+
+/**
+ * 산행 신청 마감 여부 확인
+ */
+export const isApplicationClosed = (eventDate: string): boolean => {
+  const deadline = calculateApplicationDeadline(eventDate);
+  const now = new Date();
+  return now > deadline;
+};
+
+/**
+ * 산행 신청 마감까지 남은 일수
+ */
+export const getDaysUntilDeadline = (eventDate: string): number => {
+  const deadline = calculateApplicationDeadline(eventDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadline.setHours(0, 0, 0, 0);
+  
+  const diffTime = deadline.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+};
+
+/**
+ * 산행 신청 마감일 포맷팅
+ */
+export const formatDeadline = (eventDate: string): string => {
+  const deadline = calculateApplicationDeadline(eventDate);
+  return deadline.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }) + ' 23:59';
+};

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, UserPlus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const LandingNavbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,6 +18,20 @@ export const LandingNavbar: React.FC = () => {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 섹션으로 스크롤하는 함수
+  const scrollToSection = (sectionId: string) => {
+    // 현재 페이지가 랜딩 페이지가 아니면 먼저 홈으로 이동
+    if (location.pathname !== '/') {
+      navigate('/', { state: { scrollTo: sectionId } });
+    } else {
+      // 이미 랜딩 페이지에 있으면 바로 스크롤
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
   };
 
   const navClasses = `fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
@@ -33,21 +48,21 @@ export const LandingNavbar: React.FC = () => {
 
         {/* Desktop Menu */}
         <div className="hidden md:flex space-x-8 text-sm font-medium tracking-wide">
-          <a href="#heritage" className="hover:opacity-70 transition-opacity">소개</a>
-          <a href="#program" className="hover:opacity-70 transition-opacity">프로그램</a>
-          <a href="#trust" className="hover:opacity-70 transition-opacity">멤버십</a>
-          <a href="#faq" className="hover:opacity-70 transition-opacity">FAQ</a>
+          <button onClick={() => scrollToSection('heritage')} className="hover:opacity-70 transition-opacity">소개</button>
+          <button onClick={() => scrollToSection('program')} className="hover:opacity-70 transition-opacity">프로그램</button>
+          <button onClick={() => scrollToSection('trust')} className="hover:opacity-70 transition-opacity">멤버십</button>
+          <button onClick={() => scrollToSection('faq')} className="hover:opacity-70 transition-opacity">FAQ</button>
         </div>
 
         {/* Desktop Signup Button */}
         <div className="hidden md:block">
            <button 
-             onClick={() => navigate('/register')}
-             className={`px-6 py-2 text-xs font-bold uppercase tracking-wider border transition-all flex items-center gap-2 ${isScrolled ? 'border-slate-900 hover:bg-slate-900 hover:text-white' : 'border-white hover:bg-white hover:text-slate-900'}`}
-           >
-            <UserPlus className="w-4 h-4" />
-            가입신청
-          </button>
+            onClick={() => navigate('/register')}
+            className={`px-6 py-2 text-xs font-bold uppercase tracking-wider border transition-all flex items-center gap-2 ${isScrolled ? 'border-slate-900 hover:bg-slate-900 hover:text-white' : 'border-white hover:bg-white hover:text-slate-900'}`}
+          >
+           <UserPlus className="w-4 h-4" />
+           가입신청
+         </button>
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -65,10 +80,10 @@ export const LandingNavbar: React.FC = () => {
 
       {/* Mobile Menu Overlay */}
       <div className={`fixed inset-0 bg-slate-900 text-white flex flex-col items-center justify-center space-y-8 transition-transform duration-500 ease-in-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <a href="#heritage" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-light">소개</a>
-        <a href="#program" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-light">프로그램</a>
-        <a href="#trust" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-light">멤버십</a>
-        <a href="#faq" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-light">FAQ</a>
+        <button onClick={() => { scrollToSection('heritage'); setIsMobileMenuOpen(false); }} className="text-2xl font-light">소개</button>
+        <button onClick={() => { scrollToSection('program'); setIsMobileMenuOpen(false); }} className="text-2xl font-light">프로그램</button>
+        <button onClick={() => { scrollToSection('trust'); setIsMobileMenuOpen(false); }} className="text-2xl font-light">멤버십</button>
+        <button onClick={() => { scrollToSection('faq'); setIsMobileMenuOpen(false); }} className="text-2xl font-light">FAQ</button>
         <button 
           onClick={() => {
             setIsMobileMenuOpen(false);

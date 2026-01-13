@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Heart, Download, X, Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Grid3x3, Play, Pause, Folder, Trash2 } from 'lucide-react';
+import { Upload, Heart, Download, X, Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Play, Pause, Folder, Trash2, Mountain } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface UploadFile {
   id: string;
@@ -11,9 +12,9 @@ interface UploadFile {
 
 const Gallery = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'masonry'>('masonry');
   const [zoom, setZoom] = useState(1);
   const [likedPhotos, setLikedPhotos] = useState<Set<number>>(new Set());
   const [isSlideshow, setIsSlideshow] = useState(false);
@@ -25,7 +26,52 @@ const Gallery = () => {
   const [uploadEventTitle, setUploadEventTitle] = useState('');
   const [uploadEventYear, setUploadEventYear] = useState('2026');
   const [uploadEventMonth, setUploadEventMonth] = useState('01');
+  const [showRecentHikes, setShowRecentHikes] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 최근 산행 이력 (최근 5개)
+  const recentHikes = [
+    {
+      id: 'hike-2025-01',
+      date: '2025-01-15',
+      mountain: '북한산 백운대',
+      location: '서울 강북구',
+      year: '2025',
+      month: '01',
+    },
+    {
+      id: 'hike-2024-12',
+      date: '2024-12-20',
+      mountain: '설악산 대청봉',
+      location: '강원도 속초시',
+      year: '2024',
+      month: '12',
+    },
+    {
+      id: 'hike-2024-11',
+      date: '2024-11-18',
+      mountain: '지리산 천왕봉',
+      location: '경남 산청군',
+      year: '2024',
+      month: '11',
+    },
+    {
+      id: 'hike-2024-10',
+      date: '2024-10-20',
+      mountain: '한라산 백록담',
+      location: '제주특별자치도',
+      year: '2024',
+      month: '10',
+    },
+    {
+      id: 'hike-2024-09',
+      date: '2024-09-15',
+      mountain: '오대산 비로봉',
+      location: '강원도 평창군',
+      year: '2024',
+      month: '09',
+    },
+  ];
   
   const months = [
     { id: 'all', name: '전체' },
@@ -181,7 +227,16 @@ const Gallery = () => {
     setUploadEventTitle('');
     setUploadEventYear('2026');
     setUploadEventMonth('01');
+    setShowRecentHikes(false);
     setShowUploadModal(false);
+  };
+  
+  // 최근 산행 선택
+  const handleSelectRecentHike = (hike: typeof recentHikes[0]) => {
+    setUploadEventTitle(hike.mountain);
+    setUploadEventYear(hike.year);
+    setUploadEventMonth(hike.month);
+    setShowRecentHikes(false);
   };
   
   const handleLike = (photoId: number, e: React.MouseEvent) => {
@@ -277,13 +332,7 @@ const Gallery = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">사진 갤러리</h1>
-          <p className="text-xl text-slate-600">
-            함께한 산행의 추억을 공유해주세요.
-          </p>
-        </div>
+      <div className="flex justify-end items-center mb-8">
         <button 
           onClick={() => setShowUploadModal(true)} 
           className="btn-primary"
@@ -292,153 +341,42 @@ const Gallery = () => {
         </button>
       </div>
       
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div className="card text-center">
-          <p className="text-slate-600 text-sm mb-2">전체 사진</p>
-          <p className="text-3xl font-bold text-slate-900">{photos.length}장</p>
-        </div>
-        <div className="card text-center">
-          <p className="text-slate-600 text-sm mb-2">정기 산행</p>
-          <p className="text-3xl font-bold text-slate-900">매월 1회</p>
-        </div>
-        <div className="card text-center">
-          <p className="text-slate-600 text-sm mb-2">총 좋아요</p>
-          <p className="text-3xl font-bold text-slate-900">
-            {photos.reduce((sum, photo) => sum + photo.likes, 0)}
-          </p>
-        </div>
-      </div>
-      
-      {/* Filter & View Mode */}
+      {/* Filter */}
       <div className="mb-8 space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="w-full md:w-auto">
-            <h3 className="text-sm text-slate-600 mb-3">월별 보기</h3>
-            <div className="flex flex-wrap gap-2">
-              {months.map((month) => {
-                const photoCount = getPhotoCountByMonth(month.id);
-                return (
-                  <button
-                    key={month.id}
-                    onClick={() => setSelectedEvent(month.id)}
-                    className={`px-4 py-2 rounded-xl font-medium transition-colors ${
-                      selectedEvent === month.id
-                        ? 'bg-slate-900 text-white'
-                        : 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{month.name}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                        selectedEvent === month.id
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {photoCount}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-slate-600">레이아웃</span>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-slate-900 text-white'
-                  : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-              }`}
-              title="그리드 뷰"
-            >
-              <Grid3x3 className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode('masonry')}
-              className={`p-2 rounded-lg transition-colors ${
-                viewMode === 'masonry'
-                  ? 'bg-slate-900 text-white'
-                  : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-              }`}
-              title="메이슨리 뷰"
-            >
-              <Maximize2 className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-        
-        {/* 이벤트별 사진 개수 표시 */}
-        {selectedEvent !== 'all' && (
-          <div className="mt-6">
-            <h3 className="text-sm text-slate-600 mb-3 flex items-center gap-2">
-              <Folder className="h-4 w-4" />
-              이벤트별 사진
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {uniqueEvents
-                .filter(event => event.month === selectedEvent)
-                .map((event, index) => (
-                  <div
-                    key={index}
-                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ImageIcon className="h-4 w-4 text-slate-600" />
-                      <span className="text-sm font-medium text-slate-900">{event.eventTitle}</span>
-                      <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-bold">
-                        {event.photoCount}장
-                      </span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-        
-        {/* 전체 보기일 때 모든 이벤트 표시 */}
-        {selectedEvent === 'all' && (
-          <div className="mt-6">
-            <h3 className="text-sm text-slate-600 mb-3 flex items-center gap-2">
-              <Folder className="h-4 w-4" />
-              전체 이벤트별 사진
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {uniqueEvents.map((event, index) => (
-                <div
-                  key={index}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+        <div className="w-full">
+          <h3 className="text-sm text-slate-600 mb-3">월별 보기</h3>
+          <div className="flex flex-wrap gap-2">
+            {months.map((month) => {
+              const photoCount = getPhotoCountByMonth(month.id);
+              return (
+                <button
+                  key={month.id}
+                  onClick={() => setSelectedEvent(month.id)}
+                  className={`px-4 py-2 rounded-xl font-medium transition-colors ${
+                    selectedEvent === month.id
+                      ? 'bg-slate-900 text-white'
+                      : 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-2 flex-1">
-                      <ImageIcon className="h-4 w-4 text-slate-600 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{event.eventTitle}</p>
-                        <p className="text-xs text-slate-500">
-                          {months.find(m => m.id === event.month)?.name || event.month}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-bold whitespace-nowrap ml-2">
-                      {event.photoCount}장
+                  <div className="flex items-center gap-2">
+                    <span>{month.name}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      selectedEvent === month.id
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {photoCount}
                     </span>
                   </div>
-                </div>
-              ))}
-            </div>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
       </div>
       
-      {/* Photo Grid */}
-      <div className={`grid gap-6 ${
-        viewMode === 'grid'
-          ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-      }`}>
+      {/* Photo Grid - 바둑판식 고정 */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredPhotos.map((photo, index) => {
           const isLiked = likedPhotos.has(photo.id);
           const displayLikes = photo.likes + (isLiked ? 1 : 0);
@@ -448,17 +386,12 @@ const Gallery = () => {
               key={photo.id} 
               className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-300 transition-colors"
               onClick={() => setSelectedImage(index)}
-              style={viewMode === 'masonry' ? { 
-                gridRowEnd: `span ${Math.floor(Math.random() * 2) + 1}` 
-              } : {}}
             >
               <div className="relative overflow-hidden">
                 <img 
                   src={photo.url} 
                   alt={photo.caption}
-                  className={`w-full object-cover ${
-                    viewMode === 'grid' ? 'h-64' : 'h-auto'
-                  }`}
+                  className="w-full h-64 object-cover"
                 />
               </div>
               <div className="p-4">
@@ -717,63 +650,56 @@ const Gallery = () => {
 
             {/* 본문 */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* 이벤트 정보 입력 */}
-              <div className="mb-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    이벤트 제목 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadEventTitle}
-                    onChange={(e) => setUploadEventTitle(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900"
-                    placeholder="예: 북한산 백운대 등반"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    산행 일자 <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <select
-                        value={uploadEventYear}
-                        onChange={(e) => setUploadEventYear(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900 font-medium"
-                      >
-                        {Array.from({ length: 5 }, (_, i) => {
-                          const year = new Date().getFullYear() - i;
-                          return (
-                            <option key={year} value={year}>
-                              {year}년
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                    <div>
-                      <select
-                        value={uploadEventMonth}
-                        onChange={(e) => setUploadEventMonth(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900 font-medium"
-                      >
-                        {Array.from({ length: 12 }, (_, i) => {
-                          const month = String(i + 1).padStart(2, '0');
-                          return (
-                            <option key={month} value={month}>
-                              {i + 1}월
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
+              {/* 최근 산행 빠른 선택 */}
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowRecentHikes(!showRecentHikes)}
+                  className="w-full px-4 py-3 bg-primary-50 border-2 border-primary-200 rounded-xl hover:bg-primary-100 transition-colors flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary-600" />
+                    <span className="font-semibold text-primary-700">최근 산행에서 선택하기</span>
                   </div>
-                  <p className="text-sm text-slate-500 mt-2">
-                    선택한 날짜: {uploadEventYear}년 {uploadEventMonth}월
-                  </p>
-                </div>
+                  <ChevronRight className={`h-5 w-5 text-primary-600 transition-transform ${showRecentHikes ? 'rotate-90' : ''}`} />
+                </button>
+                
+                {showRecentHikes && (
+                  <div className="mt-3 space-y-2 pl-2">
+                    {recentHikes.map((hike) => (
+                      <button
+                        key={hike.id}
+                        onClick={() => handleSelectRecentHike(hike)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-all text-left group"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-bold text-slate-900 group-hover:text-primary-700 mb-1">
+                              {hike.mountain}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              {hike.location} · {hike.date}
+                            </p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-primary-600 mt-1" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* 게시물 제목 입력 */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  게시물 제목 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={uploadEventTitle}
+                  onChange={(e) => setUploadEventTitle(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900"
+                  placeholder="예: 북한산 백운대 등반"
+                />
               </div>
               
               {/* 구분선 */}

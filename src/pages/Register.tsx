@@ -135,9 +135,9 @@ const Register = () => {
         <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-white">
-              <p className="font-semibold mb-1">가입 승인 안내</p>
-              <p>회원가입 신청 후 관리자 승인이 필요합니다. 승인 완료 시 이메일로 안내드립니다.</p>
+            <div className="text-sm">
+              <p className="font-semibold mb-1 text-white">가입 승인 안내</p>
+              <p className="text-white">회원가입 신청 후 관리자 승인이 필요합니다. 승인 완료 시 이메일로 안내드립니다.</p>
             </div>
           </div>
         </div>

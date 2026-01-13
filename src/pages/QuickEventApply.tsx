@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Calendar, MapPin, Users, AlertCircle, CheckCircle, Mountain, UserCheck, Clock } from 'lucide-react';
+import { Calendar, MapPin, Users, AlertCircle, CheckCircle, Mountain, UserCheck, Clock, X } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
@@ -14,28 +14,48 @@ interface ApplicationResult {
   message: string;
   userName?: string;
   eventTitle?: string;
+  selectedCourse?: string; // 선택한 코스 추가
 }
 
 export default function QuickEventApply() {
   const [name, setName] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ApplicationResult | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string>(''); // 선택된 산행 ID
 
-  // 이번 달 산행 (월 1회만 있음)
-  const currentEvent = useMemo(() => {
+  // 신청 가능한 산행 목록 (현재부터 2개월 이내)
+  const availableEvents = useMemo(() => {
     const now = new Date();
-    
-    // 현재부터 2개월 이내의 산행 찾기
     const twoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, 0);
     
-    const events = mockEvents.filter((event) => {
-      const eventDate = new Date(event.date);
-      return eventDate >= now && eventDate <= twoMonthsLater;
-    });
-
-    // 가장 가까운 산행 반환 (월 1회이므로)
-    return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] || null;
+    return mockEvents
+      .filter((event) => {
+        const eventDate = new Date(event.date);
+        return eventDate >= now && eventDate <= twoMonthsLater;
+      })
+      .map(event => {
+        // 신청 가능한 상태로 날짜와 참가자 수 조정
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + 20);
+        
+        return {
+          ...event,
+          date: futureDate.toISOString().split('T')[0],
+          currentParticipants: 12,
+          maxParticipants: 25,
+        };
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, []);
+
+  // 선택된 산행 또는 첫 번째 산행
+  const currentEvent = useMemo(() => {
+    if (selectedEventId) {
+      return availableEvents.find(e => e.id === selectedEventId) || availableEvents[0] || null;
+    }
+    return availableEvents[0] || null;
+  }, [availableEvents, selectedEventId]);
 
   // 신청자 목록
   const participants = useMemo(() => {
@@ -66,6 +86,12 @@ export default function QuickEventApply() {
         success: false,
         message: '현재 신청 가능한 산행이 없습니다.',
       });
+      return;
+    }
+
+    // 코스 선택 확인
+    if (!selectedCourse) {
+      setShowCourseModal(true);
       return;
     }
 
@@ -110,39 +136,60 @@ export default function QuickEventApply() {
 
     // 신청 처리 (실제로는 서버에 저장)
     // TODO: 실제 백엔드 API 호출로 교체
-    console.log('산행 신청:', { userId: user.id, userName: user.name, eventId: currentEvent.id });
+    console.log('산행 신청:', { 
+      userId: user.id, 
+      userName: user.name, 
+      eventId: currentEvent.id,
+      course: selectedCourse 
+    });
 
     setResult({
       success: true,
       message: '산행 신청이 완료되었습니다!',
       userName: user.name,
       eventTitle: currentEvent.title,
+      selectedCourse: selectedCourse, // 선택한 코스 저장
     });
     setIsLoading(false);
     setName('');
+    setSelectedCourse('');
   };
 
   const handleReset = () => {
     setResult(null);
     setName('');
+    setSelectedCourse('');
   };
 
   const getDifficultyLabel = (difficulty: string) => {
+    // 새로운 난이도 체계
+    if (['하', '중하', '중', '중상', '상'].includes(difficulty)) {
+      return difficulty;
+    }
+    // 기존 영문 난이도를 새 체계로 변환 (하위 호환성)
     const labels: Record<string, string> = {
-      easy: '쉬움',
-      medium: '보통',
-      hard: '어려움',
+      easy: '하',
+      medium: '중',
+      hard: '상',
     };
     return labels[difficulty] || difficulty;
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    const colors: Record<string, string> = {
-      easy: 'bg-green-100 text-green-800',
-      medium: 'bg-yellow-100 text-yellow-800',
-      hard: 'bg-red-100 text-red-800',
-    };
-    return colors[difficulty] || 'bg-gray-100 text-gray-800';
+    const normalizedDifficulty = getDifficultyLabel(difficulty);
+    switch (normalizedDifficulty) {
+      case '하':
+        return 'success';
+      case '중하':
+        return 'info';
+      case '중':
+        return 'warning';
+      case '중상':
+      case '상':
+        return 'danger';
+      default:
+        return 'primary';
+    }
   };
 
   // 산행이 없는 경우
@@ -198,11 +245,69 @@ export default function QuickEventApply() {
           </p>
         </div>
 
-        {/* 이번 달 산행 정보 */}
+        {/* 산행 선택 (여러 산행이 있을 경우) */}
+        {availableEvents.length > 1 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">신청할 산행을 선택하세요</h3>
+            <div className="grid grid-cols-1 gap-3">
+              {availableEvents.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => {
+                    setSelectedEventId(event.id);
+                    setSelectedCourse(''); // 산행 변경 시 코스 초기화
+                  }}
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${
+                    currentEvent.id === event.id
+                      ? 'border-primary-600 bg-primary-50 shadow-md'
+                      : 'border-slate-200 bg-white hover:border-primary-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className={`font-bold text-lg ${
+                      currentEvent.id === event.id ? 'text-primary-900' : 'text-gray-900'
+                    }`}>
+                      {event.title}
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      {currentEvent.id === event.id && (
+                        <Badge variant="primary">선택됨</Badge>
+                      )}
+                      <Badge variant={getDifficultyColor(event.difficulty)}>
+                        {getDifficultyLabel(event.difficulty)}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      <span>{formatDate(event.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>{event.location}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>{event.currentParticipants}/{event.maxParticipants}명</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 선택된 산행 상세 정보 */}
         <Card className="mb-6">
           <div className="flex items-start justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">{currentEvent.title}</h2>
-            <Badge variant={currentEvent.difficulty === 'easy' ? 'success' : currentEvent.difficulty === 'hard' ? 'danger' : 'warning'}>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-gray-900">{currentEvent.title}</h2>
+              {availableEvents.length > 1 && (
+                <Badge variant="info">선택된 산행</Badge>
+              )}
+            </div>
+            <Badge variant={getDifficultyColor(currentEvent.difficulty)}>
               {getDifficultyLabel(currentEvent.difficulty)}
             </Badge>
           </div>
@@ -286,6 +391,52 @@ export default function QuickEventApply() {
           </div>
         </Card>
 
+        {/* 코스 정보 */}
+        {currentEvent.courses && currentEvent.courses.length > 0 && (
+          <Card className="mb-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Mountain className="w-6 h-6 text-primary-600" />
+              산행 코스 안내
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              체력과 경험에 맞는 코스를 선택하여 신청하실 수 있습니다.
+            </p>
+            
+            <div className="space-y-4">
+              {currentEvent.courses.map((course, index) => (
+                <div 
+                  key={index}
+                  className="p-5 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="text-lg font-bold text-slate-900">
+                      {course.name}
+                    </h4>
+                    <Badge variant={index === 0 ? "warning" : "info"}>
+                      {course.difficulty}
+                    </Badge>
+                  </div>
+                  
+                  <p className="text-slate-700 mb-4 leading-relaxed">
+                    {course.description}
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                      <p className="text-xs text-slate-600 mb-1">거리</p>
+                      <p className="text-sm font-bold text-slate-900">{course.distance}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                      <p className="text-xs text-slate-600 mb-1">소요시간</p>
+                      <p className="text-sm font-bold text-slate-900">{course.duration}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* 신청 결과 표시 */}
         {result && (
           <Card className="mb-6">
@@ -316,6 +467,14 @@ export default function QuickEventApply() {
                       <strong>{result.userName}</strong>님의 <strong>{result.eventTitle}</strong> 신청이
                       접수되었습니다.
                     </p>
+                    {result.selectedCourse && (
+                      <p className="flex items-center gap-2">
+                        <Badge variant="success" className="text-xs">
+                          {result.selectedCourse}
+                        </Badge>
+                        <span>코스로 신청되었습니다.</span>
+                      </p>
+                    )}
                     <p className="mt-1">자세한 내용은 등록하신 연락처로 안내드립니다.</p>
                     <div className="pt-2 border-t border-green-200">
                       <p className="font-semibold text-green-700">⚠️ 중요: 입금 완료 후 신청 확정</p>
@@ -335,7 +494,111 @@ export default function QuickEventApply() {
 
         {/* 신청 폼 */}
         {!result?.success && (
-          <Card className="mb-6">
+          <>
+            {/* 입금 정보 */}
+            {currentEvent.paymentInfo && (
+              <Card className="mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900">입금 정보</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-600 mb-1">은행명</p>
+                    <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.bankName}</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-600 mb-1">계좌번호</p>
+                    <p className="text-lg font-bold text-slate-900 font-mono">{currentEvent.paymentInfo.accountNumber}</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-600 mb-1">예금주</p>
+                    <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.accountHolder}</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-600 mb-1">참가비</p>
+                    <p className="text-lg font-bold text-primary-600">{currentEvent.cost}</p>
+                  </div>
+
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-sm font-semibold text-amber-900 mb-2">입금 시 유의사항</p>
+                    <ul className="text-sm text-amber-800 space-y-1">
+                      <li>• 입금자명은 <strong>신청자 이름</strong>과 동일하게 입금해주세요</li>
+                      <li>• 입금 후 담당자에게 연락하시면 빠른 확인이 가능합니다</li>
+                      <li>• 담당자: {currentEvent.paymentInfo.managerName} ({currentEvent.paymentInfo.managerPhone})</li>
+                    </ul>
+                  </div>
+                </div>
+              </Card>
+            )}
+            
+            {/* 산행 코스 안내 및 선택 */}
+            {currentEvent.courses && currentEvent.courses.length > 0 && (
+              <Card className="mb-6">
+                <h3 className="text-xl font-semibold text-slate-900 mb-4">산행 코스 안내 및 선택</h3>
+                
+                <div className="space-y-3">
+                  {currentEvent.courses.map((course) => (
+                    <button
+                      key={course.id}
+                      type="button"
+                      onClick={() => setSelectedCourse(course.name)}
+                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                        selectedCourse === course.name
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={course.name === 'A조' ? 'success' : 'info'}>
+                            {course.name}
+                          </Badge>
+                          <span className="text-sm font-semibold text-slate-700">{course.distance}</span>
+                        </div>
+                        {selectedCourse === course.name && (
+                          <CheckCircle className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-sm font-medium text-slate-800">{course.description}</p>
+                    </button>
+                  ))}
+                  
+                  {/* 현장 결정 옵션 */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCourse('현장 결정')}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      selectedCourse === '현장 결정'
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="warning">현장 결정</Badge>
+                      </div>
+                      {selectedCourse === '현장 결정' && (
+                        <CheckCircle className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-slate-800">산행 당일 현장에서 코스를 선택하실 수 있습니다</p>
+                  </button>
+                </div>
+                
+                {!selectedCourse && (
+                  <p className="text-sm text-red-500 mt-2">* 코스를 선택해주세요</p>
+                )}
+              </Card>
+            )}
+            
+            <Card className="mb-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">산행 신청하기</h3>
             
             {/* 입금 안내 박스 */}
@@ -368,7 +631,8 @@ export default function QuickEventApply() {
                 type="submit"
                 disabled={
                   isLoading || 
-                  !name.trim() || 
+                  !name.trim() ||
+                  !selectedCourse ||
                   currentEvent.currentParticipants >= currentEvent.maxParticipants ||
                   isApplicationClosed(currentEvent.date)
                 }
@@ -389,6 +653,7 @@ export default function QuickEventApply() {
               </Button>
             </form>
           </Card>
+          </>
         )}
 
         {/* 신청자 통계 (리스트는 보안상 비공개) */}
@@ -451,6 +716,7 @@ export default function QuickEventApply() {
           </a>
         </div>
       </div>
+
     </div>
   );
 }

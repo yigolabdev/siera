@@ -7,7 +7,16 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+
+  // 로딩 중에는 아무것도 렌더링하지 않음 (깜빡임 방지)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -33,4 +42,3 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
 };
 
 export default ProtectedRoute;
-

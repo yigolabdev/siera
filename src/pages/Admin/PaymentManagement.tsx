@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, CreditCard, CheckCircle, Clock, Users, AlertCircle, Calendar, Filter } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 
 interface Applicant {
   id: number;
+  eventId: string; // 어떤 산행 이벤트의 신청자인지
   name: string;
   isGuest: boolean;
   company: string;
@@ -33,94 +35,200 @@ const PaymentManagement = () => {
     {
       id: '1',
       title: '1월 정기 산행',
-      mountain: '북한산',
-      date: '2025-01-25',
+      mountain: '앙봉산',
+      date: '2026-01-15',
       cost: 60000,
-      maxParticipants: 40,
-      currentParticipants: 28,
+      maxParticipants: 25,
+      currentParticipants: 18,
     },
     {
       id: '2',
-      title: '2월 정기 산행',
+      title: '12월 정기 산행',
       mountain: '설악산',
-      date: '2025-02-15',
+      date: '2025-12-15',
       cost: 60000,
-      maxParticipants: 40,
-      currentParticipants: 15,
+      maxParticipants: 25,
+      currentParticipants: 22,
     },
     {
       id: '3',
-      title: '1박 2일 특별 산행',
+      title: '11월 정기 산행',
       mountain: '지리산',
-      date: '2025-03-08',
-      cost: 150000,
-      maxParticipants: 30,
-      currentParticipants: 12,
+      date: '2025-11-20',
+      cost: 60000,
+      maxParticipants: 25,
+      currentParticipants: 25,
     },
   ]);
 
-  const [applicants] = useState<Applicant[]>([
+  // Mock 데이터 - 모든 이벤트의 신청자
+  const [allApplicants, setAllApplicants] = useState<Applicant[]>([
+    // 1월 정기 산행 (id: '1') 신청자
     {
       id: 1,
-      name: '김대한',
+      eventId: '1',
+      name: '김산행',
       isGuest: false,
-      company: '테크코리아',
-      occupation: '대표이사',
-      phone: '010-1234-5678',
+      company: '○○그룹',
+      occupation: '회장',
+      phone: '010-1111-1111',
       email: 'kim@example.com',
-      applicationDate: '2025-01-10',
+      applicationDate: '2026-01-03',
       paymentStatus: 'completed',
-      paymentDate: '2025-01-11',
+      paymentDate: '2026-01-04',
       amount: 60000,
     },
     {
       id: 2,
-      name: '이민국',
+      eventId: '1',
+      name: '이등산',
       isGuest: false,
-      company: '글로벌산업',
-      occupation: '부사장',
-      phone: '010-2345-6789',
+      company: '△△건설',
+      occupation: '대표이사',
+      phone: '010-2222-2222',
       email: 'lee@example.com',
-      applicationDate: '2025-01-10',
+      applicationDate: '2026-01-03',
       paymentStatus: 'completed',
-      paymentDate: '2025-01-10',
+      paymentDate: '2026-01-04',
       amount: 60000,
     },
     {
       id: 3,
-      name: '박세계',
+      eventId: '1',
+      name: '박트레킹',
       isGuest: true,
-      company: '프리랜서',
-      occupation: '컨설턴트',
-      phone: '010-3456-7890',
+      company: '□□금융',
+      occupation: '부사장',
+      phone: '010-3333-3333',
       email: 'park@example.com',
-      applicationDate: '2025-01-11',
+      applicationDate: '2026-01-05',
       paymentStatus: 'pending',
       amount: 60000,
     },
     {
       id: 4,
-      name: '최지구',
+      eventId: '1',
+      name: '최하이킹',
       isGuest: false,
-      company: '미래기획',
-      occupation: '이사',
-      phone: '010-4567-8901',
+      company: '◇◇제약',
+      occupation: '전무이사',
+      phone: '010-4444-4444',
       email: 'choi@example.com',
-      applicationDate: '2025-01-11',
-      paymentStatus: 'confirmed',
-      paymentDate: '2025-01-12',
+      applicationDate: '2026-01-05',
+      paymentStatus: 'pending',
       amount: 60000,
     },
     {
       id: 5,
-      name: '정우주',
-      isGuest: true,
-      company: '스타트업',
-      occupation: '대표',
-      phone: '010-5678-9012',
+      eventId: '1',
+      name: '정봉우리',
+      isGuest: false,
+      company: '☆☆병원',
+      occupation: '원장',
+      phone: '010-5555-5555',
       email: 'jung@example.com',
-      applicationDate: '2025-01-12',
+      applicationDate: '2026-01-06',
+      paymentStatus: 'completed',
+      paymentDate: '2026-01-07',
+      amount: 60000,
+    },
+    // 12월 정기 산행 (id: '2') 신청자
+    {
+      id: 6,
+      eventId: '2',
+      name: '홍정상',
+      isGuest: false,
+      company: '※※법률사무소',
+      occupation: '대표변호사',
+      phone: '010-6666-6666',
+      email: 'hong@example.com',
+      applicationDate: '2025-12-01',
+      paymentStatus: 'completed',
+      paymentDate: '2025-12-02',
+      amount: 60000,
+    },
+    {
+      id: 7,
+      eventId: '2',
+      name: '강백운',
+      isGuest: false,
+      company: '◎◎IT',
+      occupation: '대표',
+      phone: '010-7777-7777',
+      email: 'kang@example.com',
+      applicationDate: '2025-12-01',
+      paymentStatus: 'completed',
+      paymentDate: '2025-12-03',
+      amount: 60000,
+    },
+    {
+      id: 8,
+      eventId: '2',
+      name: '윤설악',
+      isGuest: true,
+      company: '▽▽건축',
+      occupation: '사장',
+      phone: '010-8888-8888',
+      email: 'yoon@example.com',
+      applicationDate: '2025-12-03',
       paymentStatus: 'pending',
+      amount: 60000,
+    },
+    {
+      id: 9,
+      eventId: '2',
+      name: '임북한',
+      isGuest: false,
+      company: '♧♧통신',
+      occupation: '부장',
+      phone: '010-9999-9999',
+      email: 'lim@example.com',
+      applicationDate: '2025-12-03',
+      paymentStatus: 'completed',
+      paymentDate: '2025-12-04',
+      amount: 60000,
+    },
+    // 11월 정기 산행 (id: '3') 신청자
+    {
+      id: 10,
+      eventId: '3',
+      name: '서지리',
+      isGuest: false,
+      company: '♤♤무역',
+      occupation: '이사',
+      phone: '010-1010-1010',
+      email: 'seo@example.com',
+      applicationDate: '2025-11-01',
+      paymentStatus: 'completed',
+      paymentDate: '2025-11-02',
+      amount: 60000,
+    },
+    {
+      id: 11,
+      eventId: '3',
+      name: '안한라',
+      isGuest: false,
+      company: '♡♡관광',
+      occupation: '대표',
+      phone: '010-1111-2222',
+      email: 'ahn@example.com',
+      applicationDate: '2025-11-02',
+      paymentStatus: 'completed',
+      paymentDate: '2025-11-03',
+      amount: 60000,
+    },
+    {
+      id: 12,
+      eventId: '3',
+      name: '오덕유',
+      isGuest: true,
+      company: '♥♥컨설팅',
+      occupation: '대표',
+      phone: '010-2222-3333',
+      email: 'oh@example.com',
+      applicationDate: '2025-11-03',
+      paymentStatus: 'completed',
+      paymentDate: '2025-11-04',
       amount: 60000,
     },
   ]);
@@ -128,29 +236,35 @@ const PaymentManagement = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>('1');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'completed' | 'pending' | 'confirmed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [applicantsList, setApplicantsList] = useState<Applicant[]>(applicants);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
-  // 필터링된 신청자 목록
-  const filteredApplicants = applicantsList.filter(applicant => {
-    const matchesSearch = applicant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         applicant.company.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = paymentFilter === 'all' || applicant.paymentStatus === paymentFilter;
-    return matchesSearch && matchesFilter;
-  });
+  // 선택된 이벤트의 신청자 목록
+  const eventApplicants = useMemo(() => {
+    return allApplicants.filter(applicant => applicant.eventId === selectedEventId);
+  }, [allApplicants, selectedEventId]);
 
-  // 통계 계산
-  const stats = {
-    total: applicantsList.length,
-    completed: applicantsList.filter(a => a.paymentStatus === 'completed').length,
-    pending: applicantsList.filter(a => a.paymentStatus === 'pending').length,
-    teamEligible: applicantsList.filter(a => a.paymentStatus === 'completed').length,
-  };
+  // 필터링된 신청자 목록
+  const filteredApplicants = useMemo(() => {
+    return eventApplicants.filter(applicant => {
+      const matchesSearch = applicant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           applicant.company.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = paymentFilter === 'all' || applicant.paymentStatus === paymentFilter;
+      return matchesSearch && matchesFilter;
+    });
+  }, [eventApplicants, searchTerm, paymentFilter]);
+
+  // 통계 계산 (선택된 이벤트 기준)
+  const stats = useMemo(() => ({
+    total: eventApplicants.length,
+    completed: eventApplicants.filter(a => a.paymentStatus === 'completed').length,
+    pending: eventApplicants.filter(a => a.paymentStatus === 'pending').length,
+    teamEligible: eventApplicants.filter(a => a.paymentStatus === 'completed').length,
+  }), [eventApplicants]);
 
   // 입금 확인 처리
   const handleConfirmPayment = (id: number) => {
-    setApplicantsList(prev =>
+    setAllApplicants(prev =>
       prev.map(applicant =>
         applicant.id === id
           ? {
@@ -166,7 +280,7 @@ const PaymentManagement = () => {
   // 입금 취소 처리
   const handleCancelPayment = (id: number) => {
     if (confirm('입금 확인을 취소하시겠습니까?')) {
-      setApplicantsList(prev =>
+      setAllApplicants(prev =>
         prev.map(applicant =>
           applicant.id === id
             ? {
@@ -196,11 +310,20 @@ const PaymentManagement = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">입금 관리</h1>
-        <p className="text-xl text-slate-600">
-          산행 신청자의 참가비 입금 여부를 확인하고 관리합니다.
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-slate-900 mb-3">월별 산행 회비 관리</h1>
+          <p className="text-xl text-slate-600">
+            월별 정기 산행 참가비 입금 여부를 확인하고 관리합니다.
+          </p>
+        </div>
+        <Link
+          to="/admin/annual-fee"
+          className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors flex items-center gap-2"
+        >
+          <span className="text-xl">₩</span>
+          연회비 관리
+        </Link>
       </div>
 
       {/* 산행 이벤트 선택 */}

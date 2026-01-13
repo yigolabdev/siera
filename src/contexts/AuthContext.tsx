@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: '1',
           name: '관리자',
           email: 'admin@siera.com',
-          role: 'admin',
+          role: 'chairman',
           isApproved: true,
           joinDate: '2026-01-01',
         };
@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateProfileImage,
     updateUser,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
+    isAdmin: user?.role === 'chairman' || user?.role === 'committee',
     isLoading,
   };
 

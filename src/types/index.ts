@@ -1,5 +1,5 @@
 // ==================== User Types ====================
-export type UserRole = 'admin' | 'staff' | 'member' | 'guest';
+export type UserRole = 'chairman' | 'committee' | 'member' | 'guest';
 
 export interface User {
   id: string;
@@ -40,7 +40,7 @@ export interface PendingUser {
 }
 
 // ==================== Event Types ====================
-export type Difficulty = 'easy' | 'medium' | 'hard';
+export type Difficulty = '하' | '중하' | '중' | '중상' | '상';
 export type ScheduleType = 'departure' | 'stop' | 'return' | 'arrival';
 
 export interface ScheduleItem {

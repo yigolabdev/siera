@@ -1,8 +1,11 @@
 import { TrendingUp, Award, Calendar, Users, BarChart3, Target, Trophy, Medal } from 'lucide-react';
+import { useState } from 'react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
 const Attendance = () => {
+  const [activeTab, setActiveTab] = useState<'rate' | 'count'>('rate');
+  
   const attendanceData = [
     {
       id: 1,
@@ -78,7 +81,7 @@ const Attendance = () => {
   const getRankBadge = (rank: number) => {
     if (rank === 1) {
       return (
-        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full shadow-lg">
+        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-warning-400 to-warning-600 rounded-full shadow-lg">
           <Trophy className="h-6 w-6 text-white" />
         </div>
       );
@@ -90,7 +93,7 @@ const Attendance = () => {
       );
     } else if (rank === 3) {
       return (
-        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full shadow-lg">
+        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full shadow-lg">
           <Award className="h-6 w-6 text-white" />
         </div>
       );
@@ -103,15 +106,15 @@ const Attendance = () => {
   };
   
   const getProgressColor = (rate: number) => {
-    if (rate >= 90) return 'bg-green-500';
-    if (rate >= 80) return 'bg-blue-500';
-    if (rate >= 70) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (rate >= 90) return 'bg-success-600';
+    if (rate >= 80) return 'bg-primary-600';
+    if (rate >= 70) return 'bg-warning-600';
+    return 'bg-danger-600';
   };
   
   const getRateBadge = (rate: number) => {
     if (rate >= 90) return <Badge variant="success">{rate.toFixed(1)}%</Badge>;
-    if (rate >= 80) return <Badge variant="info">{rate.toFixed(1)}%</Badge>;
+    if (rate >= 80) return <Badge variant="primary">{rate.toFixed(1)}%</Badge>;
     if (rate >= 70) return <Badge variant="warning">{rate.toFixed(1)}%</Badge>;
     return <Badge variant="danger">{rate.toFixed(1)}%</Badge>;
   };
@@ -121,41 +124,45 @@ const Attendance = () => {
     attendanceData.reduce((sum, member) => sum + member.rate, 0) / attendanceData.length
   );
   
+  // 탭에 따라 정렬된 데이터
+  const sortedData = activeTab === 'rate'
+    ? [...attendanceData].sort((a, b) => b.rate - a.rate)
+    : [...attendanceData].sort((a, b) => b.attended - a.attended);
+  
+  // 정렬된 데이터에 순위 재할당
+  const rankedData = sortedData.map((member, index) => ({
+    ...member,
+    rank: index + 1
+  }));
+  
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">참여율 현황</h1>
-        <p className="text-xl text-slate-600">
-          회원님들의 산행 참여율을 확인하세요.
-        </p>
-      </div>
-      
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card className="text-center hover:shadow-lg transition-all">
           <div className="flex items-center justify-center mb-2">
-            <Calendar className="w-6 h-6 text-blue-600" />
+            <Calendar className="w-6 h-6 text-slate-600" />
           </div>
           <p className="text-sm text-slate-600 mb-1">총 산행 횟수</p>
           <p className="text-3xl font-bold text-slate-900">{totalEvents}회</p>
         </Card>
         <Card className="text-center hover:shadow-lg transition-all">
           <div className="flex items-center justify-center mb-2">
-            <Users className="w-6 h-6 text-green-600" />
+            <Users className="w-6 h-6 text-slate-600" />
           </div>
           <p className="text-sm text-slate-600 mb-1">평균 참가자</p>
           <p className="text-3xl font-bold text-slate-900">35명</p>
         </Card>
         <Card className="text-center hover:shadow-lg transition-all">
           <div className="flex items-center justify-center mb-2">
-            <Target className="w-6 h-6 text-purple-600" />
+            <Target className="w-6 h-6 text-slate-600" />
           </div>
           <p className="text-sm text-slate-600 mb-1">평균 참여율</p>
           <p className="text-3xl font-bold text-slate-900">{avgAttendanceRate}%</p>
         </Card>
         <Card className="text-center hover:shadow-lg transition-all">
           <div className="flex items-center justify-center mb-2">
-            <Trophy className="w-6 h-6 text-yellow-600" />
+            <Trophy className="w-6 h-6 text-slate-600" />
           </div>
           <p className="text-sm text-slate-600 mb-1">최고 참여율</p>
           <p className="text-3xl font-bold text-slate-900">
@@ -167,14 +174,14 @@ const Attendance = () => {
       {/* Monthly Trend */}
       <Card className="mb-8 hover:shadow-xl transition-all">
         <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-          <BarChart3 className="w-7 h-7 text-primary-600" />
+          <BarChart3 className="w-7 h-7 text-slate-600" />
           월별 참여 추이
         </h2>
         <div className="space-y-4">
           {monthlyStats.map((stat, index) => (
             <div key={index} className="p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
               <div className="flex items-center gap-4">
-                <Badge variant="info">{stat.month}</Badge>
+                <Badge variant="primary">{stat.month}</Badge>
                 <div className="flex-grow">
                   <div className="flex justify-between text-sm text-slate-600 mb-2">
                     <span>평균 {stat.avgAttendance}명 참석</span>
@@ -182,7 +189,7 @@ const Attendance = () => {
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-3">
                     <div 
-                      className="bg-primary-600 h-3 rounded-full transition-all duration-500"
+                      className="bg-slate-900 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${(stat.avgAttendance / 45) * 100}%` }}
                     />
                   </div>
@@ -195,23 +202,45 @@ const Attendance = () => {
       
       {/* Ranking Table */}
       <Card className="hover:shadow-xl transition-all">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-          <TrendingUp className="w-7 h-7 text-primary-600" />
-          회원별 참여율 순위
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <TrendingUp className="w-7 h-7 text-slate-600" />
+            회원별 {activeTab === 'rate' ? '참여율' : '참여 횟수'} 순위
+          </h2>
+          
+          {/* Tabs */}
+          <div className="flex bg-slate-100 rounded-xl p-1">
+            <button
+              onClick={() => setActiveTab('rate')}
+              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
+                activeTab === 'rate'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              참여율
+            </button>
+            <button
+              onClick={() => setActiveTab('count')}
+              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
+                activeTab === 'count'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              참여 횟수
+            </button>
+          </div>
+        </div>
         
         <div className="space-y-4">
-          {attendanceData.map((member) => (
+          {rankedData.map((member) => (
             <div 
               key={member.id} 
               className={`flex items-center gap-4 p-5 rounded-xl border-2 transition-all hover:shadow-lg ${
-                member.rank === 1
-                  ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300'
-                  : member.rank === 2
-                  ? 'bg-gradient-to-r from-slate-50 to-gray-50 border-slate-300'
-                  : member.rank === 3
-                  ? 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-300'
-                  : 'bg-white border-slate-200 hover:border-primary-600'
+                member.rank <= 3
+                  ? 'bg-slate-50 border-slate-300'
+                  : 'bg-white border-slate-200 hover:border-slate-400'
               }`}
             >
               {/* Rank Badge */}
@@ -266,9 +295,9 @@ const Attendance = () => {
       </Card>
       
       {/* Info Box */}
-      <Card className="mt-6 bg-blue-50 border-2 border-blue-200">
+      <Card className="mt-6 bg-slate-50 border-2 border-slate-200">
         <p className="text-slate-700">
-          <strong className="text-blue-900">참고:</strong> 참여율은 가입 이후 진행된 전체 산행 대비 참석한 산행의 비율입니다.
+          <strong className="text-slate-900">참고:</strong> 참여율은 가입 이후 진행된 전체 산행 대비 참석한 산행의 비율입니다.
         </p>
       </Card>
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Shield, UserCog, Search, UserCheck, UserPlus, Check, X, Eye, Calendar, Briefcase, Building2, Phone, Mail, Mountain, MessageSquare, Edit, Save, Plus, Award, AlertCircle, CreditCard } from 'lucide-react';
+import { Users, Shield, UserCog, Search, UserCheck, UserPlus, Check, X, Eye, Calendar, Briefcase, Building2, Phone, Mail, Mountain, MessageSquare, AlertCircle, UserX, Power } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -17,15 +17,7 @@ interface Member {
   company: string;
   joinDate: string;
   role: UserRole;
-}
-
-interface ExecutivePosition {
-  id: string;
-  title: '회장' | '부회장' | '운영진' | '감사' | '재무';
-  memberName?: string;
-  memberId?: number;
-  startTerm: string;  // YYYY-MM
-  endTerm: string;    // YYYY-MM
+  isActive: boolean; // 회원 활성화 상태
 }
 
 interface GuestApplication {
@@ -44,14 +36,13 @@ interface GuestApplication {
 
 const MemberManagement = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'members' | 'approval' | 'executives' | 'guestApplications'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'approval' | 'guestApplications'>('members');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [selectedPendingUser, setSelectedPendingUser] = useState<PendingUser | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isExecutiveModalOpen, setIsExecutiveModalOpen] = useState(false);
-  const [editingExecutive, setEditingExecutive] = useState<ExecutivePosition | null>(null);
   
   // 비밀번호 확인 모달 상태
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -67,7 +58,8 @@ const MemberManagement = () => {
       occupation: '○○그룹 회장',
       company: '○○그룹',
       joinDate: '2020-01-15',
-      role: 'admin',
+      role: 'chairman',
+      isActive: true,
     },
     {
       id: 2,
@@ -77,7 +69,8 @@ const MemberManagement = () => {
       occupation: '△△건설 대표이사',
       company: '△△건설',
       joinDate: '2020-03-20',
-      role: 'staff',
+      role: 'committee',
+      isActive: true,
     },
     {
       id: 3,
@@ -87,7 +80,8 @@ const MemberManagement = () => {
       occupation: '□□금융 부사장',
       company: '□□금융',
       joinDate: '2020-06-10',
-      role: 'staff',
+      role: 'committee',
+      isActive: true,
     },
     {
       id: 4,
@@ -98,6 +92,7 @@ const MemberManagement = () => {
       company: '◇◇제약',
       joinDate: '2021-01-05',
       role: 'member',
+      isActive: true,
     },
     {
       id: 5,
@@ -108,6 +103,7 @@ const MemberManagement = () => {
       company: '☆☆병원',
       joinDate: '2021-03-15',
       role: 'member',
+      isActive: false, // 비활성화 예시
     },
   ]);
 
@@ -159,53 +155,6 @@ const MemberManagement = () => {
   const [selectedGuestApplication, setSelectedGuestApplication] = useState<GuestApplication | null>(null);
   const [isGuestDetailModalOpen, setIsGuestDetailModalOpen] = useState(false);
 
-  // 운영진 목록 - 미리 정의된 5개 직책
-  const [executives, setExecutives] = useState<ExecutivePosition[]>([
-    {
-      id: '1',
-      title: '회장',
-      memberName: '김대한',
-      memberId: 1,
-      startTerm: '2024-01',
-      endTerm: '2026-12',
-    },
-    {
-      id: '2',
-      title: '부회장',
-      memberName: '이민국',
-      memberId: 2,
-      startTerm: '2024-01',
-      endTerm: '2026-12',
-    },
-    {
-      id: '3',
-      title: '감사',
-      memberName: '박세계',
-      memberId: 3,
-      startTerm: '2024-01',
-      endTerm: '2026-12',
-    },
-    {
-      id: '4',
-      title: '재무',
-      startTerm: '2024-01',
-      endTerm: '2026-12',
-    },
-    {
-      id: '5',
-      title: '운영진',
-      startTerm: '2024-01',
-      endTerm: '2026-12',
-    },
-  ]);
-
-  const [executiveFormData, setExecutiveFormData] = useState({
-    title: '',
-    memberId: 0,
-    startTerm: '',
-    endTerm: '',
-  });
-
   // 비밀번호 검증 요청 함수
   const requestPasswordVerification = (action: () => void) => {
     setPasswordAction(() => action);
@@ -235,19 +184,6 @@ const MemberManagement = () => {
     setIsPasswordModalOpen(false);
     setPasswordInput('');
     setPasswordAction(null);
-  };
-
-  const handleRoleChange = (memberId: number, newRole: UserRole) => {
-    if (confirm(`정말 권한을 변경하시겠습니까?`)) {
-      requestPasswordVerification(() => {
-        setMembers(prev =>
-          prev.map(member =>
-            member.id === memberId ? { ...member, role: newRole } : member
-          )
-        );
-        alert('권한이 변경되었습니다.');
-      });
-    }
   };
 
   const handleApprove = (userId: string) => {
@@ -311,67 +247,6 @@ const MemberManagement = () => {
     setIsGuestDetailModalOpen(true);
   };
 
-  // 운영진 관리 함수
-  const handleOpenExecutiveModal = (executive: ExecutivePosition) => {
-    setEditingExecutive(executive);
-    setExecutiveFormData({
-      title: executive.title,
-      memberId: executive.memberId || 0,
-      startTerm: executive.startTerm,
-      endTerm: executive.endTerm,
-    });
-    setIsExecutiveModalOpen(true);
-  };
-
-  const handleSaveExecutive = () => {
-    if (!executiveFormData.startTerm || !executiveFormData.endTerm) {
-      alert('임기를 모두 입력해주세요.');
-      return;
-    }
-
-    const member = executiveFormData.memberId ? members.find(m => m.id === executiveFormData.memberId) : undefined;
-
-    // 비밀번호 검증 요청
-    requestPasswordVerification(() => {
-      if (editingExecutive) {
-        // 수정
-        setExecutives(prev =>
-          prev.map(exec =>
-            exec.id === editingExecutive.id
-              ? {
-                  ...exec,
-                  memberName: member?.name,
-                  memberId: executiveFormData.memberId || undefined,
-                  startTerm: executiveFormData.startTerm,
-                  endTerm: executiveFormData.endTerm,
-                }
-              : exec
-          )
-        );
-        alert('운영진 정보가 수정되었습니다.');
-      }
-      setIsExecutiveModalOpen(false);
-    });
-  };
-
-  const handleDeleteExecutive = (id: string) => {
-    if (confirm('정말 이 운영진을 해임하시겠습니까?')) {
-      // 비밀번호 검증 요청
-      requestPasswordVerification(() => {
-        setExecutives(prev => prev.map(exec =>
-          exec.id === id
-            ? {
-                ...exec,
-                memberName: undefined,
-                memberId: undefined,
-              }
-            : exec
-        ));
-        alert('운영진이 해임되었습니다.');
-      });
-    }
-  };
-
   const getHikingLevelLabel = (level: string) => {
     const labels: Record<string, string> = {
       beginner: '초급',
@@ -379,6 +254,28 @@ const MemberManagement = () => {
       advanced: '상급',
     };
     return labels[level] || level;
+  };
+
+  // 회원 활성화/비활성화 토글
+  const handleToggleMemberStatus = (memberId: number) => {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+
+    const action = member.isActive ? '비활성화' : '활성화';
+    const confirmMessage = member.isActive
+      ? `${member.name} 회원을 비활성화하시겠습니까?\n비활성화된 회원은 로그인 및 산행 신청이 불가능합니다.`
+      : `${member.name} 회원을 활성화하시겠습니까?`;
+
+    requestPasswordVerification(() => {
+      if (confirm(confirmMessage)) {
+        setMembers(prev =>
+          prev.map(m =>
+            m.id === memberId ? { ...m, isActive: !m.isActive } : m
+          )
+        );
+        alert(`${member.name} 회원이 ${action}되었습니다.`);
+      }
+    });
   };
 
   const filteredMembers = members.filter(member => {
@@ -389,7 +286,11 @@ const MemberManagement = () => {
       member.occupation.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.company.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || member.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesStatus = 
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && member.isActive) ||
+      (statusFilter === 'inactive' && !member.isActive);
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   const filteredPendingUsers = pendingUsers.filter(user => {
@@ -399,8 +300,10 @@ const MemberManagement = () => {
 
   const memberStats = {
     total: members.length,
-    admin: members.filter(m => m.role === 'admin').length,
-    staff: members.filter(m => m.role === 'staff').length,
+    active: members.filter(m => m.isActive).length,
+    inactive: members.filter(m => !m.isActive).length,
+    chairman: members.filter(m => m.role === 'chairman').length,
+    committee: members.filter(m => m.role === 'committee').length,
     member: members.filter(m => m.role === 'member').length,
   };
 
@@ -409,12 +312,6 @@ const MemberManagement = () => {
     approved: pendingUsers.filter(u => u.status === 'approved').length,
     rejected: pendingUsers.filter(u => u.status === 'rejected').length,
     total: pendingUsers.length,
-  };
-
-  const executiveStats = {
-    total: executives.length,
-    assigned: executives.filter(e => e.memberId).length,
-    vacant: executives.filter(e => !e.memberId).length,
   };
 
   const guestStats = {
@@ -431,10 +328,10 @@ const MemberManagement = () => {
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
-      case 'admin':
-        return <Badge variant="danger">관리자</Badge>;
-      case 'staff':
-        return <Badge variant="info">운영진</Badge>;
+      case 'chairman':
+        return <Badge variant="danger">회장단</Badge>;
+      case 'committee':
+        return <Badge variant="info">운영위원</Badge>;
       case 'member':
         return <Badge variant="success">일반회원</Badge>;
       default:
@@ -455,22 +352,8 @@ const MemberManagement = () => {
     }
   };
 
-  const isTermActive = (startTerm: string, endTerm: string) => {
-    const today = new Date();
-    const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    return currentYearMonth >= startTerm && currentYearMonth <= endTerm;
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">회원 관리</h1>
-        <p className="text-xl text-slate-600">
-          회원 정보를 관리하고 가입 신청을 승인하며 운영진을 관리할 수 있습니다.
-        </p>
-      </div>
-
       {/* Tabs */}
       <div className="mb-8">
         <div className="border-b border-slate-200">
@@ -515,18 +398,6 @@ const MemberManagement = () => {
                 <Badge variant={activeTab === 'guestApplications' ? 'danger' : 'warning'}>{guestStats.pending}</Badge>
               )}
             </button>
-            <button
-              onClick={() => setActiveTab('executives')}
-              className={`py-4 px-1 border-b-2 font-bold text-lg transition-colors flex items-center gap-2 ${
-                activeTab === 'executives'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <Award className="w-5 h-5" />
-              운영진 관리
-              <Badge variant={activeTab === 'executives' ? 'primary' : 'info'}>{executiveStats.total}</Badge>
-            </button>
           </nav>
         </div>
       </div>
@@ -535,7 +406,7 @@ const MemberManagement = () => {
       {activeTab === 'members' && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
             <Card className="text-center hover:shadow-lg transition-all">
               <div className="flex items-center justify-center mb-2">
                 <Users className="w-6 h-6 text-blue-600" />
@@ -544,33 +415,41 @@ const MemberManagement = () => {
               <p className="text-3xl font-bold text-slate-900">{memberStats.total}명</p>
             </Card>
 
+            <Card className="text-center bg-emerald-50 border-emerald-200 hover:shadow-lg transition-all">
+              <div className="flex items-center justify-center mb-2">
+                <UserCheck className="w-6 h-6 text-emerald-600" />
+              </div>
+              <p className="text-emerald-700 text-sm mb-1">활성 회원</p>
+              <p className="text-3xl font-bold text-emerald-900">{memberStats.active}명</p>
+            </Card>
+
+            <Card className="text-center bg-slate-50 border-slate-300 hover:shadow-lg transition-all">
+              <div className="flex items-center justify-center mb-2">
+                <UserX className="w-6 h-6 text-slate-600" />
+              </div>
+              <p className="text-slate-600 text-sm mb-1">비활성 회원</p>
+              <p className="text-3xl font-bold text-slate-900">{memberStats.inactive}명</p>
+            </Card>
+
             <Card className="text-center hover:shadow-lg transition-all">
               <div className="flex items-center justify-center mb-2">
                 <Shield className="w-6 h-6 text-red-600" />
               </div>
-              <p className="text-slate-600 text-sm mb-1">관리자</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.admin}명</p>
+              <p className="text-slate-600 text-sm mb-1">회장단</p>
+              <p className="text-3xl font-bold text-slate-900">{memberStats.chairman}명</p>
             </Card>
 
             <Card className="text-center hover:shadow-lg transition-all">
               <div className="flex items-center justify-center mb-2">
                 <UserCog className="w-6 h-6 text-blue-600" />
               </div>
-              <p className="text-slate-600 text-sm mb-1">운영진</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.staff}명</p>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <UserCheck className="w-6 h-6 text-green-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">일반회원</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.member}명</p>
+              <p className="text-slate-600 text-sm mb-1">운영위원</p>
+              <p className="text-3xl font-bold text-slate-900">{memberStats.committee}명</p>
             </Card>
           </div>
 
           {/* Search and Filter */}
-          <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="flex flex-col gap-4 mb-8">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
               <input
@@ -581,99 +460,156 @@ const MemberManagement = () => {
                 className="input-field pl-12"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setRoleFilter('all')}
-                className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                  roleFilter === 'all'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                전체
-              </button>
-              <button
-                onClick={() => setRoleFilter('admin')}
-                className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                  roleFilter === 'admin'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                관리자
-              </button>
-              <button
-                onClick={() => setRoleFilter('staff')}
-                className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                  roleFilter === 'staff'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                운영진
-              </button>
-              <button
-                onClick={() => setRoleFilter('member')}
-                className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                  roleFilter === 'member'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                일반회원
-              </button>
+            
+            {/* Filters - 한 줄로 배치 */}
+            <div className="flex flex-wrap items-end gap-4">
+              {/* Role Filter */}
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">직급별 필터</p>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setRoleFilter('all')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      roleFilter === 'all'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    전체
+                  </button>
+                  <button
+                    onClick={() => setRoleFilter('chairman')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      roleFilter === 'chairman'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    회장단
+                  </button>
+                  <button
+                    onClick={() => setRoleFilter('committee')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      roleFilter === 'committee'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    운영위원
+                  </button>
+                  <button
+                    onClick={() => setRoleFilter('member')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      roleFilter === 'member'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    일반회원
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">활성화 상태</p>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      statusFilter === 'all'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    전체
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('active')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      statusFilter === 'active'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    활성 ({memberStats.active})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('inactive')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                      statusFilter === 'inactive'
+                        ? 'bg-slate-600 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  비활성 ({memberStats.inactive})
+                </button>
+              </div>
             </div>
+          </div>
           </div>
 
           {/* Member List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMembers.length > 0 ? (
               filteredMembers.map(member => (
-                <Card key={member.id} className="hover:shadow-xl hover:border-primary-600 transition-all">
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
-                      {getRoleBadge(member.role)}
+                <Card 
+                  key={member.id} 
+                  className={`hover:shadow-xl transition-all relative ${
+                    member.isActive 
+                      ? 'hover:border-primary-600' 
+                      : 'bg-slate-50 border-slate-300 opacity-75'
+                  }`}
+                >
+                  {/* 비활성화 상태 표시 */}
+                  {!member.isActive && (
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="default">비활성</Badge>
                     </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Mail className="w-4 h-4" />
-                        <span>{member.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Phone className="w-4 h-4" />
-                        <span>{member.phone}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Briefcase className="w-4 h-4" />
-                        <span>{member.occupation}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Building2 className="w-4 h-4" />
-                        <span>{member.company}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Calendar className="w-4 h-4" />
-                        <span>가입: {member.joinDate}</span>
-                      </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`text-xl font-bold ${member.isActive ? 'text-slate-900' : 'text-slate-500'}`}>
+                      {member.name}
+                    </h3>
+                    {getRoleBadge(member.role)}
+                  </div>
+                  
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <Mail className="w-4 h-4" />
+                      <span>{member.email}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <Phone className="w-4 h-4" />
+                      <span>{member.phone}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <Briefcase className="w-4 h-4" />
+                      <span>{member.occupation}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <Building2 className="w-4 h-4" />
+                      <span>{member.company}</span>
+                    </div>
+                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <Calendar className="w-4 h-4" />
+                      <span>가입: {member.joinDate}</span>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <label htmlFor={`role-${member.id}`} className="block text-sm font-semibold text-slate-700 mb-2">
-                      역할 변경
-                    </label>
-                    <select
-                      id={`role-${member.id}`}
-                      value={member.role}
-                      onChange={(e) => handleRoleChange(member.id, e.target.value as UserRole)}
-                      className="input-field"
-                    >
-                      <option value="admin">관리자</option>
-                      <option value="staff">운영진</option>
-                      <option value="member">일반회원</option>
-                    </select>
-                  </div>
+                  {/* 활성화/비활성화 버튼 */}
+                  <button
+                    onClick={() => handleToggleMemberStatus(member.id)}
+                    className={`w-full py-2 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                      member.isActive
+                        ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
+                        : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300'
+                    }`}
+                  >
+                    <Power className="w-4 h-4" />
+                    {member.isActive ? '비활성화' : '활성화'}
+                  </button>
                 </Card>
               ))
             ) : (
@@ -832,143 +768,6 @@ const MemberManagement = () => {
         </>
       )}
 
-      {/* Executives Tab */}
-      {activeTab === 'executives' && (
-        <>
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="text-center hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Award className="w-6 h-6 text-purple-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">전체 직책</p>
-              <p className="text-3xl font-bold text-slate-900">{executiveStats.total}개</p>
-            </Card>
-
-            <Card className="text-center bg-blue-50 border-blue-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <UserCheck className="w-6 h-6 text-blue-600" />
-              </div>
-              <p className="text-blue-700 text-sm mb-1">임명됨</p>
-              <p className="text-3xl font-bold text-blue-900">{executiveStats.assigned}명</p>
-            </Card>
-
-            <Card className="text-center bg-amber-50 border-amber-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <UserPlus className="w-6 h-6 text-amber-600" />
-              </div>
-              <p className="text-amber-700 text-sm mb-1">공석</p>
-              <p className="text-3xl font-bold text-amber-900">{executiveStats.vacant}개</p>
-            </Card>
-          </div>
-
-          {/* Executives List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {executives.map((executive) => {
-              const member = members.find(m => m.id === executive.memberId);
-              const isActive = isTermActive(executive.startTerm, executive.endTerm);
-              
-              return (
-                <Card 
-                  key={executive.id} 
-                  className={`hover:shadow-xl transition-all ${
-                    isActive ? 'border-l-4 border-l-primary-500' : 'opacity-75'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-2xl font-bold text-slate-900">{executive.title}</h3>
-                        {isActive ? (
-                          <Badge variant="success">현재 임기</Badge>
-                        ) : (
-                          <Badge variant="info">종료</Badge>
-                        )}
-                      </div>
-
-                      {executive.memberId && member ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-slate-900">
-                            <UserCheck className="w-5 h-5 text-primary-600" />
-                            <span className="font-bold text-lg">{executive.memberName}</span>
-                          </div>
-                          <div className="text-sm text-slate-600 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Briefcase className="w-4 h-4" />
-                              <span>{member.occupation}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4" />
-                              <span>{member.company}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-amber-600">
-                          <UserPlus className="w-5 h-5" />
-                          <span className="font-semibold">공석 (미임명)</span>
-                        </div>
-                      )}
-
-                      <div className="mt-4 pt-4 border-t border-slate-200">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Calendar className="w-4 h-4" />
-                          <span className="font-medium">
-                            임기: {executive.startTerm} ~ {executive.endTerm}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 ml-4">
-                      <button
-                        onClick={() => handleOpenExecutiveModal(executive)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title={executive.memberId ? "수정" : "임명"}
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      {executive.memberId && (
-                        <button
-                          onClick={() => handleDeleteExecutive(executive.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="해임"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          {executives.length === 0 && (
-            <Card className="text-center py-12">
-              <Award className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="text-xl text-slate-500">운영진 직책이 설정되지 않았습니다.</p>
-            </Card>
-          )}
-
-          {/* Info Notice */}
-          <Card className="mt-8 bg-blue-50 border-blue-200">
-            <div className="flex items-start gap-3">
-              <Award className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">운영진 관리 안내</h3>
-                <ul className="text-sm text-slate-700 space-y-1">
-                  <li>• 운영진 직책을 추가하고 회원을 임명할 수 있습니다.</li>
-                  <li>• 임기를 설정하여 기간별로 관리할 수 있습니다.</li>
-                  <li>• 공석인 직책은 "미임명" 상태로 표시되며, 나중에 임명할 수 있습니다.</li>
-                  <li>• 이 정보는 회원 명부의 운영진 페이지와 연동됩니다.</li>
-                </ul>
-              </div>
-            </div>
-          </Card>
-        </>
-      )}
-
       {/* Guest Applications Tab */}
       {activeTab === 'guestApplications' && (
         <>
@@ -1121,13 +920,12 @@ const MemberManagement = () => {
           </div>
 
           {/* Guest Detail Modal */}
-          <Modal
-            isOpen={isGuestDetailModalOpen}
-            onClose={() => setIsGuestDetailModalOpen(false)}
-            title="게스트 신청 상세정보"
-            size="lg"
-          >
-            {selectedGuestApplication && (
+          {isGuestDetailModalOpen && selectedGuestApplication && (
+            <Modal
+              onClose={() => setIsGuestDetailModalOpen(false)}
+              title="게스트 신청 상세정보"
+              maxWidth="max-w-4xl"
+            >
               <div className="p-6">
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-4">
@@ -1212,19 +1010,18 @@ const MemberManagement = () => {
                   )}
                 </div>
               </div>
-            )}
-          </Modal>
+            </Modal>
+          )}
         </>
       )}
 
       {/* Pending User Detail Modal */}
-      <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="가입 신청 상세정보"
-        size="lg"
-      >
-        {selectedPendingUser && (
+      {isDetailModalOpen && selectedPendingUser && (
+        <Modal
+          onClose={() => setIsDetailModalOpen(false)}
+          title="가입 신청 상세정보"
+          maxWidth="max-w-4xl"
+        >
           <div className="p-6">
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -1305,105 +1102,16 @@ const MemberManagement = () => {
               )}
             </div>
           </div>
-        )}
-      </Modal>
-
-      {/* Executive Modal */}
-      <Modal
-        isOpen={isExecutiveModalOpen}
-        onClose={() => setIsExecutiveModalOpen(false)}
-        title={editingExecutive ? `${editingExecutive.title} 임명/수정` : '운영진 관리'}
-        size="lg"
-      >
-        <div className="p-6">
-          <div className="space-y-5">
-            {/* 직책명 표시 (수정 불가) */}
-            <div>
-              <label className="block text-slate-700 font-semibold mb-2">
-                직책
-              </label>
-              <div className="px-4 py-3 bg-slate-100 rounded-lg border border-slate-300">
-                <p className="text-lg font-bold text-slate-900">{editingExecutive?.title}</p>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-slate-700 font-semibold mb-2">
-                회원 선택 {editingExecutive?.memberId ? '' : <Badge variant="warning">공석</Badge>}
-              </label>
-              <select
-                value={executiveFormData.memberId}
-                onChange={(e) => setExecutiveFormData({ ...executiveFormData, memberId: parseInt(e.target.value) })}
-                className="input-field"
-              >
-                <option value={0}>미임명 (공석)</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name} - {member.occupation} ({member.company})
-                  </option>
-                ))}
-              </select>
-              <p className="text-sm text-slate-500 mt-2">
-                운영진으로 임명할 회원을 선택하세요.
-              </p>
-            </div>
-
-            <div className="border-t pt-5">
-              <p className="text-sm font-semibold text-slate-700 mb-4">임기 설정 <Badge variant="danger">필수</Badge></p>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-700 font-medium mb-2">
-                    시작
-                  </label>
-                  <input
-                    type="month"
-                    value={executiveFormData.startTerm}
-                    onChange={(e) => setExecutiveFormData({ ...executiveFormData, startTerm: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-medium mb-2">
-                    종료 <Badge variant="danger">필수</Badge>
-                  </label>
-                  <input
-                    type="month"
-                    value={executiveFormData.endTerm}
-                    onChange={(e) => setExecutiveFormData({ ...executiveFormData, endTerm: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-4 mt-8 pt-6 border-t">
-            <button
-              onClick={() => setIsExecutiveModalOpen(false)}
-              className="flex-1 btn-secondary"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSaveExecutive}
-              className="flex-1 btn-primary flex items-center justify-center gap-2"
-            >
-              <Save className="w-5 h-5" />
-              저장
-            </button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
 
       {/* Password Verification Modal */}
-      <Modal
-        isOpen={isPasswordModalOpen}
-        onClose={handlePasswordCancel}
-        title="관리자 비밀번호 확인"
-        size="sm"
-      >
+      {isPasswordModalOpen && (
+        <Modal
+          onClose={handlePasswordCancel}
+          title="관리자 비밀번호 확인"
+          maxWidth="max-w-md"
+        >
         <div className="p-6">
           <div className="mb-6">
             <div className="flex items-center gap-3 mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -1450,7 +1158,8 @@ const MemberManagement = () => {
             </button>
           </div>
         </div>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 };

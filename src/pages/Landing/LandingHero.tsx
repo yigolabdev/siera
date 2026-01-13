@@ -90,12 +90,20 @@ export const LandingHero: React.FC = () => {
             </FadeIn>
 
             <FadeIn delay={800}>
-              <button 
-                onClick={scrollToAbout}
-                className="inline-block border-2 border-white text-white px-10 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors duration-300"
-              >
-                시애라 알아보기
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <button 
+                  onClick={scrollToAbout}
+                  className="inline-block border-2 border-white text-white px-10 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors duration-300"
+                >
+                  시애라 알아보기
+                </button>
+                <button 
+                  onClick={() => navigate('/about')}
+                  className="inline-block border-2 border-white bg-white text-black px-10 py-3 text-sm font-bold uppercase tracking-widest hover:bg-transparent hover:text-white transition-colors duration-300"
+                >
+                  시애라 소개 보기
+                </button>
+              </div>
             </FadeIn>
           </div>
 

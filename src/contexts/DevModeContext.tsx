@@ -28,7 +28,11 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
   
   const [applicationStatus, setApplicationStatus] = useState<ApplicationStatus>(() => {
     const saved = localStorage.getItem('siera-app-status');
-    return (saved as ApplicationStatus) || 'open';
+    // 명시적으로 'open' (신청 가능)을 기본값으로 설정
+    if (!saved || saved === 'null' || saved === 'undefined') {
+      return 'open';
+    }
+    return saved as ApplicationStatus;
   });
 
   // LocalStorage에 저장

@@ -136,14 +136,14 @@ export const mockEvents: HikingEvent[] = [
   {
     id: '1',
     title: '북한산 백운대 등반',
-    date: '2026-01-15',
+    date: '2026-02-15',
     location: '북한산 국립공원',
     mountain: '앙봉산',
     altitude: '737.2m',
     difficulty: '중',
     description: '백운대 정상을 목표로 하는 1월 정기 산행입니다.',
     maxParticipants: 25,
-    currentParticipants: 18,
+    currentParticipants: 15,
     cost: '60,000원',
     imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=400&fit=crop',
     paymentInfo: {

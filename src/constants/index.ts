@@ -234,3 +234,63 @@ export const VALIDATION = {
   MAX_FILE_SIZE: FILE_UPLOAD.MAX_SIZE,
   ALLOWED_FILE_TYPES: FILE_UPLOAD.ALLOWED_TYPES,
 } as const;
+
+/**
+ * 이벤트 관련 상수
+ */
+export const EVENT_CONSTANTS = {
+  APPLICATION_DEADLINE_DAYS: 10, // 산행 출발일 기준 10일 전 마감
+  MAX_PARTICIPANTS_DEFAULT: 100,
+  MIN_PARTICIPANTS: 5,
+  TEAM_SIZE_DEFAULT: 10,
+} as const;
+
+/**
+ * UI 관련 상수
+ */
+export const UI_CONSTANTS = {
+  MAX_UPLOAD_IMAGES: 10,
+  SIDEBAR_WIDTH: 280,
+  HEADER_HEIGHT: 64,
+  MOBILE_BREAKPOINT: 768,
+  TABLET_BREAKPOINT: 1024,
+} as const;
+
+/**
+ * 메시지 템플릿
+ */
+export const MESSAGE_TEMPLATES = {
+  CONFIRM_DELETE: '정말 삭제하시겠습니까?',
+  CONFIRM_SAVE: '변경사항을 저장하시겠습니까?',
+  CONFIRM_CANCEL: '작성을 취소하시겠습니까? 작성한 내용은 저장되지 않습니다.',
+  CONFIRM_LOGOUT: '로그아웃 하시겠습니까?',
+  REQUIRED_FIELD: '필수 입력 항목입니다.',
+  INVALID_FORMAT: '올바른 형식이 아닙니다.',
+} as const;
+
+/**
+ * 라우트 경로
+ */
+export const ROUTES = {
+  HOME: '/',
+  LOGIN: '/login',
+  REGISTER: '/register',
+  PROFILE: '/profile',
+  EVENTS: '/home/events',
+  MEMBERS: '/home/members',
+  GALLERY: '/home/gallery',
+  BOARD: '/home/board',
+  ATTENDANCE: '/home/attendance',
+  CLUB_INFO: '/home/club-info',
+  HIKING_HISTORY: '/home/hiking-history',
+  QUICK_APPLY: '/quick-apply',
+  GUEST_APPLICATION: '/guest-application',
+  ADMIN: {
+    EVENTS: '/admin/events',
+    MEMBERS: '/admin/members',
+    PAYMENT: '/admin/payment',
+    EXECUTIVES: '/admin/executives',
+    POEMS: '/admin/poems',
+  },
+} as const;
+

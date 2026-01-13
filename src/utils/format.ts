@@ -135,3 +135,84 @@ export const formatDeadline = (eventDate: string): string => {
     day: 'numeric',
   }) + ' 23:59';
 };
+
+/**
+ * 날짜 범위 포맷팅
+ */
+export const formatDateRange = (startDate: string, endDate: string): string => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (start.toDateString() === end.toDateString()) {
+    return formatDate(startDate);
+  }
+  
+  return `${formatDate(startDate)} ~ ${formatDate(endDate)}`;
+};
+
+/**
+ * 시간 포맷팅 (HH:MM)
+ */
+export const formatTime = (timeString: string): string => {
+  if (!timeString) return '';
+  const [hours, minutes] = timeString.split(':');
+  return `${hours}:${minutes}`;
+};
+
+/**
+ * ISO 날짜를 YYYY-MM-DD 형식으로 변환
+ */
+export const formatISODate = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toISOString().split('T')[0];
+};
+
+/**
+ * 월 포맷팅 (YYYY년 MM월)
+ */
+export const formatMonth = (month: string): string => {
+  const [year, mon] = month.split('-');
+  return `${year}년 ${parseInt(mon)}월`;
+};
+
+/**
+ * 숫자에 천 단위 콤마 추가
+ */
+export const formatNumber = (num: number | string): string => {
+  const numValue = typeof num === 'string' ? parseFloat(num) : num;
+  return numValue.toLocaleString('ko-KR');
+};
+
+/**
+ * 퍼센트 포맷팅
+ */
+export const formatPercentage = (value: number, decimals = 0): string => {
+  return `${value.toFixed(decimals)}%`;
+};
+
+/**
+ * 텍스트 줄임 (말줄임표)
+ */
+export const truncateText = (text: string, maxLength: number): string => {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength)}...`;
+};
+
+/**
+ * 한국어 조사 선택 (은/는, 이/가, 을/를)
+ */
+export const getKoreanParticle = (word: string, type: '은는' | '이가' | '을를'): string => {
+  if (!word) return '';
+  
+  const lastChar = word.charCodeAt(word.length - 1);
+  const hasJongseong = (lastChar - 0xAC00) % 28 > 0;
+  
+  const particles = {
+    '은는': hasJongseong ? '은' : '는',
+    '이가': hasJongseong ? '이' : '가',
+    '을를': hasJongseong ? '을' : '를',
+  };
+  
+  return particles[type];
+};
+

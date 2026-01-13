@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
 import { HikingEvent } from '../data/mockData';
 import { mockEvents, mockParticipants } from '../data/mockEvents';
 import { Participant } from '../types';
@@ -46,34 +46,36 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   const [participants, setParticipants] = useState<Record<string, Participant[]>>(mockParticipants);
   const [teams, setTeams] = useState<Record<string, Team[]>>({});
   
-  // 현재 진행 중인 이벤트 (가장 가까운 미래 이벤트)
-  const currentEvent = events
-    .filter(event => new Date(event.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] || null;
+  // 현재 진행 중인 이벤트 (가장 가까운 미래 이벤트) - useMemo로 최적화
+  const currentEvent = useMemo(() => {
+    return events
+      .filter(event => new Date(event.date) >= new Date())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] || null;
+  }, [events]);
 
-  const addEvent = (event: HikingEvent) => {
+  const addEvent = useCallback((event: HikingEvent) => {
     setEvents(prev => [...prev, event]);
-  };
+  }, []);
 
-  const updateEvent = (id: string, updatedEvent: Partial<HikingEvent>) => {
+  const updateEvent = useCallback((id: string, updatedEvent: Partial<HikingEvent>) => {
     setEvents(prev => prev.map(event => 
       event.id === id ? { ...event, ...updatedEvent } : event
     ));
-  };
+  }, []);
 
-  const deleteEvent = (id: string) => {
+  const deleteEvent = useCallback((id: string) => {
     setEvents(prev => prev.filter(event => event.id !== id));
-  };
+  }, []);
 
-  const getEventById = (id: string) => {
+  const getEventById = useCallback((id: string) => {
     return events.find(event => event.id === id);
-  };
+  }, [events]);
 
-  const getParticipantsByEventId = (eventId: string) => {
+  const getParticipantsByEventId = useCallback((eventId: string) => {
     return participants[eventId] || [];
-  };
+  }, [participants]);
 
-  const addParticipant = (eventId: string, participant: Participant) => {
+  const addParticipant = useCallback((eventId: string, participant: Participant) => {
     setParticipants(prev => ({
       ...prev,
       [eventId]: [...(prev[eventId] || []), participant],
@@ -82,48 +84,65 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     // 이벤트의 currentParticipants 업데이트
     setEvents(prev => prev.map(event => 
       event.id === eventId 
-        ? { ...event, currentParticipants: (prev[eventId]?.length || 0) + 1 }
+        ? { ...event, currentParticipants: (event.currentParticipants || 0) + 1 }
         : event
     ));
-  };
+  }, []);
 
-  const updateParticipantStatus = (eventId: string, participantId: string, status: 'confirmed' | 'pending') => {
+  const updateParticipantStatus = useCallback((eventId: string, participantId: string, status: 'confirmed' | 'pending') => {
     setParticipants(prev => ({
       ...prev,
       [eventId]: (prev[eventId] || []).map(p => 
         p.id === participantId ? { ...p, status } : p
       ),
     }));
-  };
+  }, []);
 
   // 조 편성 관련 함수
-  const getTeamsByEventId = (eventId: string) => {
+  const getTeamsByEventId = useCallback((eventId: string) => {
     return teams[eventId] || [];
-  };
+  }, [teams]);
 
-  const setTeamsForEvent = (eventId: string, eventTeams: Team[]) => {
+  const setTeamsForEvent = useCallback((eventId: string, eventTeams: Team[]) => {
     setTeams(prev => ({
       ...prev,
       [eventId]: eventTeams,
     }));
-  };
+  }, []);
+
+  // Context value를 useMemo로 메모이제이션
+  const value = useMemo(() => ({
+    events,
+    currentEvent,
+    participants,
+    teams,
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    getEventById,
+    getParticipantsByEventId,
+    addParticipant,
+    updateParticipantStatus,
+    getTeamsByEventId,
+    setTeamsForEvent,
+  }), [
+    events,
+    currentEvent,
+    participants,
+    teams,
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    getEventById,
+    getParticipantsByEventId,
+    addParticipant,
+    updateParticipantStatus,
+    getTeamsByEventId,
+    setTeamsForEvent,
+  ]);
 
   return (
-    <EventContext.Provider value={{
-      events,
-      currentEvent,
-      participants,
-      teams,
-      addEvent,
-      updateEvent,
-      deleteEvent,
-      getEventById,
-      getParticipantsByEventId,
-      addParticipant,
-      updateParticipantStatus,
-      getTeamsByEventId,
-      setTeamsForEvent,
-    }}>
+    <EventContext.Provider value={value}>
       {children}
     </EventContext.Provider>
   );

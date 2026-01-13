@@ -1,52 +1,52 @@
-import { ReactNode, ButtonHTMLAttributes } from 'react';
+import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  children: ReactNode;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'success';
   size?: 'sm' | 'md' | 'lg';
-  isLoading?: boolean;
+  loading?: boolean;
   fullWidth?: boolean;
+  children: React.ReactNode;
 }
 
-const Button = ({
-  children,
+const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
-  isLoading = false,
+  loading = false,
   fullWidth = false,
-  className = '',
   disabled,
+  className = '',
+  children,
   ...props
-}: ButtonProps) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-
-  const variantClasses = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
-    secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+}) => {
+  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+  
+  const variants = {
+    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-4 focus:ring-primary-200',
+    secondary: 'bg-slate-600 text-white hover:bg-slate-700 focus:ring-4 focus:ring-slate-200',
+    outline: 'border-2 border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-4 focus:ring-slate-200',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-4 focus:ring-red-200',
+    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-4 focus:ring-green-200',
   };
 
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+  const sizes = {
+    sm: 'px-3 py-1.5 text-sm gap-1.5',
+    md: 'px-4 py-2.5 text-base gap-2',
+    lg: 'px-6 py-3 text-lg gap-2.5',
   };
 
   const widthClass = fullWidth ? 'w-full' : '';
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className}`}
-      disabled={disabled || isLoading}
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${widthClass} ${className}`}
+      disabled={disabled || loading}
       {...props}
     >
-      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {loading && <Loader2 className="w-4 h-4 animate-spin" />}
       {children}
     </button>
   );
 };
 
 export default Button;
-

@@ -203,3 +203,85 @@ export interface AttendanceStats {
   attendanceRate: number;
 }
 
+// ==================== Executive Types ====================
+export interface Executive {
+  id: string;
+  memberId: string;
+  name: string;
+  title: string;
+  category: 'chairman' | 'committee';
+  occupation: string;
+  company: string;
+  phone: string;
+  email: string;
+  profileImage?: string;
+  bio?: string;
+  startTerm: string;
+  endTerm: string;
+}
+
+// ==================== Poem Types ====================
+export interface Poem {
+  id: string;
+  title: string;
+  author: string;
+  content: string;
+  month: string;
+  createdAt: string;
+}
+
+// ==================== Guest Application Types ====================
+export interface GuestApplication {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  name: string;
+  phone: string;
+  email: string;
+  occupation: string;
+  company: string;
+  reason: string;
+  referredBy?: string;
+  appliedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+// ==================== Utility Types ====================
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+// ==================== API Response Types ====================
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// ==================== Form Types ====================
+export interface FormField {
+  value: string;
+  error?: string;
+  touched: boolean;
+}
+
+export type FormState<T extends Record<string, any>> = {
+  [K in keyof T]: FormField;
+};
+
+export interface FormValidation {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+

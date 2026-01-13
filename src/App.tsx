@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { DevModeProvider } from './contexts/DevModeContext';
 import { EventProvider } from './contexts/EventContext';
@@ -7,28 +8,38 @@ import { PoemProvider } from './contexts/PoemContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout/Layout';
-import Landing from './pages/Landing';
-import AboutSierra from './pages/AboutSierra';
-import Register from './pages/Register';
-import Home from './pages/Home';
-import Events from './pages/Events';
-import Gallery from './pages/Gallery';
-import Board from './pages/Board';
-import Members from './pages/Members';
-import Attendance from './pages/Attendance';
-import Profile from './pages/Profile';
-import ClubInfo from './pages/ClubInfo';
-import HikingHistory from './pages/HikingHistory';
-import GuestApplication from './pages/GuestApplication';
-import QuickEventApply from './pages/QuickEventApply';
-import EventManagement from './pages/Admin/EventManagement';
-import EventPrintView from './pages/Admin/EventPrintView';
-import MemberManagement from './pages/Admin/MemberManagement';
-import PaymentManagement from './pages/Admin/PaymentManagement';
-import AnnualFeeManagement from './pages/Admin/AnnualFeeManagement';
-import ExecutiveManagement from './pages/Admin/ExecutiveManagement';
-import PoemManagement from './pages/Admin/PoemManagement';
-import RoutingTest from './pages/RoutingTest';
+import LoadingSpinner from './components/ui/LoadingSpinner';
+
+// 코드 스플리팅 적용
+const Landing = lazy(() => import('./pages/Landing'));
+const AboutSierra = lazy(() => import('./pages/AboutSierra'));
+const Register = lazy(() => import('./pages/Register'));
+const Home = lazy(() => import('./pages/Home'));
+const Events = lazy(() => import('./pages/Events'));
+const Gallery = lazy(() => import('./pages/Gallery'));
+const Board = lazy(() => import('./pages/Board'));
+const Members = lazy(() => import('./pages/Members'));
+const Attendance = lazy(() => import('./pages/Attendance'));
+const Profile = lazy(() => import('./pages/Profile'));
+const ClubInfo = lazy(() => import('./pages/ClubInfo'));
+const HikingHistory = lazy(() => import('./pages/HikingHistory'));
+const GuestApplication = lazy(() => import('./pages/GuestApplication'));
+const QuickEventApply = lazy(() => import('./pages/QuickEventApply'));
+const EventManagement = lazy(() => import('./pages/Admin/EventManagement'));
+const EventPrintView = lazy(() => import('./pages/Admin/EventPrintView'));
+const MemberManagement = lazy(() => import('./pages/Admin/MemberManagement'));
+const PaymentManagement = lazy(() => import('./pages/Admin/PaymentManagement'));
+const AnnualFeeManagement = lazy(() => import('./pages/Admin/AnnualFeeManagement'));
+const ExecutiveManagement = lazy(() => import('./pages/Admin/ExecutiveManagement'));
+const PoemManagement = lazy(() => import('./pages/Admin/PoemManagement'));
+const RoutingTest = lazy(() => import('./pages/RoutingTest'));
+
+// 로딩 컴포넌트
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <LoadingSpinner size="large" />
+  </div>
+);
 
 function App() {
   return (
@@ -39,7 +50,8 @@ function App() {
             <PoemProvider>
               <Router>
                 <ScrollToTop />
-                <Routes>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<AboutSierra />} />
@@ -97,8 +109,9 @@ function App() {
             
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Router>
+          </Routes>
+                </Suspense>
+              </Router>
             </PoemProvider>
           </MemberProvider>
         </EventProvider>

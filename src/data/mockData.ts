@@ -1,46 +1,9 @@
 // 중앙화된 Mock 데이터
 // 실제 프로덕션에서는 API에서 가져올 데이터
 
-export interface HikingEvent {
-  id: string;
-  title: string;
-  mountain: string;
-  date: string;
-  location: string;
-  altitude?: string;
-  difficulty: '하' | '중하' | '중' | '중상' | '상';
-  description: string;
-  maxParticipants: number;
-  currentParticipants: number;
-  cost: string;
-  imageUrl: string;
-  isSpecial?: boolean;
-  schedule?: ScheduleItem[];
-  courses?: Course[];
-  paymentInfo?: PaymentInfo;
-}
+import type { HikingEvent, ScheduleItem, Course, PaymentInfo } from '../types';
 
-export interface ScheduleItem {
-  time: string;
-  location: string;
-  type: 'departure' | 'stop' | 'arrival';
-}
-
-export interface Course {
-  name: string;
-  difficulty: string;
-  distance: string;
-  duration: string;
-  description: string;
-}
-
-export interface PaymentInfo {
-  bankName: string;
-  accountNumber: string;
-  accountHolder: string;
-  managerName: string;
-  managerPhone: string;
-}
+export type { HikingEvent, ScheduleItem, Course, PaymentInfo };
 
 export interface Member {
   id: number;
@@ -149,6 +112,7 @@ export const mockCurrentEvent: HikingEvent = {
   ],
   courses: [
     {
+      id: 'course-1-a',
       name: 'A코스',
       difficulty: '중',
       distance: '8.5km',
@@ -156,6 +120,7 @@ export const mockCurrentEvent: HikingEvent = {
       description: '정상까지 정규 코스',
     },
     {
+      id: 'course-1-b',
       name: 'B코스',
       difficulty: '중하',
       distance: '6.2km',

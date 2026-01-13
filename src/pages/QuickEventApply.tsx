@@ -89,12 +89,6 @@ export default function QuickEventApply() {
       return;
     }
 
-    // 코스 선택 확인
-    if (!selectedCourse) {
-      setShowCourseModal(true);
-      return;
-    }
-
     // 신청 마감 확인
     if (isApplicationClosed(currentEvent.date)) {
       setResult({

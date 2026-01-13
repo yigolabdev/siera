@@ -124,6 +124,8 @@ export const FILE_UPLOAD = {
  */
 export const STORAGE_KEYS = {
   AUTH_USER: 'sierra_auth_user',
+  USER: 'sierra_user',
+  SAVED_EMAIL: 'sierra_saved_email',
   DEV_MODE: 'sierra_dev_mode',
   DEV_MODE_STATUS: 'sierra_dev_mode_status',
   THEME: 'sierra_theme',
@@ -219,4 +221,16 @@ export const Z_INDEX = {
   MODAL: 1050,
   POPOVER: 1060,
   TOOLTIP: 1070,
+} as const;
+
+/**
+ * Validation 규칙
+ */
+export const VALIDATION = {
+  EMAIL: REGEX_PATTERNS.EMAIL,
+  PHONE: REGEX_PATTERNS.PHONE,
+  PASSWORD: REGEX_PATTERNS.PASSWORD,
+  MIN_PASSWORD_LENGTH: 8,
+  MAX_FILE_SIZE: FILE_UPLOAD.MAX_SIZE,
+  ALLOWED_FILE_TYPES: FILE_UPLOAD.ALLOWED_TYPES,
 } as const;

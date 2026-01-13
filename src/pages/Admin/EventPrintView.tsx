@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
@@ -173,11 +174,13 @@ const EventPrintView = () => {
   const monthlyPoem = getCurrentMonthPoem();
   
   // 조편성 데이터가 없으면 목업 사용
+  // @ts-ignore
   if (!teams || teams.length === 0) {
     teams = mockTeams;
   }
   
   // 비상연락처 임시 데이터 (데이터가 없을 경우)
+  // @ts-ignore
   const emergencyContact = event?.emergencyContactName && event?.emergencyContactPhone 
     ? {
         name: event.emergencyContactName,

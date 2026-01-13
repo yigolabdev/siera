@@ -1,5 +1,5 @@
 // ==================== User Types ====================
-export type UserRole = 'chairman' | 'committee' | 'member' | 'guest';
+export type UserRole = 'admin' | 'chairman' | 'committee' | 'member' | 'guest';
 
 export interface User {
   id: string;
@@ -54,7 +54,9 @@ export interface Course {
   name: string;
   description: string;
   distance: string;
-  schedule: ScheduleItem[];
+  schedule?: ScheduleItem[];
+  difficulty?: Difficulty;
+  duration?: string;
 }
 
 export interface PaymentInfo {
@@ -70,7 +72,7 @@ export interface HikingEvent {
   title: string;
   date: string;
   location: string;
-  mountain?: string;
+  mountain: string;
   altitude?: string;
   difficulty: Difficulty;
   description: string;
@@ -78,10 +80,13 @@ export interface HikingEvent {
   currentParticipants: number;
   cost: string;
   imageUrl?: string;
-  schedule: ScheduleItem[];
+  schedule?: ScheduleItem[];
   courses?: Course[];
   teams?: Team[];
   paymentInfo?: PaymentInfo;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  isSpecial?: boolean;
 }
 
 // ==================== Team Types ====================
@@ -90,14 +95,21 @@ export interface TeamMember {
   name: string;
   occupation: string;
   company: string;
+  phone?: string;
+  position?: string;
 }
 
 export interface Team {
   id: string;
+  eventId: string;
+  number?: number;
   name: string;
   leaderId: string;
   leaderName: string;
   leaderOccupation: string;
+  leaderCompany?: string;
+  leaderPosition?: string;
+  leaderPhone?: string;
   members: TeamMember[];
 }
 

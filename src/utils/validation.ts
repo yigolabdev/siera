@@ -4,14 +4,14 @@ import { VALIDATION } from '../constants';
  * 이메일 유효성 검사
  */
 export const isValidEmail = (email: string): boolean => {
-  return VALIDATION.EMAIL_PATTERN.test(email);
+  return VALIDATION.EMAIL.test(email);
 };
 
 /**
  * 전화번호 유효성 검사
  */
 export const isValidPhoneNumber = (phone: string): boolean => {
-  return VALIDATION.PHONE_PATTERN.test(phone);
+  return VALIDATION.PHONE.test(phone);
 };
 
 /**
@@ -29,8 +29,8 @@ export const isValidImageFile = (file: File): { valid: boolean; error?: string }
     return { valid: false, error: '이미지 파일만 업로드 가능합니다.' };
   }
   
-  if (file.size > VALIDATION.MAX_IMAGE_SIZE) {
-    return { valid: false, error: '파일 크기는 5MB를 초과할 수 없습니다.' };
+  if (file.size > VALIDATION.MAX_FILE_SIZE) {
+    return { valid: false, error: '파일 크기는 10MB를 초과할 수 없습니다.' };
   }
   
   return { valid: true };

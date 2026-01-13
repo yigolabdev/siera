@@ -42,15 +42,22 @@ jobs:
       - name: Deploy to S3
         run: |
           aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete
+          
+      # 7. S3 웹사이트 설정 (SPA 라우팅 지원)
+      - name: Configure S3 for SPA
+        run: |
+          aws s3 website s3://${{ secrets.AWS_S3_BUCKET }} \
+            --index-document index.html \
+            --error-document index.html
       
-      # 7. CloudFront 캐시 무효화 (선택사항 - CloudFront 사용 시)
+      # 8. CloudFront 캐시 무효화 (선택사항 - CloudFront 사용 시)
       # - name: Invalidate CloudFront
       #   run: |
       #     aws cloudfront create-invalidation \
       #       --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
       #       --paths "/*"
       
-      # 8. 배포 완료 알림
+      # 9. 배포 완료 알림
       - name: Deployment completed
         run: |
           echo "✅ Deployment completed successfully!"

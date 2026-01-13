@@ -28,7 +28,7 @@ jobs:
       
       # 4. 프로젝트 빌드
       - name: Build project
-        run: npm run build
+        run: npx vite build
       
       # 5. AWS 자격 증명 설정
       - name: Configure AWS credentials

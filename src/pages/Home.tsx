@@ -547,13 +547,13 @@ const Home = () => {
             </Card>
           </Link>
           
-          <Link to="/home/info">
+          <Link to="/home/hiking-history">
             <Card className="text-center hover:shadow-lg hover:border-primary-600 transition-all group cursor-pointer p-3 sm:p-4">
               <div className="flex items-center justify-center mb-2 sm:mb-3">
                 <Mountain className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600 group-hover:text-primary-600 transition-colors" />
               </div>
               <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-primary-600 transition-colors">
-                등산 정보
+                이전 산행
               </h3>
             </Card>
           </Link>

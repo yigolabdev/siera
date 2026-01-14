@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Search, CreditCard, CheckCircle, Clock, Users, AlertCircle, Calendar, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEvents } from '../../contexts/EventContext';
+import { useDevMode } from '../../contexts/DevModeContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 
@@ -30,36 +32,41 @@ interface HikingEvent {
 }
 
 const PaymentManagement = () => {
-  // Mock 데이터
-  const [events] = useState<HikingEvent[]>([
-    {
-      id: '1',
-      title: '1월 정기 산행',
-      mountain: '앙봉산',
-      date: '2026-01-15',
-      cost: 60000,
-      maxParticipants: 25,
-      currentParticipants: 18,
-    },
-    {
-      id: '2',
-      title: '12월 정기 산행',
-      mountain: '설악산',
-      date: '2025-12-15',
-      cost: 60000,
-      maxParticipants: 25,
-      currentParticipants: 22,
-    },
-    {
-      id: '3',
-      title: '11월 정기 산행',
-      mountain: '지리산',
-      date: '2025-11-20',
-      cost: 60000,
-      maxParticipants: 25,
-      currentParticipants: 25,
-    },
-  ]);
+  const { currentEvent, specialEvent } = useEvents();
+  const { specialApplicationStatus } = useDevMode();
+  
+  // 실제 이벤트 목록 생성 (정기산행 + 특별산행)
+  const events = useMemo(() => {
+    const eventList: HikingEvent[] = [];
+    
+    // 정기 산행 추가
+    if (currentEvent) {
+      eventList.push({
+        id: currentEvent.id,
+        title: currentEvent.title,
+        mountain: currentEvent.mountain || currentEvent.location,
+        date: currentEvent.date,
+        cost: parseInt(currentEvent.cost.replace(/[^0-9]/g, '')),
+        maxParticipants: currentEvent.maxParticipants,
+        currentParticipants: currentEvent.currentParticipants || 0,
+      });
+    }
+    
+    // 특별 산행 추가 (신청 기간일 때만)
+    if (specialEvent && specialApplicationStatus !== 'no-event') {
+      eventList.push({
+        id: specialEvent.id,
+        title: `${specialEvent.title} (특별산행)`,
+        mountain: specialEvent.mountain || specialEvent.location,
+        date: specialEvent.date,
+        cost: parseInt(specialEvent.cost.replace(/[^0-9]/g, '')),
+        maxParticipants: specialEvent.maxParticipants,
+        currentParticipants: specialEvent.currentParticipants || 0,
+      });
+    }
+    
+    return eventList;
+  }, [currentEvent, specialEvent, specialApplicationStatus]);
 
   // Mock 데이터 - 모든 이벤트의 신청자
   const [allApplicants, setAllApplicants] = useState<Applicant[]>([
@@ -233,7 +240,7 @@ const PaymentManagement = () => {
     },
   ]);
 
-  const [selectedEventId, setSelectedEventId] = useState<string>('1');
+  const [selectedEventId, setSelectedEventId] = useState<string>(events[0]?.id || '1');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'completed' | 'pending' | 'confirmed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -342,35 +349,41 @@ const PaymentManagement = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {events.map((event) => (
-            <button
-              key={event.id}
-              onClick={() => setSelectedEventId(event.id)}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                selectedEventId === event.id
-                  ? 'border-blue-600 bg-white shadow-lg'
-                  : 'border-blue-200 bg-white/50 hover:border-blue-400 hover:bg-white'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-bold text-slate-900">{event.title}</h4>
-                {selectedEventId === event.id && (
-                  <CheckCircle className="w-5 h-5 text-blue-600" />
-                )}
-              </div>
-              <p className="text-sm text-slate-600 mb-1">{event.mountain}</p>
-              <p className="text-sm text-slate-500 mb-2">{event.date}</p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-600">
-                  {event.currentParticipants} / {event.maxParticipants}명
-                </span>
-                <span className="font-bold text-blue-600">
-                  ₩{event.cost.toLocaleString()}
-                </span>
-              </div>
-            </button>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {events.length > 0 ? (
+            events.map((event) => (
+              <button
+                key={event.id}
+                onClick={() => setSelectedEventId(event.id)}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedEventId === event.id
+                    ? 'border-blue-600 bg-white shadow-lg'
+                    : 'border-blue-200 bg-white/50 hover:border-blue-400 hover:bg-white'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="font-bold text-slate-900">{event.title}</h4>
+                  {selectedEventId === event.id && (
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                  )}
+                </div>
+                <p className="text-sm text-slate-600 mb-1">{event.mountain}</p>
+                <p className="text-sm text-slate-500 mb-2">{event.date}</p>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">
+                    {event.currentParticipants} / {event.maxParticipants}명
+                  </span>
+                  <span className="font-bold text-blue-600">
+                    ₩{event.cost.toLocaleString()}
+                  </span>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="col-span-2 text-center py-8 text-slate-500">
+              등록된 산행 이벤트가 없습니다.
+            </div>
+          )}
         </div>
       </Card>
 

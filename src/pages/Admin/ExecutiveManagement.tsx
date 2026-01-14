@@ -365,18 +365,6 @@ const ExecutiveManagement = () => {
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                자기소개
-              </label>
-              <textarea
-                value={data.bio || ''}
-                onChange={(e) => setEditForm({ ...data, bio: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none"
-                placeholder="자기소개를 입력하세요..."
-                rows={3}
-              />
-            </div>
             <div className="flex gap-2">
               <button
                 onClick={handleSaveEdit}
@@ -658,20 +646,6 @@ const ExecutiveManagement = () => {
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  자기소개
-                </label>
-                <textarea
-                  value={newExecutive.bio || ''}
-                  onChange={(e) =>
-                    setNewExecutive({ ...newExecutive, bio: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="자기소개를 입력하세요..."
-                  rows={3}
-                />
               </div>
               {newExecutive.memberId && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">

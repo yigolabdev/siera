@@ -416,36 +416,6 @@ const Home = () => {
             <div>
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">{event.title}</h3>
               
-              <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                <div className="flex justify-between items-center p-2.5 sm:p-3 bg-slate-50 rounded-lg">
-                  <span className="text-sm sm:text-base text-slate-600">일정</span>
-                  <span className="text-sm sm:text-base font-semibold text-slate-900">{event.date}</span>
-                </div>
-                <div className="flex justify-between items-center p-2.5 sm:p-3 bg-slate-50 rounded-lg">
-                  <span className="text-sm sm:text-base text-slate-600">신청 인원</span>
-                  <span className="text-sm sm:text-base font-semibold text-slate-900">
-                    {event.participants}/{event.maxParticipants}명
-                  </span>
-                </div>
-              </div>
-              
-              <div className="mb-4 sm:mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs sm:text-sm text-slate-600">신청률</span>
-                  <span className="text-xs sm:text-sm font-semibold text-primary-600">
-                    {Math.round((event.participants / event.maxParticipants) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2.5 sm:h-3 overflow-hidden">
-                  <div 
-                    className={`h-2.5 sm:h-3 rounded-full transition-all duration-500 ${
-                      event.isSpecial ? 'bg-purple-600' : 'bg-primary-600'
-                    }`}
-                    style={{ width: `${(event.participants / event.maxParticipants) * 100}%` }}
-                  />
-                </div>
-              </div>
-              
               {/* 내 참석 여부 - 첫 번째 이벤트만 표시 */}
               {index === 0 && user && myParticipationStatus && (
                 <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl border-2 border-dashed" 

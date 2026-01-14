@@ -199,7 +199,7 @@ export const LandingHero: React.FC = () => {
                   className="bg-white text-slate-900 py-3 rounded-lg font-bold text-base hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
                 >
                   <LogIn className="w-5 h-5" />
-                  로그인
+                  회원 로그인
                 </button>
                 
                 <button

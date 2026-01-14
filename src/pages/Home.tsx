@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Calendar, Image, Users, TrendingUp, Bell, MapPin, Mountain, CheckCircle, XCircle, Clock, Settings, CalendarX, Cloud, Thermometer, Wind, Droplets, CloudRain, CloudSnow, Sun, BookOpen } from 'lucide-react';
+import { Calendar, Image, Users, TrendingUp, Bell, MapPin, Mountain, CheckCircle, XCircle, Clock, Settings, CalendarX, Cloud, Thermometer, Wind, Droplets, CloudRain, CloudSnow, Sun } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevMode } from '../contexts/DevModeContext';
@@ -194,16 +194,11 @@ const Home = () => {
                 
                 <div className="relative p-8 md:p-12">
                   {/* 헤더 */}
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                      <BookOpen className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-slate-800">이달의 詩</h3>
-                      <p className="text-sm text-slate-500 mt-1">
-                        {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
-                      </p>
-                    </div>
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-bold text-slate-800">이달의 詩</h3>
+                    <p className="text-sm text-slate-500 mt-2">
+                      {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+                    </p>
                   </div>
 
                   {/* 시 제목과 작가 */}

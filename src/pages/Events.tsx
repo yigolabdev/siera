@@ -278,38 +278,6 @@ const Events = () => {
       ) : (
         <div>
       
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <Calendar className="w-6 h-6 text-blue-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-2">산행 일자</p>
-          <p className="text-2xl font-bold text-slate-900">{formatDate(event.date)}</p>
-        </Card>
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <Users className="w-6 h-6 text-green-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-2">참가 신청</p>
-          <p className="text-3xl font-bold text-slate-900">
-            {event.currentParticipants}/{event.maxParticipants}명
-          </p>
-        </Card>
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <Clock className="w-6 h-6 text-purple-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-2">신청 마감</p>
-          <p className="text-lg font-bold text-slate-900">{applicationDeadline}</p>
-          {!applicationClosed && daysUntilDeadline <= 5 && (
-            <Badge variant={daysUntilDeadline <= 3 ? 'danger' : 'warning'} className="mt-2">
-              {daysUntilDeadline}일 남음
-            </Badge>
-          )}
-        </Card>
-      </div>
-      
       {/* Current Event */}
       <Card className="mb-12 p-0 overflow-hidden hover:shadow-xl transition-all">
         {/* Hero Image */}

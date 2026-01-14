@@ -230,7 +230,7 @@ export const LandingHero: React.FC = () => {
               className="mt-3 ml-auto px-3 py-1.5 bg-orange-100 text-orange-900 rounded-lg text-xs font-bold hover:bg-orange-200 transition-all border border-orange-300 flex items-center gap-1.5"
             >
               <AlertCircle className="w-3 h-3" />
-              DEV 관리자
+              개발용 임시 로그인
             </button>
           </FadeIn>
         </div>

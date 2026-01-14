@@ -489,49 +489,6 @@ export default function QuickEventApply() {
         {/* 신청 폼 */}
         {!result?.success && (
           <>
-            {/* 입금 정보 */}
-            {currentEvent.paymentInfo && (
-              <Card className="mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-primary-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900">입금 정보</h3>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-sm text-slate-600 mb-1">은행명</p>
-                    <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.bankName}</p>
-                  </div>
-
-                  <div className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-sm text-slate-600 mb-1">계좌번호</p>
-                    <p className="text-lg font-bold text-slate-900 font-mono">{currentEvent.paymentInfo.accountNumber}</p>
-                  </div>
-
-                  <div className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-sm text-slate-600 mb-1">예금주</p>
-                    <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.accountHolder}</p>
-                  </div>
-
-                  <div className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-sm text-slate-600 mb-1">참가비</p>
-                    <p className="text-lg font-bold text-primary-600">{currentEvent.cost}</p>
-                  </div>
-
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                    <p className="text-sm font-semibold text-amber-900 mb-2">입금 시 유의사항</p>
-                    <ul className="text-sm text-amber-800 space-y-1">
-                      <li>• 입금자명은 <strong>신청자 이름</strong>과 동일하게 입금해주세요</li>
-                      <li>• 입금 후 담당자에게 연락하시면 빠른 확인이 가능합니다</li>
-                      <li>• 담당자: {currentEvent.paymentInfo.managerName} ({currentEvent.paymentInfo.managerPhone})</li>
-                    </ul>
-                  </div>
-                </div>
-              </Card>
-            )}
-            
             <Card className="mb-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">산행 신청하기</h3>
             
@@ -675,6 +632,49 @@ export default function QuickEventApply() {
                   <span className="font-semibold">개인정보 보호</span><br />
                   신청자 명단은 회원 보호를 위해 비공개입니다. 로그인 후 회원 전용 페이지에서 확인하실 수 있습니다.
                 </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* 입금 정보 */}
+        {currentEvent.paymentInfo && (
+          <Card className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-primary-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900">입금 정보</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <p className="text-sm text-slate-600 mb-1">은행명</p>
+                <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.bankName}</p>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <p className="text-sm text-slate-600 mb-1">계좌번호</p>
+                <p className="text-lg font-bold text-slate-900 font-mono">{currentEvent.paymentInfo.accountNumber}</p>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <p className="text-sm text-slate-600 mb-1">예금주</p>
+                <p className="text-lg font-bold text-slate-900">{currentEvent.paymentInfo.accountHolder}</p>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <p className="text-sm text-slate-600 mb-1">참가비</p>
+                <p className="text-lg font-bold text-primary-600">{currentEvent.cost}</p>
+              </div>
+
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-sm font-semibold text-amber-900 mb-2">입금 시 유의사항</p>
+                <ul className="text-sm text-amber-800 space-y-1">
+                  <li>• 입금자명은 <strong>신청자 이름</strong>과 동일하게 입금해주세요</li>
+                  <li>• 입금 후 담당자에게 연락하시면 빠른 확인이 가능합니다</li>
+                  <li>• 담당자: {currentEvent.paymentInfo.managerName} ({currentEvent.paymentInfo.managerPhone})</li>
+                </ul>
               </div>
             </div>
           </Card>

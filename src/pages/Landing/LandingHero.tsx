@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FadeIn } from '../../components/ui/FadeIn';
-import { ChevronDown, LogIn, AlertCircle } from 'lucide-react';
+import { ChevronDown, LogIn, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import Modal from '../../components/ui/Modal';
 
 export const LandingHero: React.FC = () => {
   const [loginFormData, setLoginFormData] = useState({
@@ -10,6 +11,7 @@ export const LandingHero: React.FC = () => {
     password: '',
   });
   const [rememberMe, setRememberMe] = useState(false);
+  const [showMobileLoginModal, setShowMobileLoginModal] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -31,6 +33,7 @@ export const LandingHero: React.FC = () => {
       } else {
         localStorage.removeItem('savedEmail');
       }
+      setShowMobileLoginModal(false); // 모달 닫기
       navigate('/home');
     } else {
       alert('이메일 또는 비밀번호가 올바르지 않습니다.');
@@ -107,12 +110,12 @@ export const LandingHero: React.FC = () => {
             </FadeIn>
           </div>
 
-          {/* Login Form - 한 줄 레이아웃 */}
+          {/* Login Form */}
           <FadeIn delay={1000} className="w-full max-w-6xl">
-            {/* Single Line Login Box */}
-            <div className="bg-slate-900/95 backdrop-blur-sm rounded-xl p-5 shadow-2xl w-full border border-slate-700">
+            {/* Desktop: 한 줄 레이아웃 */}
+            <div className="hidden md:block bg-slate-900/95 backdrop-blur-sm rounded-xl p-5 shadow-2xl w-full border border-slate-700">
               <form onSubmit={handleLoginSubmit}>
-                <div className="flex flex-col md:flex-row items-center gap-3">
+                <div className="flex items-center gap-3">
                   {/* Title */}
                   <div className="flex-shrink-0">
                     <h2 className="text-lg font-bold text-white whitespace-nowrap">
@@ -121,7 +124,7 @@ export const LandingHero: React.FC = () => {
                   </div>
 
                   {/* Divider */}
-                  <div className="hidden md:block w-px h-8 bg-slate-700"></div>
+                  <div className="w-px h-8 bg-slate-700"></div>
 
                   {/* Email Input */}
                   <input
@@ -129,7 +132,7 @@ export const LandingHero: React.FC = () => {
                     name="email"
                     value={loginFormData.email}
                     onChange={handleLoginChange}
-                    className="w-full md:flex-1 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                    className="flex-1 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
                     placeholder="이메일"
                     required
                   />
@@ -140,7 +143,7 @@ export const LandingHero: React.FC = () => {
                     name="password"
                     value={loginFormData.password}
                     onChange={handleLoginChange}
-                    className="w-full md:flex-1 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                    className="flex-1 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
                     placeholder="비밀번호"
                     required
                   />
@@ -160,7 +163,7 @@ export const LandingHero: React.FC = () => {
                   {/* Login Button */}
                   <button 
                     type="submit" 
-                    className="w-full md:w-auto bg-white text-slate-900 px-5 py-2 rounded-lg font-bold text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    className="bg-white text-slate-900 px-5 py-2 rounded-lg font-bold text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
                   >
                     <LogIn className="w-4 h-4" />
                     로그인
@@ -170,7 +173,7 @@ export const LandingHero: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/quick-apply')}
-                    className="w-full md:w-auto bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-green-700 transition-all whitespace-nowrap"
+                    className="bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-green-700 transition-all whitespace-nowrap"
                   >
                     간편신청
                   </button>
@@ -179,12 +182,42 @@ export const LandingHero: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/guest-application')}
-                    className="w-full md:w-auto text-white text-sm font-medium px-4 py-2 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600 whitespace-nowrap"
+                    className="text-white text-sm font-medium px-4 py-2 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600 whitespace-nowrap"
                   >
                     게스트
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* Mobile: 3개 버튼만 표시 */}
+            <div className="md:hidden bg-slate-900/95 backdrop-blur-sm rounded-xl p-4 shadow-2xl w-full border border-slate-700">
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileLoginModal(true)}
+                  className="bg-white text-slate-900 py-3 rounded-lg font-bold text-base hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-5 h-5" />
+                  로그인
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => navigate('/quick-apply')}
+                  className="bg-green-600 text-white text-base font-bold py-3 rounded-lg hover:bg-green-700 transition-all"
+                >
+                  간편 산행 신청
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => navigate('/guest-application')}
+                  className="text-white text-base font-medium py-3 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600"
+                >
+                  게스트로 신청하기
+                </button>
+              </div>
             </div>
 
             {/* Development Quick Login - 최소화 (관리자만) */}
@@ -202,6 +235,79 @@ export const LandingHero: React.FC = () => {
           </FadeIn>
         </div>
       </div>
+
+      {/* Mobile Login Modal */}
+      {showMobileLoginModal && (
+        <Modal onClose={() => setShowMobileLoginModal(false)} maxWidth="max-w-md">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">회원 로그인</h2>
+              <button
+                onClick={() => setShowMobileLoginModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-2 text-sm">
+                  이메일
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={loginFormData.email}
+                  onChange={handleLoginChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
+                  placeholder="example@email.com"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-slate-700 font-semibold mb-2 text-sm">
+                  비밀번호
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={loginFormData.password}
+                  onChange={handleLoginChange}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="rememberMeMobile"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 text-slate-600 bg-white border-slate-300 rounded focus:ring-slate-500 focus:ring-2 cursor-pointer"
+                  />
+                  <span className="ml-2 text-sm font-medium text-slate-700">로그인 정보 저장</span>
+                </label>
+                <a href="#" className="text-sm text-slate-600 hover:text-slate-900 font-medium">
+                  비밀번호 찾기
+                </a>
+              </div>
+              
+              <button 
+                type="submit" 
+                className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-5 h-5" />
+                로그인
+              </button>
+            </form>
+          </div>
+        </Modal>
+      )}
 
       {/* Scroll Indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce text-white/70 cursor-pointer" onClick={scrollToAbout}>

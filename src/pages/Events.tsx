@@ -171,14 +171,6 @@ const Events = () => {
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   
-  // URL 파라미터로 신청 모달 자동 열기
-  useEffect(() => {
-    const apply = searchParams.get('apply');
-    if (apply === 'true' && !applicationClosed && event && event.currentParticipants < event.maxParticipants) {
-      setShowCourseModal(true);
-    }
-  }, [searchParams, applicationClosed, event]);
-  
   // 신청 마감일 정보 계산 (개발 모드 상태 반영)
   const applicationDeadline = event ? formatDeadline(event.date) : '';
   const daysUntilDeadline = useMemo(() => {
@@ -195,6 +187,14 @@ const Events = () => {
     if (!isDevMode) return isApplicationClosed(event.date);
     return applicationStatus === 'closed';
   }, [isDevMode, applicationStatus, event]);
+  
+  // URL 파라미터로 신청 모달 자동 열기
+  useEffect(() => {
+    const apply = searchParams.get('apply');
+    if (apply === 'true' && !applicationClosed && event && event.currentParticipants < event.maxParticipants) {
+      setShowCourseModal(true);
+    }
+  }, [searchParams, applicationClosed, event]);
   
   const handleRegister = () => {
     if (applicationClosed) {

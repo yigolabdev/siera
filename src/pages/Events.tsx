@@ -231,6 +231,7 @@ const Events = () => {
     setSelectedCourse(course);
     setShowCourseModal(false);
     setIsRegistered(true);
+    // 바로 입금 정보 모달 표시
     setShowPaymentModal(true);
   };
   
@@ -1021,9 +1022,15 @@ const Events = () => {
 
             {/* 본문 */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
-                <p className="text-sm text-yellow-900 font-bold">
-                  참가비를 입금해주셔야 최종 신청이 완료됩니다.
+              <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <p className="text-lg font-bold text-green-900">
+                    신청이 완료되었습니다!
+                  </p>
+                </div>
+                <p className="text-sm text-green-800">
+                  아래 계좌로 참가비를 입금해주시면 최종 확정됩니다.
                 </p>
               </div>
               
@@ -1083,11 +1090,56 @@ const Events = () => {
                       <Copy className="h-5 w-5 text-slate-600" />
                     </button>
                   </div>
+                  
+                  <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="w-5 h-5 text-yellow-600" />
+                      <p className="text-sm text-yellow-700 font-medium">입금 기한</p>
+                    </div>
+                    <p className="text-lg font-bold text-yellow-900">{event.paymentInfo.deadline}</p>
+                  </div>
                 </div>
+                
+                {/* 전체 정보 복사 버튼 - 메인 영역에 배치 */}
+                <button
+                  onClick={() => {
+                    if (event.paymentInfo) {
+                      const copyText = `[산행 신청 완료]
+산행명: ${event.title}
+참가비: ${event.cost}
+
+[입금 정보]
+은행명: ${event.paymentInfo.bankName}
+계좌번호: ${event.paymentInfo.accountNumber}
+예금주: ${event.paymentInfo.accountHolder}
+입금 기한: ${event.paymentInfo.deadline}
+
+[담당자 연락처]
+담당자: ${event.paymentInfo.managerName}
+연락처: ${event.paymentInfo.managerPhone}`.trim();
+                      
+                      navigator.clipboard.writeText(copyText)
+                        .then(() => {
+                          alert('입금 정보가 클립보드에 복사되었습니다.');
+                          setShowPaymentModal(false);
+                        })
+                        .catch(() => {
+                          alert('복사에 실패했습니다. 다시 시도해주세요.');
+                        });
+                    }
+                  }}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl font-bold hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                  <Copy className="w-5 h-5" />
+                  전체 정보 복사하기
+                </button>
                 
                 {/* 담당자 정보 */}
                 <Card className="bg-blue-50 border-blue-200">
-                  <h5 className="text-sm font-bold text-slate-900 mb-3">담당자 문의</h5>
+                  <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-blue-600" />
+                    담당자 문의
+                  </h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-600">이름</span>
@@ -1106,59 +1158,33 @@ const Events = () => {
                 </Card>
                 
                 {/* 입금 시 주의사항 */}
-                <Card className="bg-slate-50">
-                  <h5 className="text-sm font-bold text-slate-900 mb-2">입금 시 주의사항</h5>
-                  <ul className="space-y-1 text-sm text-slate-700">
+                <Card className="bg-amber-50 border-2 border-amber-200">
+                  <h5 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    입금 시 주의사항
+                  </h5>
+                  <ul className="space-y-1 text-sm text-amber-800">
                     <li>• 입금자명은 본인 이름으로 해주세요</li>
-                    <li>• 입금 확인 후 참석 확정됩니다</li>
+                    <li>• 입금 확인 후 참석이 최종 확정됩니다</li>
                     <li>• 문의사항은 담당자에게 연락주세요</li>
                   </ul>
                 </Card>
                 
                 {copiedText && (
-                  <div className="fixed top-4 right-4 px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg">
-                    {copiedText} 복사됨
+                  <div className="fixed top-4 right-4 px-4 py-2 bg-primary-600 text-white rounded-xl shadow-lg animate-fade-in z-50">
+                    ✓ {copiedText} 복사됨
                   </div>
                 )}
               </div>
             </div>
 
             {/* 푸터 */}
-            <div className="p-6 border-t flex gap-3">
+            <div className="p-6 border-t">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="flex-1 px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-300 transition-colors"
+                className="w-full px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-300 transition-colors"
               >
                 닫기
-              </button>
-              <button
-                onClick={() => {
-                  if (event.paymentInfo) {
-                    const copyText = `
-[산행 신청 완료]
-산행명: ${event.title}
-참가비: ${event.cost.toLocaleString()}원
-
-[입금 정보]
-은행명: ${event.paymentInfo.bankName}
-계좌번호: ${event.paymentInfo.accountNumber}
-예금주: ${event.paymentInfo.accountHolder}
-입금 기한: ${event.paymentInfo.deadline}
-                    `.trim();
-                    
-                    navigator.clipboard.writeText(copyText)
-                      .then(() => {
-                        alert('입금 정보가 클립보드에 복사되었습니다.');
-                        setShowPaymentModal(false);
-                      })
-                      .catch(() => {
-                        alert('복사에 실패했습니다. 다시 시도해주세요.');
-                      });
-                  }
-                }}
-                className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors"
-              >
-                전체 정보 복사
               </button>
             </div>
           </div>

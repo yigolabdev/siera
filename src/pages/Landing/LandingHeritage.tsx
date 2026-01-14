@@ -1,10 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FadeIn } from '../../components/ui/FadeIn';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const LandingHeritage: React.FC = () => {
   const navigate = useNavigate();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  // 슬라이드 이미지들 (산행 관련 이미지)
+  const slides = [
+    {
+      url: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&h=500&fit=crop',
+      alt: '산악회 단체 사진 1',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=500&fit=crop',
+      alt: '산악회 산행 모습 1',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop',
+      alt: '산악회 산행 모습 2',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&h=500&fit=crop',
+      alt: '산악회 산행 모습 3',
+    },
+  ];
+
+  // 자동 슬라이드
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 4000); // 4초마다 변경
+
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
   
   return (
     <section id="heritage" className="relative py-32 bg-slate-900 text-white overflow-hidden">
@@ -55,6 +93,70 @@ export const LandingHeritage: React.FC = () => {
               <div className="absolute -top-4 -right-4 w-full h-full border border-white/10 -z-10"></div>
            </FadeIn>
         </div>
+      </div>
+
+      {/* Image Slider Section */}
+      <div className="relative z-10 max-w-5xl mx-auto px-6 mt-20">
+        <FadeIn delay={600}>
+          <div className="relative group">
+            {/* Slider Container */}
+            <div className="relative h-64 md:h-80 overflow-hidden rounded-2xl shadow-2xl">
+              {slides.map((slide, index) => (
+                <div
+                  key={index}
+                  className={`absolute inset-0 transition-opacity duration-1000 ${
+                    index === currentSlide ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  <img
+                    src={slide.url}
+                    alt={slide.alt}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Dark overlay for better contrast */}
+                  <div className="absolute inset-0 bg-black/20"></div>
+                </div>
+              ))}
+
+              {/* Navigation Arrows */}
+              <button
+                onClick={prevSlide}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                aria-label="이전 슬라이드"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                onClick={nextSlide}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                aria-label="다음 슬라이드"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+
+              {/* Dots Indicator */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                {slides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentSlide
+                        ? 'bg-white w-8'
+                        : 'bg-white/50 hover:bg-white/75'
+                    }`}
+                    aria-label={`슬라이드 ${index + 1}로 이동`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Caption */}
+            <p className="text-center text-white/70 text-sm mt-4">
+              시애라 산악회의 소중한 순간들
+            </p>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );

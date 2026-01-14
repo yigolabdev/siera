@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mountain, User, LogOut, Shield, Code, Settings, Menu, X } from 'lucide-react';
+import { Mountain, User, LogOut, Shield, Settings, Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDevMode } from '../../contexts/DevModeContext';
 import { useState } from 'react';
@@ -94,33 +94,19 @@ const Header = () => {
           
           {/* Desktop User Menu */}
           <div className="hidden lg:flex items-center space-x-4">
-            {/* Dev & Test Buttons */}
+            {/* Dev Button */}
             {isAdmin && (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setShowDevPanel(true)}
-                  className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
-                    isDevMode
-                      ? 'bg-purple-600 text-white border-2 border-purple-700 shadow-lg'
-                      : 'bg-slate-100 text-slate-600 hover:bg-purple-50 hover:text-purple-600 border-2 border-transparent'
-                  }`}
-                >
-                  <Settings className={`w-3.5 h-3.5 ${isDevMode ? 'animate-spin-slow' : ''}`} />
-                  DEV {isDevMode && '●'}
-                </button>
-                
-                <Link
-                  to="/dev/routing-test"
-                  className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
-                    isActive('/dev/routing-test')
-                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                      : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 border-2 border-transparent'
-                  }`}
-                >
-                  <Code className="w-3.5 h-3.5" />
-                  TEST
-                </Link>
-              </div>
+              <button
+                onClick={() => setShowDevPanel(true)}
+                className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
+                  isDevMode
+                    ? 'bg-purple-600 text-white border-2 border-purple-700 shadow-lg'
+                    : 'bg-slate-100 text-slate-600 hover:bg-purple-50 hover:text-purple-600 border-2 border-transparent'
+                }`}
+              >
+                <Settings className={`w-3.5 h-3.5 ${isDevMode ? 'animate-spin-slow' : ''}`} />
+                DEV {isDevMode && '●'}
+              </button>
             )}
             
             <Link 
@@ -261,14 +247,14 @@ const Header = () => {
                   </Link>
                 ))}
                 
-                {/* Mobile Dev Buttons */}
-                <div className="flex gap-2 mt-3 px-4">
+                {/* Mobile Dev Button */}
+                <div className="px-4 mt-3">
                   <button
                     onClick={() => {
                       setShowDevPanel(true);
                       closeMobileMenu();
                     }}
-                    className={`flex-1 px-3 py-2 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 ${
+                    className={`w-full px-3 py-2 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 ${
                       isDevMode
                         ? 'bg-purple-600 text-white'
                         : 'bg-slate-100 text-slate-600'
@@ -277,19 +263,6 @@ const Header = () => {
                     <Settings className={`w-3.5 h-3.5 ${isDevMode ? 'animate-spin-slow' : ''}`} />
                     DEV {isDevMode && '●'}
                   </button>
-                  
-                  <Link
-                    to="/dev/routing-test"
-                    onClick={closeMobileMenu}
-                    className={`flex-1 px-3 py-2 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 ${
-                      isActive('/dev/routing-test')
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    <Code className="w-3.5 h-3.5" />
-                    TEST
-                  </Link>
                 </div>
               </div>
             )}

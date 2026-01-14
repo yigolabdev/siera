@@ -34,7 +34,6 @@ const PaymentManagement = lazy(() => import('./pages/Admin/PaymentManagement'));
 const AnnualFeeManagement = lazy(() => import('./pages/Admin/AnnualFeeManagement'));
 const ExecutiveManagement = lazy(() => import('./pages/Admin/ExecutiveManagement'));
 const ContentManagement = lazy(() => import('./pages/Admin/ContentManagement'));
-const RoutingTest = lazy(() => import('./pages/RoutingTest'));
 
 // 로딩 컴포넌트
 const PageLoader = () => (
@@ -101,15 +100,6 @@ function App() {
                 <EventPrintView />
               </ProtectedRoute>
             } />
-            
-            {/* Dev Tools - 개발용 라우팅 테스트 */}
-            <Route path="/dev" element={
-              <ProtectedRoute requireAdmin>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route path="routing-test" element={<RoutingTest />} />
-            </Route>
             
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />

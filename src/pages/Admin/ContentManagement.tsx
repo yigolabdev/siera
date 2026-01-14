@@ -193,14 +193,6 @@ const ContentManagement = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">게시물 관리</h1>
-        <p className="text-xl text-slate-600">
-          공지사항, 회칙, 이달의 시를 관리합니다.
-        </p>
-      </div>
-
       {/* Tabs */}
       <div className="flex gap-2 mb-8 border-b border-slate-200">
         <button

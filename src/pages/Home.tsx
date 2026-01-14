@@ -142,27 +142,6 @@ const Home = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-      {/* 개발 모드 인디케이터 */}
-      {isDevMode && (
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-purple-50 border-2 border-purple-200 rounded-xl">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Settings className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-purple-900 text-xs sm:text-sm">🔧 개발자 모드 활성화</p>
-              <p className="text-[10px] sm:text-xs text-purple-700 mt-0.5 sm:mt-1">
-                현재 상태: <span className="font-semibold">{
-                  applicationStatus === 'open' ? '신청 가능' :
-                  applicationStatus === 'closed' ? '신청 마감' :
-                  applicationStatus === 'full' ? '정원 마감' : '산행 미정'
-                }</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* 산행 미정 상태일 때 다른 UI 표시 */}
       {(isDevMode && applicationStatus === 'no-event') || !mainEvent ? (
         <div>

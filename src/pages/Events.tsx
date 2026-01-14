@@ -230,27 +230,6 @@ const Events = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* 개발 모드 인디케이터 */}
-      {isDevMode && (
-        <div className="mb-6 p-4 bg-purple-50 border-2 border-purple-200 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-              <Settings className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-purple-900 text-sm">🔧 개발자 모드 활성화</p>
-              <p className="text-xs text-purple-700 mt-1">
-                현재 상태: <span className="font-semibold">{
-                  applicationStatus === 'open' ? '신청 가능' :
-                  applicationStatus === 'closed' ? '신청 마감' :
-                  applicationStatus === 'full' ? '정원 마감' : '산행 미정'
-                }</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-slate-900 mb-3">이번 달 정기 산행</h1>
         <p className="text-xl text-slate-600">

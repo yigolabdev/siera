@@ -24,7 +24,7 @@ const Header = () => {
   ];
   
   const adminNavigation = [
-    { name: '이달의 시', path: '/admin/poems' },
+    { name: '게시물 관리', path: '/admin/content' },
     { name: '입금 관리', path: '/admin/payment' },
     { name: '산행 관리', path: '/admin/events' },
     { name: '회원 관리', path: '/admin/members' },

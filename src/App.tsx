@@ -31,7 +31,7 @@ const MemberManagement = lazy(() => import('./pages/Admin/MemberManagement'));
 const PaymentManagement = lazy(() => import('./pages/Admin/PaymentManagement'));
 const AnnualFeeManagement = lazy(() => import('./pages/Admin/AnnualFeeManagement'));
 const ExecutiveManagement = lazy(() => import('./pages/Admin/ExecutiveManagement'));
-const PoemManagement = lazy(() => import('./pages/Admin/PoemManagement'));
+const ContentManagement = lazy(() => import('./pages/Admin/ContentManagement'));
 const RoutingTest = lazy(() => import('./pages/RoutingTest'));
 
 // 로딩 컴포넌트
@@ -88,7 +88,7 @@ function App() {
               <Route path="annual-fee" element={<AnnualFeeManagement />} />
               <Route path="executives" element={<ExecutiveManagement />} />
               <Route path="events" element={<EventManagement />} />
-              <Route path="poems" element={<PoemManagement />} />
+              <Route path="content" element={<ContentManagement />} />
             </Route>
             
             {/* Print View - 별도 레이아웃 없이 */}

@@ -572,19 +572,17 @@ const Members = () => {
     // Don't reset page - let safePage handle it naturally
   };
   
-  const getPositionBadge = (position: string) => {
-    switch (position) {
-      case 'president':
-        return <Badge variant="primary">회장</Badge>;
-      case 'vice-president':
-        return <Badge variant="primary">부회장</Badge>;
-      case 'executive':
-        return <Badge variant="primary">임원</Badge>;
-      case 'member':
-        return null; // 일반회원은 뱃지 표시 안함
-      default:
-        return null; // 일반회원은 뱃지 표시 안함
+  const getPositionBadge = (member: any) => {
+    // executiveTeam에서 해당 회원의 직책 정보 찾기
+    const executive = executiveTeam.find(exec => exec.name === member.name);
+    
+    if (executive && executive.title) {
+      // 운영진인 경우 실제 직책 표시
+      return <Badge variant="primary">{executive.title}</Badge>;
     }
+    
+    // 일반회원은 뱃지 표시 안함
+    return null;
   };
   
   const handleMemberClick = (member: any) => {
@@ -708,7 +706,7 @@ const Members = () => {
               <div className="flex-grow min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <h3 className="text-lg font-bold text-slate-900">{member.name}</h3>
-                  {getPositionBadge(member.position)}
+                  {getPositionBadge(member)}
                 </div>
                 <div className="text-sm">
                   <p className="text-slate-600">{member.company}</p>
@@ -834,7 +832,7 @@ const Members = () => {
               <div className="text-center">
                 <div className="flex items-center justify-center gap-3 mb-2">
                   <h2 className="text-3xl font-bold text-slate-900">{selectedMember.name}</h2>
-                  {getPositionBadge(selectedMember.position)}
+                  {getPositionBadge(selectedMember)}
                 </div>
                 <p className="text-lg text-slate-600 mb-1">{selectedMember.company}</p>
                 <p className="text-xl font-semibold text-slate-900">{selectedMember.occupation}</p>

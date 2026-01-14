@@ -67,7 +67,7 @@ export const LandingHero: React.FC = () => {
       <div className="relative z-10 px-6 max-w-7xl mx-auto w-full">
         <div className="flex flex-col items-center justify-center">
           {/* Main Content */}
-          <div className="text-center mb-20 md:mb-28">
+          <div className="text-center mb-28 md:mb-40">
             <FadeIn delay={200}>
               <h2 className="text-white/90 text-sm md:text-base tracking-[0.3em] uppercase mb-4 font-medium">
                 2005 ~ 2026 Heritage

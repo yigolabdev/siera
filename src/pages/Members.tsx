@@ -6,19 +6,10 @@ import Badge from '../components/ui/Badge';
 
 const Members = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPosition, setSelectedPosition] = useState('all');
   const [showExecutiveModal, setShowExecutiveModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
-  
-  const positions = [
-    { id: 'all', name: '전체' },
-    { id: 'president', name: '회장' },
-    { id: 'vice-president', name: '부회장' },
-    { id: 'executive', name: '임원' },
-    { id: 'member', name: '회원' },
-  ];
   
   // 운영진 데이터
   const executiveTeam = [
@@ -545,11 +536,10 @@ const Members = () => {
   ];
   
   const filteredMembers = members.filter(member => {
-    const matchesPosition = selectedPosition === 'all' || member.position === selectedPosition;
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.occupation.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.company.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesPosition && matchesSearch;
+    return matchesSearch;
   });
   
   // Pagination
@@ -560,12 +550,6 @@ const Members = () => {
   const startIndex = (safePage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentMembers = filteredMembers.slice(startIndex, endIndex);
-  
-  // Reset to page 1 when filter changes
-  const handlePositionChange = (positionId: string) => {
-    setSelectedPosition(positionId);
-    setCurrentPage(1);
-  };
   
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -664,21 +648,6 @@ const Members = () => {
             onChange={(e) => handleSearchChange(e.target.value)}
             className="input-field pl-12"
           />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {positions.map((position) => (
-            <button
-              key={position.id}
-              onClick={() => handlePositionChange(position.id)}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                selectedPosition === position.id
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              {position.name}
-            </button>
-          ))}
         </div>
       </div>
       

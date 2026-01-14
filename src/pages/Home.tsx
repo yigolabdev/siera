@@ -505,24 +505,41 @@ const Home = () => {
                        borderColor: myParticipationStatus === 'attending' ? '#86efac' : 
                                    myParticipationStatus === 'pending' ? '#fde68a' : '#cbd5e1'
                      }}>
-                  <div className="flex items-center gap-2">
-                    {myParticipationStatus === 'attending' && (
-                      <>
-                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                        <span className="text-sm sm:text-base font-bold text-green-900">참석 신청 완료</span>
-                      </>
-                    )}
-                    {myParticipationStatus === 'pending' && (
-                      <>
-                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
-                        <span className="text-sm sm:text-base font-bold text-yellow-900">승인 대기 중</span>
-                      </>
-                    )}
-                    {myParticipationStatus === 'not-attending' && (
-                      <>
-                        <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
-                        <span className="text-sm sm:text-base font-bold text-slate-700">불참</span>
-                      </>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {myParticipationStatus === 'attending' && (
+                        <>
+                          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                          <span className="text-sm sm:text-base font-bold text-green-900">참석 신청 완료</span>
+                        </>
+                      )}
+                      {myParticipationStatus === 'pending' && (
+                        <>
+                          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
+                          <span className="text-sm sm:text-base font-bold text-yellow-900">승인 대기 중</span>
+                        </>
+                      )}
+                      {myParticipationStatus === 'not-attending' && (
+                        <>
+                          <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
+                          <span className="text-sm sm:text-base font-bold text-slate-700">불참</span>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* 참석 취소 버튼 */}
+                    {(myParticipationStatus === 'attending' || myParticipationStatus === 'pending') && (
+                      <button
+                        onClick={() => {
+                          if (confirm('참석 신청을 취소하시겠습니까?')) {
+                            setMyParticipationStatus('not-attending');
+                            alert('참석 신청이 취소되었습니다.');
+                          }
+                        }}
+                        className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        취소
+                      </button>
                     )}
                   </div>
                 </div>

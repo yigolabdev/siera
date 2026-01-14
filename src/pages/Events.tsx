@@ -241,9 +241,14 @@ const Events = () => {
   };
   
   const handleCancel = () => {
-    // TODO: 실제 취소 로직
+    if (!confirm('참석 신청을 취소하시겠습니까?\n\n이미 입금하신 경우 환불 절차가 진행됩니다.')) {
+      return;
+    }
+    
+    // TODO: 실제 취소 로직 (백엔드 API 호출)
     setIsRegistered(false);
-    alert('신청이 취소되었습니다.');
+    setSelectedCourse('');
+    alert('참석 신청이 취소되었습니다.\n\n환불이 필요하신 경우 담당자에게 문의해주세요.\n담당자: ' + (event?.paymentInfo?.managerName || '') + '\n연락처: ' + (event?.paymentInfo?.managerPhone || ''));
   };
   
   return (

@@ -9,7 +9,7 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAdmin } = useAuth();
-  const { isDevMode, toggleDevMode } = useDevMode();
+  const { isDevMode, toggleDevMode, applicationStatus } = useDevMode();
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -49,12 +49,21 @@ const Header = () => {
     <>
       {/* Dev Mode Indicator Bar */}
       {isDevMode && (
-        <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-purple-600 text-white py-1.5 px-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-xs font-semibold">
-            <Settings className="w-3.5 h-3.5 animate-spin-slow" />
-            <span>개발자 모드 활성화</span>
-            <span className="hidden sm:inline text-purple-200">
-              · 테스트 환경에서 실행 중입니다
+        <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-purple-600 text-white py-2 px-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 text-xs">
+            <Settings className="w-3.5 h-3.5 animate-spin-slow flex-shrink-0" />
+            <span className="font-semibold">개발자 모드 활성화</span>
+            <span className="hidden sm:inline text-purple-200">·</span>
+            <span className="font-medium">
+              현재 상태: <span className="font-bold">{
+                applicationStatus === 'open' ? '✅ 신청 가능' :
+                applicationStatus === 'closed' ? '🔒 신청 마감' :
+                applicationStatus === 'full' ? '⛔ 정원 마감' : '📋 산행 미정'
+              }</span>
+            </span>
+            <span className="hidden md:inline text-purple-200">·</span>
+            <span className="hidden md:inline text-purple-200 text-[10px]">
+              💡 DEV 버튼을 클릭하여 상태 변경 가능
             </span>
           </div>
         </div>

@@ -396,35 +396,29 @@ export default function QuickEventApply() {
               체력과 경험에 맞는 코스를 선택하여 신청하실 수 있습니다.
             </p>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               {currentEvent.courses.map((course, index) => (
                 <div 
                   key={index}
-                  className="p-5 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 transition-all"
+                  className="p-4 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 transition-all"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="text-lg font-bold text-slate-900">
-                      {course.name}
-                    </h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-lg font-bold text-slate-900">
+                        {course.name}
+                      </h4>
+                      <span className="text-sm font-semibold text-slate-600">
+                        {course.distance}
+                      </span>
+                    </div>
                     <Badge variant={index === 0 ? "warning" : "info"}>
                       {course.difficulty}
                     </Badge>
                   </div>
                   
-                  <p className="text-slate-700 mb-4 leading-relaxed">
+                  <p className="text-slate-700 mt-2 text-sm leading-relaxed">
                     {course.description}
                   </p>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <p className="text-xs text-slate-600 mb-1">거리</p>
-                      <p className="text-sm font-bold text-slate-900">{course.distance}</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <p className="text-xs text-slate-600 mb-1">소요시간</p>
-                      <p className="text-sm font-bold text-slate-900">{course.duration}</p>
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>

@@ -46,7 +46,21 @@ const Header = () => {
   };
   
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <>
+      {/* Dev Mode Indicator Bar */}
+      {isDevMode && (
+        <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-purple-600 text-white py-1.5 px-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 text-xs font-semibold">
+            <Settings className="w-3.5 h-3.5 animate-spin-slow" />
+            <span>개발자 모드 활성화</span>
+            <span className="hidden sm:inline text-purple-200">
+              · 테스트 환경에서 실행 중입니다
+            </span>
+          </div>
+        </div>
+      )}
+      
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -277,6 +291,7 @@ const Header = () => {
       {/* Dev Mode Panel */}
       {showDevPanel && <DevModePanel onClose={() => setShowDevPanel(false)} />}
     </header>
+    </>
   );
 };
 

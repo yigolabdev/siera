@@ -6,7 +6,15 @@ interface DevModePanelProps {
 }
 
 const DevModePanel = ({ onClose }: DevModePanelProps) => {
-  const { applicationStatus, setApplicationStatus, resetToDefault, toggleDevMode, isDevMode } = useDevMode();
+  const { 
+    applicationStatus, 
+    setApplicationStatus, 
+    specialApplicationStatus,
+    setSpecialApplicationStatus,
+    resetToDefault, 
+    toggleDevMode, 
+    isDevMode 
+  } = useDevMode();
 
   const applicationStatuses: { value: ApplicationStatus; label: string; description: string }[] = [
     { value: 'open', label: '신청 가능', description: '정상적으로 신청 가능한 상태' },
@@ -21,6 +29,14 @@ const DevModePanel = ({ onClose }: DevModePanelProps) => {
       toggleDevMode();
     }
     setApplicationStatus(status);
+  };
+
+  const handleSpecialStatusChange = (status: ApplicationStatus) => {
+    // 상태를 변경할 때 자동으로 개발자 모드 활성화
+    if (!isDevMode) {
+      toggleDevMode();
+    }
+    setSpecialApplicationStatus(status);
   };
 
   const handleComplete = () => {
@@ -49,9 +65,12 @@ const DevModePanel = ({ onClose }: DevModePanelProps) => {
 
         {/* Body */}
         <div className="p-6 space-y-8">
-          {/* Application Status */}
+          {/* Regular Application Status */}
           <div>
-            <h3 className="text-lg font-bold text-slate-900 mb-4">신청 상태</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <h3 className="text-lg font-bold text-slate-900">정기 산행 신청 상태</h3>
+            </div>
             <div className="space-y-2">
               {applicationStatuses.map((status) => (
                 <button
@@ -59,7 +78,7 @@ const DevModePanel = ({ onClose }: DevModePanelProps) => {
                   onClick={() => handleStatusChange(status.value)}
                   className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                     applicationStatus === status.value
-                      ? 'border-blue-500 bg-blue-50'
+                      ? 'border-green-500 bg-green-50'
                       : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
@@ -69,7 +88,40 @@ const DevModePanel = ({ onClose }: DevModePanelProps) => {
                       <p className="text-sm text-slate-600 mt-1">{status.description}</p>
                     </div>
                     {applicationStatus === status.value && (
-                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Special Application Status */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              <h3 className="text-lg font-bold text-slate-900">✨ 특별 산행 신청 상태</h3>
+            </div>
+            <div className="space-y-2">
+              {applicationStatuses.map((status) => (
+                <button
+                  key={status.value}
+                  onClick={() => handleSpecialStatusChange(status.value)}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                    specialApplicationStatus === status.value
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="font-bold text-slate-900">{status.label}</p>
+                      <p className="text-sm text-slate-600 mt-1">{status.description}</p>
+                    </div>
+                    {specialApplicationStatus === status.value && (
+                      <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
                         <div className="w-2 h-2 bg-white rounded-full"></div>
                       </div>
                     )}
@@ -83,12 +135,20 @@ const DevModePanel = ({ onClose }: DevModePanelProps) => {
         {/* Footer */}
         <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-6 rounded-b-2xl">
           {/* 현재 선택된 상태 표시 */}
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-            <p className="text-sm text-blue-900">
-              <span className="font-bold">선택된 상태:</span>{' '}
-              {applicationStatuses.find(s => s.value === applicationStatus)?.label}
-            </p>
-            <p className="text-xs text-blue-700 mt-1">
+          <div className="mb-4 space-y-2">
+            <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+              <p className="text-sm text-green-900">
+                <span className="font-bold">정기 산행:</span>{' '}
+                {applicationStatuses.find(s => s.value === applicationStatus)?.label}
+              </p>
+            </div>
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl">
+              <p className="text-sm text-purple-900">
+                <span className="font-bold">✨ 특별 산행:</span>{' '}
+                {applicationStatuses.find(s => s.value === specialApplicationStatus)?.label}
+              </p>
+            </div>
+            <p className="text-xs text-slate-600 text-center">
               완료 버튼을 누르면 이 상태가 페이지에 즉시 반영됩니다
             </p>
           </div>

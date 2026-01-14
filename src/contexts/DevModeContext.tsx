@@ -7,6 +7,8 @@ interface DevModeContextType {
   toggleDevMode: () => void;
   applicationStatus: ApplicationStatus;
   setApplicationStatus: (status: ApplicationStatus) => void;
+  specialApplicationStatus: ApplicationStatus; // 특별산행 상태 추가
+  setSpecialApplicationStatus: (status: ApplicationStatus) => void;
   resetToDefault: () => void;
 }
 
@@ -35,6 +37,16 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
     return saved as ApplicationStatus;
   });
 
+  // 특별산행 상태 추가
+  const [specialApplicationStatus, setSpecialApplicationStatus] = useState<ApplicationStatus>(() => {
+    const saved = localStorage.getItem('siera-special-app-status');
+    // 기본값: 'open' (신청 가능)
+    if (!saved || saved === 'null' || saved === 'undefined') {
+      return 'open';
+    }
+    return saved as ApplicationStatus;
+  });
+
   // LocalStorage에 저장
   useEffect(() => {
     localStorage.setItem('siera-dev-mode', JSON.stringify(isDevMode));
@@ -44,12 +56,17 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('siera-app-status', applicationStatus);
   }, [applicationStatus]);
 
+  useEffect(() => {
+    localStorage.setItem('siera-special-app-status', specialApplicationStatus);
+  }, [specialApplicationStatus]);
+
   const toggleDevMode = () => {
     setIsDevMode(!isDevMode);
   };
 
   const resetToDefault = () => {
     setApplicationStatus('open');
+    setSpecialApplicationStatus('open');
   };
 
   const value: DevModeContextType = {
@@ -57,6 +74,8 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
     toggleDevMode,
     applicationStatus,
     setApplicationStatus,
+    specialApplicationStatus,
+    setSpecialApplicationStatus,
     resetToDefault,
   };
 

@@ -9,7 +9,7 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAdmin } = useAuth();
-  const { isDevMode, toggleDevMode, applicationStatus } = useDevMode();
+  const { isDevMode, toggleDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -50,17 +50,36 @@ const Header = () => {
       {/* Dev Mode Indicator Bar */}
       {isDevMode && (
         <div className="bg-slate-100 border-b border-slate-200 py-2 px-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 text-xs">
-            <Settings className="w-3.5 h-3.5 animate-spin-slow flex-shrink-0 text-slate-600" />
-            <span className="font-semibold text-slate-700">개발자 모드 활성화</span>
-            <span className="hidden sm:inline text-slate-400">·</span>
-            <span className="font-medium text-slate-700">
-              현재 상태: <span className="font-bold">{
-                applicationStatus === 'open' ? '✅ 신청 가능' :
-                applicationStatus === 'closed' ? '🔒 신청 마감' :
-                applicationStatus === 'full' ? '⛔ 정원 마감' : '📋 산행 미정'
-              }</span>
-            </span>
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <Settings className="w-3.5 h-3.5 animate-spin-slow flex-shrink-0 text-slate-600" />
+              <span className="font-semibold text-slate-700">개발자 모드 활성화</span>
+            </div>
+            
+            {/* 정기 산행 상태 */}
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-slate-400">·</span>
+              <span className="font-medium text-slate-700">
+                정기: <span className="font-bold">{
+                  applicationStatus === 'open' ? '✅ 신청 가능' :
+                  applicationStatus === 'closed' ? '🔒 신청 마감' :
+                  applicationStatus === 'full' ? '⛔ 정원 마감' : '📋 산행 미정'
+                }</span>
+              </span>
+            </div>
+
+            {/* 특별 산행 상태 */}
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-slate-400">·</span>
+              <span className="font-medium text-purple-700">
+                특별: <span className="font-bold">{
+                  specialApplicationStatus === 'open' ? '✨ 신청 가능' :
+                  specialApplicationStatus === 'closed' ? '🔒 신청 마감' :
+                  specialApplicationStatus === 'full' ? '⛔ 정원 마감' : '📋 산행 미정'
+                }</span>
+              </span>
+            </div>
+            
             <span className="hidden md:inline text-slate-400">·</span>
             <span className="hidden md:inline text-slate-500 text-[10px]">
               💡 DEV 버튼을 클릭하여 상태 변경 가능

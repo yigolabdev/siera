@@ -14,7 +14,7 @@ import { mockNotices } from '../data/mockPosts';
 
 const Home = () => {
   const { user } = useAuth();
-  const { isDevMode, applicationStatus } = useDevMode();
+  const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode(); // specialApplicationStatus 추가
   const { events, currentEvent, specialEvent, getParticipantsByEventId } = useEvents(); // specialEvent 추가
   const { members } = useMembers();
   const { currentPoem } = usePoems();
@@ -409,6 +409,16 @@ const Home = () => {
                   ✨ 특별 산행
                 </div>
                 <Badge variant="warning">D-{Math.ceil((new Date(specialEvent.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</Badge>
+                {/* 신청 상태 배지 추가 */}
+                {specialApplicationStatus === 'closed' && (
+                  <Badge variant="danger">신청 마감</Badge>
+                )}
+                {specialApplicationStatus === 'full' && (
+                  <Badge variant="danger">정원 마감</Badge>
+                )}
+                {specialApplicationStatus === 'no-event' && (
+                  <Badge variant="secondary">산행 미정</Badge>
+                )}
               </div>
               
               <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">{specialEvent.title}</h3>
@@ -433,12 +443,22 @@ const Home = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  to={`/home/events?eventId=${specialEvent.id}`}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-center hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
-                >
-                  특별 산행 신청하기
-                </Link>
+                {specialApplicationStatus === 'open' ? (
+                  <Link
+                    to={`/home/events?eventId=${specialEvent.id}`}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-center hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    특별 산행 신청하기
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="flex-1 px-6 py-3 bg-slate-300 text-slate-500 rounded-xl font-bold text-center cursor-not-allowed"
+                  >
+                    {specialApplicationStatus === 'closed' ? '신청 마감' :
+                     specialApplicationStatus === 'full' ? '정원 마감' : '산행 미정'}
+                  </button>
+                )}
                 <Link
                   to={`/home/events?eventId=${specialEvent.id}`}
                   className="px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-xl font-semibold text-center hover:bg-purple-50 transition-all"

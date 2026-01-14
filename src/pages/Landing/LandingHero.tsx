@@ -107,102 +107,86 @@ export const LandingHero: React.FC = () => {
             </FadeIn>
           </div>
 
-          {/* Login Form - 가로형 */}
-          <FadeIn delay={1000} className="w-full max-w-6xl flex flex-col gap-6">
-            {/* Main Login Box - 가로형 레이아웃 */}
-            <div className="bg-slate-900/95 backdrop-blur-sm rounded-3xl p-8 md:p-10 shadow-2xl w-full border border-slate-700">
-              {/* 가로형 레이아웃: 왼쪽 제목, 오른쪽 폼 */}
-              <div className="flex flex-col lg:flex-row items-center gap-8">
-                {/* Left: Title Section */}
-                <div className="flex-shrink-0 text-center lg:text-left lg:w-72">
-                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          {/* Login Form - 최소화된 가로형 */}
+          <FadeIn delay={1000} className="w-full max-w-5xl">
+            {/* Compact Login Box */}
+            <div className="bg-slate-900/95 backdrop-blur-sm rounded-2xl p-6 md:p-8 shadow-2xl w-full border border-slate-700">
+              <div className="flex flex-col lg:flex-row items-center gap-6">
+                {/* Left: Compact Title */}
+                <div className="flex-shrink-0 text-center lg:text-left">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
                     회원 로그인
                   </h2>
-                  <p className="text-white/90 text-base">
-                    시애라에 오신 것을<br />환영합니다
+                  <p className="text-white/80 text-sm">
+                    시애라에 오신 것을 환영합니다
                   </p>
                 </div>
 
                 {/* Vertical Divider */}
-                <div className="hidden lg:block w-px h-48 bg-slate-700"></div>
+                <div className="hidden lg:block w-px h-20 bg-slate-700"></div>
 
-                {/* Right: Form Section */}
+                {/* Right: Compact Form */}
                 <div className="flex-1 w-full">
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-white font-semibold mb-2 text-sm">
-                          이메일
-                        </label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={loginFormData.email}
-                          onChange={handleLoginChange}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-400/20 outline-none transition-all text-base"
-                          placeholder="example@email.com"
-                          required
-                        />
-                      </div>
+                  <form onSubmit={handleLoginSubmit} className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <input
+                        type="email"
+                        name="email"
+                        value={loginFormData.email}
+                        onChange={handleLoginChange}
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                        placeholder="이메일"
+                        required
+                      />
                       
-                      <div>
-                        <label className="block text-white font-semibold mb-2 text-sm">
-                          비밀번호
-                        </label>
-                        <input
-                          type="password"
-                          name="password"
-                          value={loginFormData.password}
-                          onChange={handleLoginChange}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-400/20 outline-none transition-all text-base"
-                          placeholder="••••••••"
-                          required
-                        />
-                      </div>
+                      <input
+                        type="password"
+                        name="password"
+                        value={loginFormData.password}
+                        onChange={handleLoginChange}
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                        placeholder="비밀번호"
+                        required
+                      />
                     </div>
 
-                    {/* Remember Me & Forgot Password */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
+                    <div className="flex items-center justify-between text-xs">
+                      <label className="flex items-center cursor-pointer">
                         <input
                           type="checkbox"
                           id="rememberMeHero"
                           checked={rememberMe}
                           onChange={(e) => setRememberMe(e.target.checked)}
-                          className="w-4 h-4 text-slate-400 bg-slate-800 border-slate-600 rounded focus:ring-slate-400 focus:ring-2 cursor-pointer"
+                          className="w-3.5 h-3.5 text-slate-400 bg-slate-800 border-slate-600 rounded focus:ring-slate-400 cursor-pointer"
                         />
-                        <label htmlFor="rememberMeHero" className="ml-2 text-sm font-medium text-white cursor-pointer">
-                          로그인 정보 저장
-                        </label>
-                      </div>
-                      <a href="#" className="text-sm text-white/80 hover:text-white font-medium">
-                        비밀번호 찾기
-                      </a>
+                        <span className="ml-2 text-white/80">로그인 정보 저장</span>
+                      </label>
+                      <a href="#" className="text-white/70 hover:text-white">비밀번호 찾기</a>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       <button 
                         type="submit" 
-                        className="bg-white text-slate-900 py-3 rounded-xl font-bold text-base hover:bg-slate-100 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg"
+                        className="bg-white text-slate-900 py-2.5 rounded-lg font-bold text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-1.5"
                       >
-                        <LogIn className="w-5 h-5" />
+                        <LogIn className="w-4 h-4" />
                         로그인
                       </button>
                       
                       <button
                         type="button"
                         onClick={() => navigate('/quick-apply')}
-                        className="bg-green-600 text-white text-base font-bold py-3 rounded-xl hover:bg-green-700 transition-all transform hover:scale-[1.02] shadow-md"
+                        className="bg-green-600 text-white text-sm font-bold py-2.5 rounded-lg hover:bg-green-700 transition-all"
                       >
-                        간편 산행 신청
+                        간편신청
                       </button>
                       
                       <button
                         type="button"
                         onClick={() => navigate('/guest-application')}
-                        className="text-white hover:text-white text-base font-medium py-3 hover:bg-slate-800/50 rounded-xl transition-colors border border-slate-600"
+                        className="text-white text-sm font-medium py-2.5 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600"
                       >
-                        게스트 산행 신청
+                        게스트
                       </button>
                     </div>
                   </form>
@@ -210,23 +194,22 @@ export const LandingHero: React.FC = () => {
               </div>
             </div>
 
-            {/* Development Quick Login Section */}
-            <div className="p-5 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl border-2 border-dashed border-orange-300 shadow-inner w-full">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <AlertCircle className="w-5 h-5 text-orange-600" />
-                <p className="text-sm text-orange-900 font-bold uppercase tracking-wider">
+            {/* Development Quick Login - Compact */}
+            <div className="mt-4 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border-2 border-dashed border-orange-300 w-full">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <AlertCircle className="w-4 h-4 text-orange-600" />
+                <p className="text-xs text-orange-900 font-bold uppercase">
                   ⚠️ 개발용 임시 로그인 ⚠️
                 </p>
-                <AlertCircle className="w-5 h-5 text-orange-600" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={async () => {
                     const success = await login('admin@siera.com', 'admin123');
                     if (success) navigate('/home');
                   }}
-                  className="px-4 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all transform hover:scale-105 shadow-md"
+                  className="px-3 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all"
                 >
                   👑 관리자
                 </button>
@@ -236,7 +219,7 @@ export const LandingHero: React.FC = () => {
                     const success = await login('test@example.com', 'test123');
                     if (success) navigate('/home');
                   }}
-                  className="px-4 py-3 bg-white border-2 border-orange-300 text-slate-900 rounded-xl text-sm font-bold hover:bg-orange-50 transition-all transform hover:scale-105 shadow-md"
+                  className="px-3 py-2 bg-white border-2 border-orange-300 text-slate-900 rounded-lg text-xs font-bold hover:bg-orange-50 transition-all"
                 >
                   👤 일반회원
                 </button>

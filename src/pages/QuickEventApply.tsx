@@ -191,6 +191,17 @@ export default function QuickEventApply() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
+          {/* 상단 홈 버튼 */}
+          <div className="flex justify-end mb-4">
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-primary-300 rounded-lg transition-all text-slate-700 hover:text-primary-600 font-medium shadow-sm"
+            >
+              <Mountain className="w-4 h-4" />
+              홈으로 가기
+            </a>
+          </div>
+
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
               <Mountain className="w-12 h-12 text-green-600" />
@@ -228,6 +239,17 @@ export default function QuickEventApply() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
+        {/* 상단 홈 버튼 */}
+        <div className="flex justify-end mb-4">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 hover:border-primary-300 rounded-lg transition-all text-slate-700 hover:text-primary-600 font-medium shadow-sm"
+          >
+            <Mountain className="w-4 h-4" />
+            홈으로 가기
+          </a>
+        </div>
+
         {/* 헤더 */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">

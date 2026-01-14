@@ -114,7 +114,7 @@ const Home = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-      {/* 산행 미정 상태일 때 다른 UI 표시 */}
+      {/* 산행 미정 상태일 때 - 특별산행이 있으면 배너만 표시 */}
       {(isDevMode && applicationStatus === 'no-event') || !mainEvent ? (
         <div>
           {/* Hero Section with Background Image */}
@@ -206,6 +206,82 @@ const Home = () => {
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                     <div className="w-2 h-2 bg-slate-400 rounded-full" />
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+          
+          {/* 특별 산행 배너 - 정기산행 미정 시에도 표시 */}
+          {specialEvent && specialApplicationStatus !== 'no-event' && (
+            <div className="mb-8 md:mb-12">
+              <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-shadow bg-gradient-to-r from-amber-50/50 to-white">
+                <div className="p-6 md:p-8">
+                  {/* 헤더 */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">⭐</span>
+                      <h3 className="text-xl md:text-2xl font-bold text-slate-900">특별 산행</h3>
+                      <Badge variant="warning">D-{Math.ceil((new Date(specialEvent.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</Badge>
+                    </div>
+                    {/* 신청 상태 배지 */}
+                    {specialApplicationStatus === 'closed' && (
+                      <Badge variant="danger">신청 마감</Badge>
+                    )}
+                    {specialApplicationStatus === 'full' && (
+                      <Badge variant="danger">정원 마감</Badge>
+                    )}
+                  </div>
+                  
+                  {/* 제목 */}
+                  <h4 className="text-xl md:text-2xl font-bold text-slate-900 mb-4">{specialEvent.title}</h4>
+                  
+                  {/* 정보 */}
+                  <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-slate-600">
+                    <div className="flex items-center gap-1.5">
+                      <Mountain className="w-4 h-4" />
+                      <span>{specialEvent.altitude}</span>
+                    </div>
+                    <span className="text-slate-300">|</span>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4" />
+                      <span>{specialEvent.location}</span>
+                    </div>
+                    <span className="text-slate-300">|</span>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4" />
+                      <span>{new Date(specialEvent.date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}</span>
+                    </div>
+                  </div>
+                  
+                  {/* 설명 */}
+                  <p className="text-slate-600 mb-6 text-sm leading-relaxed">
+                    {specialEvent.description || '특별한 산행에 여러분을 초대합니다. 일반 정기 산행과는 다른 특별한 경험을 만나보세요.'}
+                  </p>
+                  
+                  {/* 버튼 */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {specialApplicationStatus === 'open' ? (
+                      <Link
+                        to={`/home/events?eventId=${specialEvent.id}`}
+                        className="flex-1 px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold text-center hover:bg-amber-600 transition-colors"
+                      >
+                        신청하기
+                      </Link>
+                    ) : (
+                      <button
+                        disabled
+                        className="flex-1 px-6 py-3 bg-slate-300 text-slate-500 rounded-lg font-semibold text-center cursor-not-allowed"
+                      >
+                        {specialApplicationStatus === 'closed' ? '신청 마감' : '정원 마감'}
+                      </button>
+                    )}
+                    <Link
+                      to={`/home/events?eventId=${specialEvent.id}`}
+                      className="px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-lg font-semibold text-center hover:bg-slate-50 transition-colors"
+                    >
+                      자세히 보기
+                    </Link>
                   </div>
                 </div>
               </Card>

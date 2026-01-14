@@ -1132,8 +1132,28 @@ const Events = () => {
               </button>
               <button
                 onClick={() => {
-                  setShowPaymentModal(false);
-                  alert('입금 정보가 클립보드에 복사되었습니다.');
+                  if (event.paymentInfo) {
+                    const copyText = `
+[산행 신청 완료]
+산행명: ${event.title}
+참가비: ${event.cost.toLocaleString()}원
+
+[입금 정보]
+은행명: ${event.paymentInfo.bankName}
+계좌번호: ${event.paymentInfo.accountNumber}
+예금주: ${event.paymentInfo.accountHolder}
+입금 기한: ${event.paymentInfo.deadline}
+                    `.trim();
+                    
+                    navigator.clipboard.writeText(copyText)
+                      .then(() => {
+                        alert('입금 정보가 클립보드에 복사되었습니다.');
+                        setShowPaymentModal(false);
+                      })
+                      .catch(() => {
+                        alert('복사에 실패했습니다. 다시 시도해주세요.');
+                      });
+                  }
                 }}
                 className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors"
               >

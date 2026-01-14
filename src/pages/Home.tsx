@@ -397,7 +397,7 @@ const Home = () => {
       </div>
       
       {/* 특별 산행 배너 - 심플한 디자인 */}
-      {specialEvent && (
+      {specialEvent && specialApplicationStatus !== 'no-event' && (
         <div className="mb-8 md:mb-12">
           <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-shadow bg-gradient-to-r from-amber-50/50 to-white">
             <div className="p-6 md:p-8">

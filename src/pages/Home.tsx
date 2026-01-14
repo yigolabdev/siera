@@ -323,7 +323,7 @@ const Home = () => {
               {mainEvent.mountain}
             </h1>
             
-            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg lg:text-2xl text-white/90 mb-2 font-light">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg lg:text-2xl text-white/90 mb-2 font-bold">
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <Mountain className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 <span>{mainEvent.altitude}</span>
@@ -335,7 +335,7 @@ const Home = () => {
               </div>
             </div>
             
-            <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/70 mb-6 sm:mb-8 md:mb-10 font-light">
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg text-white/90 mb-6 sm:mb-8 md:mb-10 font-bold">
               {mainEvent.dateDisplay}
             </p>
             

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FadeIn } from '../../components/ui/FadeIn';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export const LandingHeritage: React.FC = () => {
   const navigate = useNavigate();
-  const [currentSlide, setCurrentSlide] = useState(0);
   
   // 슬라이드 이미지들 (산행 관련 이미지)
   const slides = [
@@ -26,23 +25,6 @@ export const LandingHeritage: React.FC = () => {
       alt: '산악회 산행 모습 3',
     },
   ];
-
-  // 자동 슬라이드
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 4000); // 4초마다 변경
-
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-  };
   
   return (
     <section id="heritage" className="relative py-32 bg-slate-900 text-white overflow-hidden">
@@ -95,72 +77,69 @@ export const LandingHeritage: React.FC = () => {
         </div>
       </div>
 
-      {/* Image Slider Section */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6 mt-20">
+      {/* Image Slider Section - Continuous Scroll */}
+      <div className="relative z-10 w-full mt-20 overflow-hidden">
         <FadeIn delay={600}>
-          <div className="relative group">
-            {/* Slider Container */}
-            <div className="relative h-64 md:h-80 overflow-hidden rounded-2xl shadow-2xl">
-              <div 
-                className="flex transition-transform duration-700 ease-in-out h-full"
-                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-              >
-                {slides.map((slide, index) => (
-                  <div
-                    key={index}
-                    className="min-w-full h-full relative flex-shrink-0"
-                  >
-                    <img
-                      src={slide.url}
-                      alt={slide.alt}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Dark overlay for better contrast */}
-                    <div className="absolute inset-0 bg-black/20"></div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Navigation Arrows */}
-              <button
-                onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
-                aria-label="이전 슬라이드"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
-                aria-label="다음 슬라이드"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-
-              {/* Dots Indicator */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                {slides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentSlide(index)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentSlide
-                        ? 'bg-white w-8'
-                        : 'bg-white/50 hover:bg-white/75'
-                    }`}
-                    aria-label={`슬라이드 ${index + 1}로 이동`}
+          <div className="relative">
+            {/* Continuous Scrolling Container */}
+            <div className="flex animate-scroll-left gap-4">
+              {/* 원본 이미지들 */}
+              {slides.map((slide, index) => (
+                <div
+                  key={`original-${index}`}
+                  className="flex-shrink-0 w-80 md:w-96 h-64 md:h-80 relative rounded-2xl overflow-hidden shadow-2xl"
+                >
+                  <img
+                    src={slide.url}
+                    alt={slide.alt}
+                    className="w-full h-full object-cover"
                   />
-                ))}
-              </div>
+                  <div className="absolute inset-0 bg-black/20"></div>
+                </div>
+              ))}
+              {/* 복제된 이미지들 (무한 루프를 위해) */}
+              {slides.map((slide, index) => (
+                <div
+                  key={`duplicate-${index}`}
+                  className="flex-shrink-0 w-80 md:w-96 h-64 md:h-80 relative rounded-2xl overflow-hidden shadow-2xl"
+                >
+                  <img
+                    src={slide.url}
+                    alt={slide.alt}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/20"></div>
+                </div>
+              ))}
             </div>
 
             {/* Caption */}
-            <p className="text-center text-white/70 text-sm mt-4">
+            <p className="text-center text-white/70 text-sm mt-6">
               시애라 산악회의 소중한 순간들
             </p>
           </div>
         </FadeIn>
       </div>
+
+      {/* Custom Animation Styles */}
+      <style>{`
+        @keyframes scroll-left {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        
+        .animate-scroll-left {
+          animation: scroll-left 40s linear infinite;
+        }
+        
+        .animate-scroll-left:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
     </section>
   );
 };

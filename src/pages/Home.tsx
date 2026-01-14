@@ -15,7 +15,7 @@ import { mockNotices } from '../data/mockPosts';
 const Home = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus } = useDevMode();
-  const { events, currentEvent, getParticipantsByEventId } = useEvents();
+  const { events, currentEvent, specialEvent, getParticipantsByEventId } = useEvents(); // specialEvent 추가
   const { members } = useMembers();
   const { currentPoem } = usePoems();
   
@@ -395,6 +395,61 @@ const Home = () => {
           </div>
         </div>
       </div>
+      
+      {/* 특별 산행 배너 */}
+      {specialEvent && (
+        <div className="mb-8 md:mb-12">
+          <Card className="relative overflow-hidden border-2 border-purple-200 hover:border-purple-400 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-500/10 to-pink-500/10 rounded-full blur-2xl" />
+            
+            <div className="relative p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-bold text-sm shadow-lg">
+                  ✨ 특별 산행
+                </div>
+                <Badge variant="warning">D-{Math.ceil((new Date(specialEvent.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</Badge>
+              </div>
+              
+              <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">{specialEvent.title}</h3>
+              
+              <div className="flex flex-wrap items-center gap-4 mb-6 text-slate-600">
+                <div className="flex items-center gap-2">
+                  <Mountain className="w-5 h-5 text-purple-600" />
+                  <span className="font-medium">{specialEvent.altitude}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-purple-600" />
+                  <span className="font-medium">{specialEvent.location}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <span className="font-medium">{new Date(specialEvent.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+              </div>
+              
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                {specialEvent.description || '특별한 산행에 여러분을 초대합니다. 일반 정기 산행과는 다른 특별한 경험을 만나보세요.'}
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  to={`/home/events?eventId=${specialEvent.id}`}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-center hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                >
+                  특별 산행 신청하기
+                </Link>
+                <Link
+                  to={`/home/events?eventId=${specialEvent.id}`}
+                  className="px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-xl font-semibold text-center hover:bg-purple-50 transition-all"
+                >
+                  상세 정보
+                </Link>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8 md:mb-12">
         {/* Upcoming Events - 산행 목록 */}

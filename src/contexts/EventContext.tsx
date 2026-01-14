@@ -26,6 +26,7 @@ export interface Team {
 interface EventContextType {
   events: HikingEvent[];
   currentEvent: HikingEvent | null;
+  specialEvent: HikingEvent | null; // 특별 산행 추가
   participants: Record<string, Participant[]>;
   teams: Record<string, Team[]>; // eventId를 키로 하는 조 편성 데이터
   addEvent: (event: HikingEvent) => void;
@@ -49,7 +50,14 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   // 현재 진행 중인 이벤트 (가장 가까운 미래 이벤트) - useMemo로 최적화
   const currentEvent = useMemo(() => {
     return events
-      .filter(event => new Date(event.date) >= new Date())
+      .filter(event => new Date(event.date) >= new Date() && !event.isSpecial)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] || null;
+  }, [events]);
+
+  // 특별 산행 (isSpecial이 true이고 가장 가까운 미래 이벤트)
+  const specialEvent = useMemo(() => {
+    return events
+      .filter(event => new Date(event.date) >= new Date() && event.isSpecial === true)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] || null;
   }, [events]);
 
@@ -114,6 +122,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo(() => ({
     events,
     currentEvent,
+    specialEvent, // 특별 산행 추가
     participants,
     teams,
     addEvent,
@@ -128,6 +137,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   }), [
     events,
     currentEvent,
+    specialEvent, // 의존성 추가
     participants,
     teams,
     addEvent,

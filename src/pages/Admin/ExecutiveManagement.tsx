@@ -402,10 +402,9 @@ const ExecutiveManagement = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="text-lg font-bold text-slate-900">{data.name}</h4>
                   <Badge variant={data.category === 'chairman' ? 'success' : 'info'}>
-                    {data.category === 'chairman' ? '회장단' : '운영위원'}
+                    {data.position}
                   </Badge>
                 </div>
-                <p className="text-sm text-slate-600">{data.position}</p>
               </div>
               <div className="flex gap-2">
                 <button

@@ -396,20 +396,19 @@ const Home = () => {
         </div>
       </div>
       
-      {/* 특별 산행 배너 */}
+      {/* 특별 산행 배너 - 심플한 디자인 */}
       {specialEvent && (
         <div className="mb-8 md:mb-12">
-          <Card className="relative overflow-hidden border-2 border-purple-200 hover:border-purple-400 transition-all">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-500/10 to-pink-500/10 rounded-full blur-2xl" />
-            
-            <div className="relative p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-bold text-sm shadow-lg">
-                  ✨ 특별 산행
+          <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-shadow bg-gradient-to-r from-amber-50/50 to-white">
+            <div className="p-6 md:p-8">
+              {/* 헤더 */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">⭐</span>
+                  <h3 className="text-xl md:text-2xl font-bold text-slate-900">특별 산행</h3>
+                  <Badge variant="warning">D-{Math.ceil((new Date(specialEvent.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</Badge>
                 </div>
-                <Badge variant="warning">D-{Math.ceil((new Date(specialEvent.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}</Badge>
-                {/* 신청 상태 배지 추가 */}
+                {/* 신청 상태 배지 */}
                 {specialApplicationStatus === 'closed' && (
                   <Badge variant="danger">신청 마감</Badge>
                 )}
@@ -421,39 +420,45 @@ const Home = () => {
                 )}
               </div>
               
-              <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">{specialEvent.title}</h3>
+              {/* 제목 */}
+              <h4 className="text-xl md:text-2xl font-bold text-slate-900 mb-4">{specialEvent.title}</h4>
               
-              <div className="flex flex-wrap items-center gap-4 mb-6 text-slate-600">
-                <div className="flex items-center gap-2">
-                  <Mountain className="w-5 h-5 text-purple-600" />
-                  <span className="font-medium">{specialEvent.altitude}</span>
+              {/* 정보 */}
+              <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-slate-600">
+                <div className="flex items-center gap-1.5">
+                  <Mountain className="w-4 h-4" />
+                  <span>{specialEvent.altitude}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-purple-600" />
-                  <span className="font-medium">{specialEvent.location}</span>
+                <span className="text-slate-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  <span>{specialEvent.location}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-purple-600" />
-                  <span className="font-medium">{new Date(specialEvent.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                <span className="text-slate-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  <span>{new Date(specialEvent.date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}</span>
                 </div>
               </div>
               
-              <p className="text-slate-600 mb-6 leading-relaxed">
+              {/* 설명 */}
+              <p className="text-slate-600 mb-6 text-sm leading-relaxed">
                 {specialEvent.description || '특별한 산행에 여러분을 초대합니다. 일반 정기 산행과는 다른 특별한 경험을 만나보세요.'}
               </p>
               
+              {/* 버튼 */}
               <div className="flex flex-col sm:flex-row gap-3">
                 {specialApplicationStatus === 'open' ? (
                   <Link
                     to={`/home/events?eventId=${specialEvent.id}`}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-center hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                    className="flex-1 px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold text-center hover:bg-amber-600 transition-colors"
                   >
-                    특별 산행 신청하기
+                    신청하기
                   </Link>
                 ) : (
                   <button
                     disabled
-                    className="flex-1 px-6 py-3 bg-slate-300 text-slate-500 rounded-xl font-bold text-center cursor-not-allowed"
+                    className="flex-1 px-6 py-3 bg-slate-300 text-slate-500 rounded-lg font-semibold text-center cursor-not-allowed"
                   >
                     {specialApplicationStatus === 'closed' ? '신청 마감' :
                      specialApplicationStatus === 'full' ? '정원 마감' : '산행 미정'}
@@ -461,9 +466,9 @@ const Home = () => {
                 )}
                 <Link
                   to={`/home/events?eventId=${specialEvent.id}`}
-                  className="px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-xl font-semibold text-center hover:bg-purple-50 transition-all"
+                  className="px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-lg font-semibold text-center hover:bg-slate-50 transition-colors"
                 >
-                  상세 정보
+                  자세히 보기
                 </Link>
               </div>
             </div>

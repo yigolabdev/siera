@@ -111,7 +111,7 @@ export const LandingHero: React.FC = () => {
           </div>
 
           {/* Login Form */}
-          <FadeIn delay={1000} className="w-full max-w-6xl">
+          <FadeIn delay={1000} className="w-full max-w-5xl">
             {/* Desktop: 한 줄 레이아웃 */}
             <div className="hidden md:block bg-slate-900/95 backdrop-blur-sm rounded-xl p-5 shadow-2xl w-full border border-slate-700">
               <form onSubmit={handleLoginSubmit}>
@@ -132,7 +132,7 @@ export const LandingHero: React.FC = () => {
                     name="email"
                     value={loginFormData.email}
                     onChange={handleLoginChange}
-                    className="flex-1 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                    className="w-48 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
                     placeholder="이메일"
                     required
                   />
@@ -143,7 +143,7 @@ export const LandingHero: React.FC = () => {
                     name="password"
                     value={loginFormData.password}
                     onChange={handleLoginChange}
-                    className="flex-1 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                    className="w-40 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
                     placeholder="비밀번호"
                     required
                   />

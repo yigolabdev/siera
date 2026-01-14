@@ -38,7 +38,7 @@ const ContentManagement = lazy(() => import('./pages/Admin/ContentManagement'));
 // 로딩 컴포넌트
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
-    <LoadingSpinner size="large" />
+    <LoadingSpinner size="lg" />
   </div>
 );
 

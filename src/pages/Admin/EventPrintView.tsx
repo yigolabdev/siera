@@ -174,9 +174,17 @@ const EventPrintView = () => {
   const monthlyPoem = getCurrentMonthPoem();
   
   // 조편성 데이터가 없으면 목업 사용
-  // @ts-ignore
   if (!teams || teams.length === 0) {
-    teams = mockTeams;
+    teams = mockTeams.map(team => ({
+      ...team,
+      eventId: eventId || '',
+      leaderOccupation: team.leaderPosition || '',
+      leaderPhone: '010-0000-0000',
+      members: team.members.map(member => ({
+        ...member,
+        occupation: member.position || ''
+      }))
+    })) as any;
   }
   
   // 비상연락처 임시 데이터 (데이터가 없을 경우)
@@ -327,7 +335,7 @@ const EventPrintView = () => {
                   <div className="team-leader">
                     <div className="leader-name">
                       {team.leaderName}
-                      <span className="leader-detail"> ({team.leaderCompany} · {team.leaderPosition})</span>
+                      <span className="leader-detail"> ({team.leaderCompany} · {(team as any).leaderPosition})</span>
                     </div>
                   </div>
                   <div className="team-members">
@@ -335,7 +343,7 @@ const EventPrintView = () => {
                       <div key={idx} className="member-item">
                         <span className="member-name">{member.name}</span>
                         <span className="member-company">{member.company}</span>
-                        <span className="member-position">{member.position}</span>
+                        <span className="member-position">{(member as any).position}</span>
                       </div>
                     ))}
                   </div>

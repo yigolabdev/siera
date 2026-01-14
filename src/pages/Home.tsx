@@ -115,7 +115,7 @@ const Home = () => {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
       {/* 산행 미정 상태일 때 - 특별산행이 있으면 배너만 표시 */}
-      {(isDevMode && applicationStatus === 'no-event') || !mainEvent ? (
+      {!mainEvent ? (
         <div>
           {/* Hero Section with Background Image */}
           <div className="relative h-[350px] sm:h-[400px] md:h-[500px] rounded-xl md:rounded-2xl overflow-hidden mb-8 md:mb-12 shadow-xl">
@@ -491,8 +491,8 @@ const Home = () => {
                 {specialApplicationStatus === 'full' && (
                   <Badge variant="danger">정원 마감</Badge>
                 )}
-                {specialApplicationStatus === 'no-event' && (
-                  <Badge variant="secondary">산행 미정</Badge>
+                {(specialApplicationStatus as any) === 'no-event' && (
+                  <Badge variant="default">산행 미정</Badge>
                 )}
               </div>
               

@@ -56,17 +56,20 @@ interface TeamMember {
   name: string;
   occupation: string;
   company: string;
+  phone?: string;
   isGuest?: boolean;  // 게스트 여부
 }
 
 interface Team {
   id: string;
   name: string;
+  number?: number;
   eventId: string;  // 산행 ID
   eventTitle?: string;  // 산행 제목 (표시용)
   leaderId: string;
   leaderName: string;
   leaderOccupation: string;
+  leaderPhone?: string;
   members: TeamMember[];
 }
 
@@ -1118,7 +1121,7 @@ const EventManagement = () => {
                   <select
                     value={formData.emergencyContactId || ''}
                     onChange={(e) => {
-                      const selectedExecutive = executives.find(exec => exec.id === e.target.value);
+                      const selectedExecutive = executives.find(exec => String(exec.id) === e.target.value);
                       setFormData({
                         ...formData,
                         emergencyContactId: e.target.value,

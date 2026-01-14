@@ -63,6 +63,7 @@ export interface PaymentInfo {
   bankName: string;
   accountNumber: string;
   accountHolder: string;
+  deadline?: string;
   managerName: string;
   managerPhone: string;
 }
@@ -102,6 +103,7 @@ export interface TeamMember {
 export interface Team {
   id: string;
   eventId: string;
+  eventTitle?: string;
   number?: number;
   name: string;
   leaderId: string;

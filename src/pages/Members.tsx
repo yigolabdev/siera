@@ -581,9 +581,9 @@ const Members = () => {
       case 'executive':
         return <Badge variant="primary">임원</Badge>;
       case 'member':
-        return <Badge variant="primary">회원</Badge>;
+        return null; // 일반회원은 뱃지 표시 안함
       default:
-        return <Badge variant="primary">회원</Badge>;
+        return null; // 일반회원은 뱃지 표시 안함
     }
   };
   

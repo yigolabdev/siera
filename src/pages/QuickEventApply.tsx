@@ -532,35 +532,37 @@ export default function QuickEventApply() {
               </Card>
             )}
             
-            {/* 산행 코스 안내 및 선택 */}
+            <Card className="mb-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">산행 신청하기</h3>
+            
+            {/* 산행 코스 선택 - 컴팩트 버튼 */}
             {currentEvent.courses && currentEvent.courses.length > 0 && (
-              <Card className="mb-6">
-                <h3 className="text-xl font-semibold text-slate-900 mb-4">산행 코스 안내 및 선택</h3>
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  코스 선택 <span className="text-red-500">*</span>
+                </label>
                 
-                <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
                   {currentEvent.courses.map((course) => (
                     <button
                       key={course.id}
                       type="button"
                       onClick={() => setSelectedCourse(course.name)}
-                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      className={`px-4 py-2.5 rounded-lg border-2 transition-all text-left ${
                         selectedCourse === course.name
                           ? 'border-primary-600 bg-primary-50'
-                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                          : 'border-slate-200 hover:border-primary-300 bg-white'
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={course.name === 'A조' ? 'success' : 'info'}>
-                            {course.name}
-                          </Badge>
-                          <span className="text-sm font-semibold text-slate-700">{course.distance}</span>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={course.name === 'A조' ? 'success' : 'info'} className="text-xs">
+                          {course.name}
+                        </Badge>
+                        <span className="text-sm font-medium text-slate-700">{course.distance}</span>
                         {selectedCourse === course.name && (
-                          <CheckCircle className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                          <CheckCircle className="w-4 h-4 text-primary-600" />
                         )}
                       </div>
-                      <p className="text-sm font-medium text-slate-800">{course.description}</p>
                     </button>
                   ))}
                   
@@ -568,32 +570,26 @@ export default function QuickEventApply() {
                   <button
                     type="button"
                     onClick={() => setSelectedCourse('현장 결정')}
-                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                    className={`px-4 py-2.5 rounded-lg border-2 transition-all ${
                       selectedCourse === '현장 결정'
                         ? 'border-primary-600 bg-primary-50'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        : 'border-slate-200 hover:border-primary-300 bg-white'
                     }`}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="warning">현장 결정</Badge>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="warning" className="text-xs">현장 결정</Badge>
                       {selectedCourse === '현장 결정' && (
-                        <CheckCircle className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                        <CheckCircle className="w-4 h-4 text-primary-600" />
                       )}
                     </div>
-                    <p className="text-sm font-medium text-slate-800">산행 당일 현장에서 코스를 선택하실 수 있습니다</p>
                   </button>
                 </div>
                 
                 {!selectedCourse && (
-                  <p className="text-sm text-red-500 mt-2">* 코스를 선택해주세요</p>
+                  <p className="text-sm text-red-500 mt-2">코스를 선택해주세요</p>
                 )}
-              </Card>
+              </div>
             )}
-            
-            <Card className="mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">산행 신청하기</h3>
             
             {/* 입금 안내 박스 */}
             <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">

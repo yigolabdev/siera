@@ -111,7 +111,6 @@ export const LandingHero: React.FC = () => {
           <FadeIn delay={1000} className="w-full max-w-6xl flex flex-col gap-6">
             {/* Main Login Box - 가로형 레이아웃 */}
             <div className="bg-slate-900/95 backdrop-blur-sm rounded-3xl p-8 md:p-10 shadow-2xl w-full border border-slate-700">
-            <div className="bg-slate-900/95 backdrop-blur-sm rounded-3xl p-8 md:p-10 shadow-2xl w-full border border-slate-700">
               {/* 가로형 레이아웃: 왼쪽 제목, 오른쪽 폼 */}
               <div className="flex flex-col lg:flex-row items-center gap-8">
                 {/* Left: Title Section */}

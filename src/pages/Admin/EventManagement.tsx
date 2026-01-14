@@ -78,6 +78,21 @@ const EventManagement = () => {
   const { members, getMembersByPosition } = useMembers();
   const [activeTab, setActiveTab] = useState<TabType>('events');
 
+  // 10분 단위 시간 옵션 생성
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 10) {
+        const h = hour.toString().padStart(2, '0');
+        const m = minute.toString().padStart(2, '0');
+        options.push(`${h}:${m}`);
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
+
   // 운영진 목록 가져오기
   const executives = [
     ...getMembersByPosition('chairman'),
@@ -1163,12 +1178,16 @@ const EventManagement = () => {
                           </div>
                           <div className="md:col-span-3">
                             <label className="block text-sm text-slate-600 mb-1">시간</label>
-                            <input
-                              type="time"
+                            <select
                               value={item.time}
                               onChange={(e) => handleScheduleChange(index, 'time', e.target.value)}
                               className="input-field"
-                            />
+                            >
+                              <option value="">시간 선택</option>
+                              {timeOptions.map(time => (
+                                <option key={time} value={time}>{time}</option>
+                              ))}
+                            </select>
                           </div>
                           <div className="md:col-span-5">
                             <label className="block text-sm text-slate-600 mb-1">장소</label>
@@ -1281,13 +1300,23 @@ const EventManagement = () => {
                               <label className="block text-sm text-slate-700 font-medium mb-1">
                                 거리 <span className="text-red-500">*</span>
                               </label>
-                              <input
-                                type="text"
-                                value={course.distance}
-                                onChange={(e) => updateCourse(course.id, 'distance', e.target.value)}
-                                className="input-field"
-                                placeholder="약 8.5킬로"
-                              />
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  value={course.distance.replace(/[^0-9.]/g, '')}
+                                  onChange={(e) => {
+                                    const numValue = e.target.value;
+                                    updateCourse(course.id, 'distance', numValue ? `약 ${numValue}km` : '');
+                                  }}
+                                  className="input-field pr-12"
+                                  placeholder="8.5"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
+                                  km
+                                </span>
+                              </div>
                             </div>
                             <div className="md:col-span-2">
                               <label className="block text-sm text-slate-700 font-medium mb-1">
@@ -1323,14 +1352,18 @@ const EventManagement = () => {
                                 <div key={scheduleIdx} className="grid grid-cols-12 gap-2 items-end bg-white p-3 rounded-lg border border-slate-200">
                                   <div className="col-span-2">
                                     <label className="block text-xs text-slate-600 mb-1">시간</label>
-                                    <input
-                                      type="time"
+                                    <select
                                       value={scheduleItem.time}
                                       onChange={(e) =>
                                         updateCourseSchedule(course.id, scheduleIdx, 'time', e.target.value)
                                       }
                                       className="input-field text-sm font-bold text-primary-700"
-                                    />
+                                    >
+                                      <option value="">선택</option>
+                                      {timeOptions.map(time => (
+                                        <option key={time} value={time}>{time}</option>
+                                      ))}
+                                    </select>
                                   </div>
                                   <div className="col-span-9">
                                     <label className="block text-xs text-slate-600 mb-1">장소</label>

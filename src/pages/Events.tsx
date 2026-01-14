@@ -11,11 +11,14 @@ import { mockWeatherData } from '../data/mockData';
 
 const Events = () => {
   const { user } = useAuth();
-  const { isDevMode, applicationStatus } = useDevMode();
-  const { currentEvent, getParticipantsByEventId } = useEvents();
+  const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
+  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId } = useEvents();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
   const [searchParams] = useSearchParams();
+  
+  // URL에서 eventId 가져오기
+  const eventIdFromUrl = searchParams.get('eventId');
   
   // 날씨 데이터 사용
   const weatherData = mockWeatherData;
@@ -39,18 +42,33 @@ const Events = () => {
   const weatherInfo = getWeatherIcon(weatherData.condition);
   const WeatherIcon = weatherInfo.icon;
   
+  // EventContext에서 이벤트 가져오기
+  // URL에 eventId가 있으면 해당 이벤트, 없으면 currentEvent 사용
+  const selectedEvent = useMemo(() => {
+    if (eventIdFromUrl) {
+      return getEventById(eventIdFromUrl);
+    }
+    return currentEvent;
+  }, [eventIdFromUrl, currentEvent, getEventById]);
+  
+  // 특별산행 여부 확인
+  const isSpecialEvent = selectedEvent?.isSpecial === true;
+  
+  // 해당 이벤트의 신청 상태 가져오기
+  const currentApplicationStatus = isSpecialEvent ? specialApplicationStatus : applicationStatus;
+  
   // EventContext에서 현재 이벤트 사용 (개발 모드 상태 반영)
   const event = useMemo(() => {
-    if (!currentEvent) return null;
+    if (!selectedEvent) return null;
     
     return {
-      ...currentEvent,
-      currentParticipants: isDevMode && applicationStatus === 'full' 
-        ? currentEvent.maxParticipants 
-        : currentEvent.currentParticipants,
+      ...selectedEvent,
+      currentParticipants: isDevMode && currentApplicationStatus === 'full' 
+        ? selectedEvent.maxParticipants 
+        : selectedEvent.currentParticipants,
       isRegistered: false, // TODO: 실제 사용자 신청 여부 확인
     };
-  }, [currentEvent, isDevMode, applicationStatus]);
+  }, [selectedEvent, isDevMode, currentApplicationStatus]);
   
   // 참석자 목록 (실제 신청자)
   const participants = event ? getParticipantsByEventId(event.id) : [];
@@ -177,16 +195,16 @@ const Events = () => {
     if (!event) return 0;
     if (!isDevMode) return getDaysUntilDeadline(event.date);
     
-    // 개발 모드에서는 applicationStatus에 따라 강제 설정
-    if (applicationStatus === 'closed') return -1;
+    // 개발 모드에서는 currentApplicationStatus에 따라 강제 설정
+    if (currentApplicationStatus === 'closed') return -1;
     return getDaysUntilDeadline(event.date);
-  }, [isDevMode, applicationStatus, event]);
+  }, [isDevMode, currentApplicationStatus, event]);
   
   const applicationClosed = useMemo(() => {
     if (!event) return false;
     if (!isDevMode) return isApplicationClosed(event.date);
-    return applicationStatus === 'closed';
-  }, [isDevMode, applicationStatus, event]);
+    return currentApplicationStatus === 'closed';
+  }, [isDevMode, currentApplicationStatus, event]);
   
   // URL 파라미터로 신청 모달 자동 열기
   useEffect(() => {
@@ -201,7 +219,7 @@ const Events = () => {
       alert('신청 기간이 마감되었습니다.');
       return;
     }
-    if (isDevMode && applicationStatus === 'full') {
+    if (isDevMode && currentApplicationStatus === 'full') {
       alert('정원이 마감되었습니다.');
       return;
     }
@@ -231,9 +249,13 @@ const Events = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">이번 달 정기 산행</h1>
+        <h1 className="text-4xl font-bold text-slate-900 mb-3">
+          {isSpecialEvent ? '✨ 특별 산행' : '이번 달 정기 산행'}
+        </h1>
         <p className="text-xl text-slate-600">
-          매월 한 번 진행되는 정기 산행에 참여하세요.
+          {isSpecialEvent 
+            ? '특별한 산행에 여러분을 초대합니다.' 
+            : '매월 한 번 진행되는 정기 산행에 참여하세요.'}
         </p>
       </div>
       
@@ -611,15 +633,15 @@ const Events = () => {
               <button 
                 onClick={handleRegister}
                 className={`flex-1 text-lg py-4 rounded-xl font-bold transition-all ${
-                  applicationClosed || (isDevMode && applicationStatus === 'full') || event.currentParticipants >= event.maxParticipants
+                  applicationClosed || (isDevMode && currentApplicationStatus === 'full') || event.currentParticipants >= event.maxParticipants
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     : 'btn-primary'
                 }`}
-                disabled={applicationClosed || (isDevMode && applicationStatus === 'full') || event.currentParticipants >= event.maxParticipants}
+                disabled={applicationClosed || (isDevMode && currentApplicationStatus === 'full') || event.currentParticipants >= event.maxParticipants}
               >
                 {applicationClosed 
                   ? '신청 마감' 
-                  : (isDevMode && applicationStatus === 'full') || event.currentParticipants >= event.maxParticipants 
+                  : (isDevMode && currentApplicationStatus === 'full') || event.currentParticipants >= event.maxParticipants 
                     ? '정원 마감' 
                     : '참석 신청하기'}
               </button>
@@ -761,7 +783,7 @@ const Events = () => {
       )}
       
       {/* Teams Section - 조편성이 등록되어 있고, 신청 마감 또는 정원 마감 상태일 때만 표시 */}
-      {teams.length > 0 && (applicationClosed || (isDevMode && applicationStatus === 'full')) && (
+      {teams.length > 0 && (applicationClosed || (isDevMode && currentApplicationStatus === 'full')) && (
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <Shield className="w-7 h-7 text-primary-600" />

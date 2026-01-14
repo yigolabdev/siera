@@ -441,9 +441,6 @@ const Home = () => {
             <div>
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">{event.title}</h3>
               
-              {/* 신청률 프로그레스 바 */}
-              <div className="mb-4 sm:mb-6">
-              
               {/* 내 참석 여부 - 첫 번째 이벤트만 표시 */}
               {index === 0 && user && myParticipationStatus && (
                 <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl border-2 border-dashed" 

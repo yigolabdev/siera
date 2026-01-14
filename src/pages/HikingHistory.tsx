@@ -350,8 +350,8 @@ const HikingHistory = () => {
         </div>
       </div>
       
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+      {/* Stats - 모바일에서 숨김 */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
         <Card className="text-center hover:shadow-lg transition-all">
           <div className="flex items-center justify-center mb-2">
             <Mountain className="w-6 h-6 text-primary-600" />
@@ -472,7 +472,8 @@ const HikingHistory = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  {/* 상세 정보 그리드 - 모바일에서 간소화 */}
+                  <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div className="bg-slate-50 rounded-lg p-3">
                       <p className="text-xs text-slate-600 mb-1">참가 인원</p>
                       <p className="text-lg font-bold text-slate-900">{hike.participants}명</p>
@@ -489,6 +490,14 @@ const HikingHistory = () => {
                       <p className="text-xs text-slate-600 mb-1">날씨</p>
                       <p className="text-lg font-bold text-slate-900">{hike.weather} {hike.temperature}</p>
                     </div>
+                  </div>
+
+                  {/* 모바일 전용 간소화된 정보 */}
+                  <div className="md:hidden flex flex-wrap gap-2 mb-4 text-xs">
+                    <span className="px-2 py-1 bg-slate-100 rounded text-slate-700">👥 {hike.participants}명</span>
+                    <span className="px-2 py-1 bg-slate-100 rounded text-slate-700">📏 {hike.distance}</span>
+                    <span className="px-2 py-1 bg-slate-100 rounded text-slate-700">⏱️ {hike.duration}</span>
+                    <span className="px-2 py-1 bg-slate-100 rounded text-slate-700">{hike.weather} {hike.temperature}</span>
                   </div>
                 </div>
                 

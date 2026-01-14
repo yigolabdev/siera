@@ -599,8 +599,8 @@ const Members = () => {
         </div>
       </div>
       
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+      {/* Stats - 모바일에서 숨김 */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
         <Card className="text-center hover:shadow-lg transition-all">
           <div className="flex items-center justify-center mb-2">
             <Users className="w-6 h-6 text-primary-600" />

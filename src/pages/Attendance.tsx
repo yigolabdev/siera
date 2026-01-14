@@ -137,8 +137,8 @@ const Attendance = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {/* Stats - 모바일에서 숨김 */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card className="text-center hover:shadow-lg transition-all">
           <div className="flex items-center justify-center mb-2">
             <Calendar className="w-6 h-6 text-slate-600" />

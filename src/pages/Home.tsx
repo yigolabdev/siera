@@ -339,31 +339,6 @@ const Home = () => {
               {mainEvent.dateDisplay}
             </p>
             
-            {/* 산행 정보 요약 */}
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                <Calendar className="w-4 h-4 text-white" />
-                <div className="text-left">
-                  <p className="text-[10px] text-white/60">일정</p>
-                  <p className="text-sm font-bold text-white">{mainEvent.date}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                <Users className="w-4 h-4 text-white" />
-                <div className="text-left">
-                  <p className="text-[10px] text-white/60">신청 인원</p>
-                  <p className="text-sm font-bold text-white">{mainEvent.participants}/{mainEvent.maxParticipants}명</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                <TrendingUp className="w-4 h-4 text-white" />
-                <div className="text-left">
-                  <p className="text-[10px] text-white/60">신청률</p>
-                  <p className="text-sm font-bold text-white">{Math.round((mainEvent.participants / mainEvent.maxParticipants) * 100)}%</p>
-                </div>
-              </div>
-            </div>
-            
             {/* 신청 마감일 안내 */}
             <div className="mb-6 sm:mb-8 flex justify-center">
               {applicationClosed ? (
@@ -440,6 +415,36 @@ const Home = () => {
             
             <div>
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">{event.title}</h3>
+              
+              <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                <div className="flex justify-between items-center p-2.5 sm:p-3 bg-slate-50 rounded-lg">
+                  <span className="text-sm sm:text-base text-slate-600">일정</span>
+                  <span className="text-sm sm:text-base font-semibold text-slate-900">{event.date}</span>
+                </div>
+                <div className="flex justify-between items-center p-2.5 sm:p-3 bg-slate-50 rounded-lg">
+                  <span className="text-sm sm:text-base text-slate-600">신청 인원</span>
+                  <span className="text-sm sm:text-base font-semibold text-slate-900">
+                    {event.participants}/{event.maxParticipants}명
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mb-4 sm:mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs sm:text-sm text-slate-600">신청률</span>
+                  <span className="text-xs sm:text-sm font-semibold text-primary-600">
+                    {Math.round((event.participants / event.maxParticipants) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2.5 sm:h-3 overflow-hidden">
+                  <div 
+                    className={`h-2.5 sm:h-3 rounded-full transition-all duration-500 ${
+                      event.isSpecial ? 'bg-purple-600' : 'bg-primary-600'
+                    }`}
+                    style={{ width: `${(event.participants / event.maxParticipants) * 100}%` }}
+                  />
+                </div>
+              </div>
               
               {/* 내 참석 여부 - 첫 번째 이벤트만 표시 */}
               {index === 0 && user && myParticipationStatus && (

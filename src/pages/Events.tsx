@@ -482,6 +482,24 @@ const Events = () => {
                   <span className="text-slate-600">장소</span>
                   <span className="font-semibold text-slate-900">{event.location}</span>
                 </div>
+                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                  <span className="text-slate-600">신청 인원</span>
+                  <span className="font-semibold text-slate-900">{event.currentParticipants}/{event.maxParticipants}명</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-slate-600">신청률</span>
+                    <span className="font-semibold text-primary-600">
+                      {Math.round((event.currentParticipants / event.maxParticipants) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="h-3 bg-primary-600 rounded-full transition-all duration-500"
+                      style={{ width: `${(event.currentParticipants / event.maxParticipants) * 100}%` }}
+                    />
+                  </div>
+                </div>
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <span className="text-blue-700 font-medium">신청 마감</span>
                   <span className="font-bold text-blue-900">{applicationDeadline}</span>

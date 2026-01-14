@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar, FileText, ScrollText } from 'lucide-react';
 import { usePoems, MonthlyPoem } from '../../contexts/PoemContext';
+import { useRules } from '../../contexts/RulesContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
@@ -10,6 +11,7 @@ type TabType = 'rules' | 'poem';
 const ContentManagement = () => {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const { poems, currentPoem, addPoem, updatePoem, deletePoem } = usePoems();
+  const { rulesContent, updateRules } = useRules();
   
   // 시 관리 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,8 +26,8 @@ const ContentManagement = () => {
     month: '',
   });
 
-  // 회칙 관리 상태
-  const [rulesContent, setRulesContent] = useState('');
+  // 회칙 관리 상태 - Local state for editing
+  const [localRulesContent, setLocalRulesContent] = useState(rulesContent);
 
   // 시 관리 함수들
   const handleOpenPoemModal = (poem?: MonthlyPoem) => {
@@ -92,6 +94,12 @@ const ContentManagement = () => {
 
   const sortedPoems = [...poems].sort((a, b) => b.month.localeCompare(a.month));
 
+  // 회칙 저장 핸들러
+  const handleSaveRules = () => {
+    updateRules(localRulesContent);
+    alert('회칙이 저장되었습니다.');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -140,7 +148,7 @@ const ContentManagement = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-slate-900">클럽 회칙</h2>
             <button
-              onClick={() => alert('회칙이 저장되었습니다.')}
+              onClick={handleSaveRules}
               className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors flex items-center gap-2"
             >
               <Save className="w-5 h-5" />
@@ -154,20 +162,11 @@ const ContentManagement = () => {
                 회칙 내용
               </label>
               <textarea
-                value={rulesContent}
-                onChange={(e) => setRulesContent(e.target.value)}
+                value={localRulesContent}
+                onChange={(e) => setLocalRulesContent(e.target.value)}
                 rows={20}
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-sans"
-                placeholder="클럽 회칙을 입력하세요...
-
-예시:
-제1장 총칙
-제1조 (목적)
-본 회는 산행을 통한 심신단련과 회원 상호간의 친목 도모를 목적으로 한다.
-
-제2조 (명칭)
-본 회의 명칭은 '시애라 산악회'로 한다.
-..."
+                placeholder="클럽 회칙을 입력하세요..."
               />
             </div>
             

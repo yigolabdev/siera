@@ -10,6 +10,7 @@ import {
   TrendingUp,
   CheckCircle
 } from 'lucide-react';
+import { useRules } from '../contexts/RulesContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
@@ -17,6 +18,7 @@ type TabType = 'rules' | 'history' | 'organization' | 'membership';
 
 const ClubInfo = () => {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
+  const { rulesContent } = useRules();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -69,278 +71,22 @@ const ClubInfo = () => {
       {/* Content */}
       {activeTab === 'rules' && (
         <div className="space-y-6">
-          {/* 총칙 */}
+          {/* 회칙 내용 표시 */}
           <Card>
             <div className="flex items-start gap-4 mb-6">
               <div className="p-3 bg-slate-100 rounded-xl flex-shrink-0">
                 <BookOpen className="w-6 h-6 text-slate-700" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">제1장 총칙</h2>
+                <h2 className="text-2xl font-bold text-slate-900">시애라 산악회 회칙</h2>
+                <p className="text-slate-600 mt-1">클럽 운영의 기본 규정</p>
               </div>
             </div>
             
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제1조 (명칭)</h3>
-                <p className="text-slate-700 leading-relaxed">
-                  본 회는 '시애라(Sierra) 산악회'라 칭한다.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제2조 (목적)</h3>
-                <p className="text-slate-700 leading-relaxed">
-                  본 회는 건전한 등산활동을 통하여 회원 상호간의 친목을 도모하고, 
-                  심신 단련 및 자연 보호의식을 함양함을 목적으로 한다.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제3조 (소재지)</h3>
-                <p className="text-slate-700 leading-relaxed">
-                  본 회의 사무소는 서울특별시에 둔다.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제4조 (사업)</h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  본 회는 다음의 사업을 수행한다:
-                </p>
-                <ul className="space-y-2 ml-4 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>정기 산행 및 특별 산행</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>산악 기술 교육 및 안전 교육</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>회원 친목 도모를 위한 각종 행사</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>산악 및 자연 환경 보호 활동</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>기타 본 회의 목적 달성에 필요한 사업</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </Card>
-
-          {/* 회원 */}
-          <Card>
-            <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 bg-slate-100 rounded-xl flex-shrink-0">
-                <Users className="w-6 h-6 text-slate-700" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">제2장 회원</h2>
-              </div>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제5조 (회원의 자격)</h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  본 회의 회원은 다음 각 호와 같다:
-                </p>
-                <ul className="space-y-2 ml-4 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>정회원: 본 회의 목적에 찬동하고 소정의 입회 절차를 거쳐 가입한 자</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>명예회원: 본 회의 발전에 공로가 있는 자로서 총회의 의결을 거쳐 추대된 자</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>게스트: 정회원의 추천을 받아 일시적으로 산행에 참가하는 자 (최대 3회)</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제6조 (회원의 권리)</h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  정회원은 다음의 권리를 가진다:
-                </p>
-                <ul className="space-y-2 ml-4 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>본 회가 주최하는 모든 산행 및 행사 참가</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>총회 및 운영위원회의 의결권 행사</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>임원 선출 및 피선거권</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>본 회의 시설 및 자료 이용</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제7조 (회원의 의무)</h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  회원은 다음의 의무를 진다:
-                </p>
-                <ul className="space-y-2 ml-4 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>본 회의 회칙 및 제 규정 준수</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>총회 및 운영위원회의 의결사항 이행</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>회비 및 제 비용 납부</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>본 회의 명예 및 품위 유지</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>안전 수칙 준수 및 자연 환경 보호</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </Card>
-
-          {/* 조직 및 임원 */}
-          <Card>
-            <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 bg-slate-100 rounded-xl flex-shrink-0">
-                <Shield className="w-6 h-6 text-slate-700" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">제3장 조직 및 임원</h2>
-              </div>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제8조 (임원의 구성)</h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  본 회는 다음의 임원을 둔다:
-                </p>
-                <ul className="space-y-2 ml-4 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>회장 1명</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>부회장 2명</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>운영위원장 1명</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>등산대장 1명</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>재무 1명</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>감사 2명</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>기타 운영위원 약간명</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제9조 (임원의 임기)</h3>
-                <p className="text-slate-700 leading-relaxed">
-                  임원의 임기는 2년으로 하되, 연임할 수 있다.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제10조 (회장의 직무)</h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  회장은 본 회를 대표하고 다음의 직무를 수행한다:
-                </p>
-                <ul className="space-y-2 ml-4 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>총회 및 운영위원회 소집 및 주재</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>회무 총괄 및 집행</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>대외 업무 대표</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </Card>
-
-          {/* 회비 */}
-          <Card>
-            <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 bg-slate-100 rounded-xl flex-shrink-0">
-                <TrendingUp className="w-6 h-6 text-slate-700" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">제4장 회비</h2>
-              </div>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제11조 (회비의 종류)</h3>
-                <p className="text-slate-700 leading-relaxed mb-3">
-                  본 회의 회비는 다음과 같다:
-                </p>
-                <ul className="space-y-2 ml-4 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>연회비: 매년 1월에 납부 (₩100,000)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>월별 산행비: 매 산행 신청 시 납부 (₩30,000~₩50,000)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-400 mt-1">•</span>
-                    <span>특별 산행비: 1박 이상 또는 특별 산행 시 별도 책정</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">제12조 (회비의 용도)</h3>
-                <p className="text-slate-700 leading-relaxed">
-                  회비는 산행 운영비, 행사비, 장비 구입비, 기타 운영비 등으로 사용한다.
-                </p>
-              </div>
+            <div className="prose prose-slate max-w-none">
+              <pre className="whitespace-pre-wrap font-sans text-slate-700 leading-relaxed">
+                {rulesContent}
+              </pre>
             </div>
           </Card>
         </div>

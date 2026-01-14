@@ -5,6 +5,7 @@ import { DevModeProvider } from './contexts/DevModeContext';
 import { EventProvider } from './contexts/EventContext';
 import { MemberProvider } from './contexts/MemberContext';
 import { PoemProvider } from './contexts/PoemContext';
+import { RulesProvider } from './contexts/RulesContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout/Layout';
@@ -48,10 +49,11 @@ function App() {
         <EventProvider>
           <MemberProvider>
             <PoemProvider>
-              <Router>
-                <ScrollToTop />
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
+              <RulesProvider>
+                <Router>
+                  <ScrollToTop />
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<AboutSierra />} />
@@ -112,6 +114,7 @@ function App() {
           </Routes>
                 </Suspense>
               </Router>
+              </RulesProvider>
             </PoemProvider>
           </MemberProvider>
         </EventProvider>

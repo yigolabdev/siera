@@ -17,7 +17,12 @@ export const LandingNavbar: React.FC = () => {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // About 페이지에서는 메인 페이지로 이동
+    if (location.pathname === '/about') {
+      navigate('/');
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // 섹션으로 스크롤하는 함수

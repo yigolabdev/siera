@@ -223,63 +223,63 @@ const Home = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
         
-        {/* 날씨 정보 - 반응형 위치 조정 */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 max-w-[calc(100%-2rem)] sm:max-w-none z-10">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-4 w-full sm:min-w-[280px]">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 pb-2 sm:pb-3 border-b border-slate-200">
-              <div className={`p-1.5 sm:p-2 ${weatherInfo.bg} rounded-lg sm:rounded-xl flex-shrink-0`}>
-                <WeatherIcon className={`w-4 h-4 sm:w-6 sm:h-6 ${weatherInfo.color}`} />
+        {/* 날씨 정보 - 태블릿 이상에서만 표시 */}
+        <div className="hidden md:block absolute top-6 right-6 z-10">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 min-w-[280px]">
+            <div className="flex items-center gap-3 mb-3 pb-3 border-b border-slate-200">
+              <div className={`p-2 ${weatherInfo.bg} rounded-xl flex-shrink-0`}>
+                <WeatherIcon className={`w-6 h-6 ${weatherInfo.color}`} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-slate-600 font-medium">산행 당일 날씨</p>
-                <p className="text-sm sm:text-lg font-bold text-slate-900">{weatherInfo.text}</p>
+                <p className="text-xs text-slate-600 font-medium">산행 당일 날씨</p>
+                <p className="text-lg font-bold text-slate-900">{weatherInfo.text}</p>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="p-1 sm:p-1.5 bg-orange-50 rounded-md sm:rounded-lg flex-shrink-0">
-                  <Thermometer className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-orange-50 rounded-lg flex-shrink-0">
+                  <Thermometer className="w-4 h-4 text-orange-500" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-slate-500">기온</p>
-                  <p className="text-xs sm:text-sm font-bold text-slate-900">{weatherData.temperature}°C</p>
+                  <p className="text-xs text-slate-500">기온</p>
+                  <p className="text-sm font-bold text-slate-900">{weatherData.temperature}°C</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="p-1 sm:p-1.5 bg-blue-50 rounded-md sm:rounded-lg flex-shrink-0">
-                  <Wind className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-blue-50 rounded-lg flex-shrink-0">
+                  <Wind className="w-4 h-4 text-blue-500" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-slate-500">풍속</p>
-                  <p className="text-xs sm:text-sm font-bold text-slate-900">{weatherData.windSpeed}m/s</p>
+                  <p className="text-xs text-slate-500">풍속</p>
+                  <p className="text-sm font-bold text-slate-900">{weatherData.windSpeed}m/s</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="p-1 sm:p-1.5 bg-cyan-50 rounded-md sm:rounded-lg flex-shrink-0">
-                  <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-500" />
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-cyan-50 rounded-lg flex-shrink-0">
+                  <Droplets className="w-4 h-4 text-cyan-500" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-slate-500">습도</p>
-                  <p className="text-xs sm:text-sm font-bold text-slate-900">{weatherData.humidity}%</p>
+                  <p className="text-xs text-slate-500">습도</p>
+                  <p className="text-sm font-bold text-slate-900">{weatherData.humidity}%</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="p-1 sm:p-1.5 bg-indigo-50 rounded-md sm:rounded-lg flex-shrink-0">
-                  <CloudRain className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-500" />
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-50 rounded-lg flex-shrink-0">
+                  <CloudRain className="w-4 h-4 text-indigo-500" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs text-slate-500">강수확률</p>
-                  <p className="text-xs sm:text-sm font-bold text-slate-900">{weatherData.precipitation}%</p>
+                  <p className="text-xs text-slate-500">강수확률</p>
+                  <p className="text-sm font-bold text-slate-900">{weatherData.precipitation}%</p>
                 </div>
               </div>
             </div>
             
             {/* 체감온도 및 자외선 */}
-            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-200 flex items-center justify-between text-[10px] sm:text-xs">
+            <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
               <span className="text-slate-600">
                 체감온도 <span className="font-semibold text-slate-900">{weatherData.feelsLike}°C</span>
               </span>
@@ -288,7 +288,7 @@ const Home = () => {
               </Badge>
             </div>
             
-            <p className="text-[9px] sm:text-xs text-slate-500 mt-1.5 sm:mt-2 text-center">
+            <p className="text-xs text-slate-500 mt-2 text-center">
               ⚠️ 산행 당일 날씨가 변경될 수 있습니다
             </p>
           </div>

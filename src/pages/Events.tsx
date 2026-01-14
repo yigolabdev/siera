@@ -321,8 +321,8 @@ const Events = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
           
-          {/* 날씨 정보 - 우측 상단 */}
-          <div className="absolute top-6 right-6">
+          {/* 날씨 정보 - 태블릿 이상에서만 표시 */}
+          <div className="hidden md:block absolute top-6 right-6">
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 min-w-[280px]">
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-slate-200">
                 <div className={`p-2 ${weatherInfo.bg} rounded-xl`}>

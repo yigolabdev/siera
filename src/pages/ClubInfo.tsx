@@ -18,7 +18,7 @@ type TabType = 'rules' | 'history' | 'organization' | 'membership';
 
 const ClubInfo = () => {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
-  const { rulesContent } = useRules();
+  const { rulesData } = useRules();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -73,22 +73,53 @@ const ClubInfo = () => {
         <div className="space-y-6">
           {/* 회칙 내용 표시 */}
           <Card>
-            <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 bg-slate-100 rounded-xl flex-shrink-0">
-                <BookOpen className="w-6 h-6 text-slate-700" />
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-slate-100 rounded-xl flex-shrink-0">
+                  <BookOpen className="w-6 h-6 text-slate-700" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">시애라 산악회 회칙</h2>
+                  <p className="text-slate-600 mt-1">클럽 운영의 기본 규정</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">시애라 산악회 회칙</h2>
-                <p className="text-slate-600 mt-1">클럽 운영의 기본 규정</p>
+              <div className="flex flex-col items-end gap-1">
+                <Badge variant="primary">버전 {rulesData.version}</Badge>
+                <span className="text-xs text-slate-500">시행일: {rulesData.effectiveDate}</span>
               </div>
             </div>
             
             <div className="prose prose-slate max-w-none">
-              <pre className="whitespace-pre-wrap font-sans text-slate-700 leading-relaxed">
-                {rulesContent}
+              <pre className="whitespace-pre-wrap font-sans text-slate-700 leading-relaxed text-sm bg-slate-50 p-6 rounded-lg border border-slate-200">
+{rulesData.content}
               </pre>
             </div>
           </Card>
+
+          {/* 개정 이력 */}
+          {rulesData.amendments.length > 1 && (
+            <Card>
+              <div className="flex items-center gap-3 mb-6">
+                <Calendar className="w-6 h-6 text-slate-700" />
+                <h3 className="text-xl font-bold text-slate-900">개정 이력</h3>
+              </div>
+
+              <div className="space-y-3">
+                {[...rulesData.amendments].reverse().map((amendment, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-slate-50 border border-slate-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge variant="default">버전 {amendment.version}</Badge>
+                      <span className="text-sm text-slate-600">{amendment.date}</span>
+                    </div>
+                    <p className="text-slate-700 text-sm">{amendment.description}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       )}
 

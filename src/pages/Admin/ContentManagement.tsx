@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar, FileText, ScrollText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar, FileText, ScrollText, History } from 'lucide-react';
 import { usePoems, MonthlyPoem } from '../../contexts/PoemContext';
 import { useRules } from '../../contexts/RulesContext';
 import Card from '../../components/ui/Card';
@@ -11,7 +11,7 @@ type TabType = 'rules' | 'poem';
 const ContentManagement = () => {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const { poems, currentPoem, addPoem, updatePoem, deletePoem } = usePoems();
-  const { rulesContent, updateRules } = useRules();
+  const { rulesData, updateRules, addAmendment } = useRules();
   
   // 시 관리 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,8 +26,19 @@ const ContentManagement = () => {
     month: '',
   });
 
-  // 회칙 관리 상태 - Local state for editing
-  const [localRulesContent, setLocalRulesContent] = useState(rulesContent);
+  // 회칙 관리 상태
+  const [localRulesContent, setLocalRulesContent] = useState(rulesData.content);
+  const [isAmendmentModalOpen, setIsAmendmentModalOpen] = useState(false);
+  const [amendmentForm, setAmendmentForm] = useState({
+    version: '',
+    date: '',
+    description: ''
+  });
+
+  // rulesData 변경 시 localRulesContent 동기화
+  useEffect(() => {
+    setLocalRulesContent(rulesData.content);
+  }, [rulesData.content]);
 
   // 시 관리 함수들
   const handleOpenPoemModal = (poem?: MonthlyPoem) => {
@@ -94,10 +105,31 @@ const ContentManagement = () => {
 
   const sortedPoems = [...poems].sort((a, b) => b.month.localeCompare(a.month));
 
-  // 회칙 저장 핸들러
+  // 회칙 저장 핸들러 (개정판 생성)
   const handleSaveRules = () => {
-    updateRules(localRulesContent);
+    setIsAmendmentModalOpen(true);
+  };
+
+  // 개정판 저장
+  const handleSaveAmendment = () => {
+    if (!amendmentForm.version || !amendmentForm.date || !amendmentForm.description) {
+      alert('모든 필드를 입력해주세요.');
+      return;
+    }
+
+    // 회칙 업데이트
+    updateRules(localRulesContent, amendmentForm.version, amendmentForm.date);
+    
+    // 개정 이력 추가
+    addAmendment({
+      version: amendmentForm.version,
+      date: amendmentForm.date,
+      description: amendmentForm.description
+    });
+
     alert('회칙이 저장되었습니다.');
+    setIsAmendmentModalOpen(false);
+    setAmendmentForm({ version: '', date: '', description: '' });
   };
 
   return (
@@ -144,39 +176,76 @@ const ContentManagement = () => {
 
       {/* 회칙 관리 탭 */}
       {activeTab === 'rules' && (
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">클럽 회칙</h2>
-            <button
-              onClick={handleSaveRules}
-              className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors flex items-center gap-2"
-            >
-              <Save className="w-5 h-5" />
-              저장
-            </button>
-          </div>
+        <div className="space-y-6">
+          {/* 현재 버전 정보 */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">클럽 회칙</h2>
+                <div className="flex items-center gap-3 mt-2">
+                  <Badge variant="primary">버전 {rulesData.version}</Badge>
+                  <span className="text-sm text-slate-600">시행일: {rulesData.effectiveDate}</span>
+                </div>
+              </div>
+              <button
+                onClick={handleSaveRules}
+                className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors flex items-center gap-2"
+              >
+                <Save className="w-5 h-5" />
+                개정판 저장
+              </button>
+            </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                회칙 내용
-              </label>
-              <textarea
-                value={localRulesContent}
-                onChange={(e) => setLocalRulesContent(e.target.value)}
-                rows={20}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-sans"
-                placeholder="클럽 회칙을 입력하세요..."
-              />
+            <div className="space-y-4 mt-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  회칙 내용
+                </label>
+                <textarea
+                  value={localRulesContent}
+                  onChange={(e) => setLocalRulesContent(e.target.value)}
+                  rows={25}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-sans text-sm"
+                  placeholder="클럽 회칙을 입력하세요..."
+                />
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>💡 안내:</strong> 작성한 회칙은 '시애라 안내' 페이지의 회칙 탭에 표시됩니다. 
+                  개정 시에는 버전 정보와 개정 사유를 함께 입력해야 합니다.
+                </p>
+              </div>
             </div>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-900">
-                <strong>💡 안내:</strong> 작성한 회칙은 '시애라 안내' 페이지의 클럽 규정 섹션에 표시됩니다.
-              </p>
+          </Card>
+
+          {/* 개정 이력 */}
+          <Card>
+            <div className="flex items-center gap-3 mb-6">
+              <History className="w-6 h-6 text-slate-700" />
+              <h3 className="text-xl font-bold text-slate-900">개정 이력</h3>
             </div>
-          </div>
-        </Card>
+
+            <div className="space-y-3">
+              {[...rulesData.amendments].reverse().map((amendment, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-slate-50 border border-slate-200 rounded-lg"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <Badge variant="default">버전 {amendment.version}</Badge>
+                        <span className="text-sm text-slate-600">{amendment.date}</span>
+                      </div>
+                      <p className="text-slate-700">{amendment.description}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* 이달의 시 등록 탭 */}
@@ -425,6 +494,85 @@ const ContentManagement = () => {
                 className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition-colors"
               >
                 닫기
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 개정판 저장 모달 */}
+      {isAmendmentModalOpen && (
+        <Modal onClose={() => setIsAmendmentModalOpen(false)} maxWidth="max-w-2xl">
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">회칙 개정판 저장</h2>
+            
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    버전 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={amendmentForm.version}
+                    onChange={(e) => setAmendmentForm({ ...amendmentForm, version: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="예: 2026.01.15"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    * YYYY.MM.DD 형식 권장
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    시행일 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={amendmentForm.date}
+                    onChange={(e) => setAmendmentForm({ ...amendmentForm, date: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="예: 2026년 1월 15일"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  개정 사유 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={amendmentForm.description}
+                  onChange={(e) => setAmendmentForm({ ...amendmentForm, description: e.target.value })}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  placeholder="예: 회원 자격 요건 변경 (제4조 개정)"
+                />
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm text-amber-900">
+                  <strong>⚠️ 주의:</strong> 개정판 저장 후에는 이전 버전으로 되돌릴 수 없습니다. 
+                  반드시 변경 내용을 확인한 후 저장하세요.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveAmendment}
+                className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Save className="w-5 h-5" />
+                개정판 저장
+              </button>
+              <button
+                onClick={() => setIsAmendmentModalOpen(false)}
+                className="flex-1 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition-colors flex items-center justify-center gap-2"
+              >
+                <X className="w-5 h-5" />
+                취소
               </button>
             </div>
           </div>

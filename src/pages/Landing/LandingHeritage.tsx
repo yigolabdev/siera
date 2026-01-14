@@ -101,41 +101,44 @@ export const LandingHeritage: React.FC = () => {
           <div className="relative group">
             {/* Slider Container */}
             <div className="relative h-64 md:h-80 overflow-hidden rounded-2xl shadow-2xl">
-              {slides.map((slide, index) => (
-                <div
-                  key={index}
-                  className={`absolute inset-0 transition-opacity duration-1000 ${
-                    index === currentSlide ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  <img
-                    src={slide.url}
-                    alt={slide.alt}
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Dark overlay for better contrast */}
-                  <div className="absolute inset-0 bg-black/20"></div>
-                </div>
-              ))}
+              <div 
+                className="flex transition-transform duration-700 ease-in-out h-full"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {slides.map((slide, index) => (
+                  <div
+                    key={index}
+                    className="min-w-full h-full relative flex-shrink-0"
+                  >
+                    <img
+                      src={slide.url}
+                      alt={slide.alt}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Dark overlay for better contrast */}
+                    <div className="absolute inset-0 bg-black/20"></div>
+                  </div>
+                ))}
+              </div>
 
               {/* Navigation Arrows */}
               <button
                 onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
                 aria-label="이전 슬라이드"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
               <button
                 onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
                 aria-label="다음 슬라이드"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
 
               {/* Dots Indicator */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                 {slides.map((_, index) => (
                   <button
                     key={index}

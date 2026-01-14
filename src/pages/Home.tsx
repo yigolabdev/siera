@@ -112,34 +112,6 @@ const Home = () => {
     isPinned: notice.isPinned,
   }));
   
-  // 통계 데이터 (실시간 계산)
-  const stats = [
-    { 
-      label: '총 회원', 
-      value: `${calculateStats.getTotalMembers(members)}명`, 
-      icon: Users, 
-      color: 'text-blue-600' 
-    },
-    { 
-      label: mainEvent ? `D-${mainEvent.daysLeft}` : '산행 대기', 
-      value: '다음 산행', 
-      icon: Calendar, 
-      color: 'text-green-600' 
-    },
-    { 
-      label: '평균 참여율', 
-      value: `${calculateStats.getAverageAttendanceRate(members)}%`, 
-      icon: TrendingUp, 
-      color: 'text-purple-600' 
-    },
-    { 
-      label: '사진 갤러리', 
-      value: '234장', // TODO: Gallery Context에서 가져오기
-      icon: Image, 
-      color: 'text-orange-600' 
-    },
-  ];
-  
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
       {/* 산행 미정 상태일 때 다른 UI 표시 */}
@@ -422,22 +394,6 @@ const Home = () => {
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-8 md:mb-12">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="text-center hover:shadow-lg transition-all p-3 sm:p-4">
-              <div className="flex items-center justify-center mb-1 sm:mb-2">
-                <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.color}`} />
-              </div>
-              <p className="text-slate-600 text-xs sm:text-sm mb-1">{stat.label}</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{stat.value}</p>
-            </Card>
-          );
-        })}
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8 md:mb-12">

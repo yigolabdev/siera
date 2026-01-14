@@ -335,17 +335,8 @@ const Gallery = () => {
       {/* Filter */}
       <div className="mb-8 space-y-4">
         <div className="w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm text-slate-600">월별 보기</h3>
-            <button 
-              onClick={() => setShowUploadModal(true)} 
-              className="btn-primary flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              사진 업로드
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
+          <h3 className="text-sm text-slate-600 mb-3">월별 보기</h3>
+          <div className="flex flex-wrap items-center gap-2">
             {months.map((month) => {
               const photoCount = getPhotoCountByMonth(month.id);
               return (
@@ -371,6 +362,13 @@ const Gallery = () => {
                 </button>
               );
             })}
+            <button 
+              onClick={() => setShowUploadModal(true)} 
+              className="btn-primary flex items-center gap-2 ml-auto"
+            >
+              <Upload className="h-4 w-4" />
+              사진 업로드
+            </button>
           </div>
         </div>
       </div>

@@ -223,7 +223,20 @@ const Home = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
         
-        {/* 날씨 정보 - 태블릿 이상에서만 표시 */}
+        {/* 날씨 정보 - 모바일: 간단한 한 줄, 태블릿+: 상세 박스 */}
+        {/* 모바일 버전 - 하단 중앙에 한 줄로 표시 */}
+        <div className="md:hidden absolute bottom-20 left-0 right-0 flex justify-center px-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg">
+            <WeatherIcon className={`w-4 h-4 ${weatherInfo.color}`} />
+            <span className="text-xs font-semibold text-slate-900">{weatherInfo.text}</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-xs font-medium text-slate-700">{weatherData.temperature}°C</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-xs font-medium text-slate-700">💧 {weatherData.precipitation}%</span>
+          </div>
+        </div>
+        
+        {/* 태블릿+ 버전 - 우측 상단에 상세 정보 */}
         <div className="hidden md:block absolute top-6 right-6 z-10">
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-4 min-w-[280px]">
             <div className="flex items-center gap-3 mb-3 pb-3 border-b border-slate-200">

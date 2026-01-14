@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FadeIn } from '../../components/ui/FadeIn';
-import { ChevronDown, LogIn, AlertCircle, X } from 'lucide-react';
+import { ChevronDown, LogIn, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Modal from '../../components/ui/Modal';
 
@@ -240,14 +240,10 @@ export const LandingHero: React.FC = () => {
       {showMobileLoginModal && (
         <Modal onClose={() => setShowMobileLoginModal(false)} maxWidth="max-w-md">
           <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
+            {/* Title - 중앙 정렬, X 버튼 제거 (Modal 컴포넌트 자체 제공) */}
+            <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-slate-900">회원 로그인</h2>
-              <button
-                onClick={() => setShowMobileLoginModal(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              <p className="text-slate-600 text-sm mt-1">시애라에 오신 것을 환영합니다</p>
             </div>
 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -281,7 +277,7 @@ export const LandingHero: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2">
                 <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -292,19 +288,40 @@ export const LandingHero: React.FC = () => {
                   />
                   <span className="ml-2 text-sm font-medium text-slate-700">로그인 정보 저장</span>
                 </label>
-                <a href="#" className="text-sm text-slate-600 hover:text-slate-900 font-medium">
+                <button
+                  type="button"
+                  onClick={() => alert('비밀번호 찾기 기능은 준비 중입니다.')}
+                  className="text-sm text-slate-600 hover:text-slate-900 font-medium"
+                >
                   비밀번호 찾기
-                </a>
+                </button>
               </div>
               
               <button 
                 type="submit" 
-                className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                className="w-full bg-slate-900 text-white py-3.5 rounded-lg font-bold text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 mt-6"
               >
                 <LogIn className="w-5 h-5" />
                 로그인
               </button>
             </form>
+
+            {/* 추가 옵션 */}
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              <p className="text-center text-sm text-slate-600 mb-3">
+                아직 회원이 아니신가요?
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileLoginModal(false);
+                  navigate('/register');
+                }}
+                className="w-full text-slate-700 border-2 border-slate-300 py-2.5 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-all"
+              >
+                회원가입
+              </button>
+            </div>
           </div>
         </Modal>
       )}

@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar, FileText, ScrollText, History } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar, FileText, ScrollText, History, Bell, Pin, Edit2 } from 'lucide-react';
 import { usePoems, MonthlyPoem } from '../../contexts/PoemContext';
 import { useRules } from '../../contexts/RulesContext';
+import { useNotices, Notice } from '../../contexts/NoticeContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 
-type TabType = 'rules' | 'poem';
+type TabType = 'notice' | 'rules' | 'poem';
 
 const ContentManagement = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('rules');
+  const [activeTab, setActiveTab] = useState<TabType>('notice');
   const { poems, currentPoem, addPoem, updatePoem, deletePoem } = usePoems();
   const { rulesData, updateRules, addAmendment } = useRules();
+  const { notices, addNotice, updateNotice, deleteNotice, togglePin } = useNotices();
   
   // 시 관리 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +35,15 @@ const ContentManagement = () => {
     version: '',
     date: '',
     description: ''
+  });
+
+  // 공지사항 관리 상태
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [noticeForm, setNoticeForm] = useState({
+    title: '',
+    content: '',
+    isPinned: false,
   });
 
   // rulesData 변경 시 localRulesContent 동기화
@@ -105,6 +116,54 @@ const ContentManagement = () => {
 
   const sortedPoems = [...poems].sort((a, b) => b.month.localeCompare(a.month));
 
+  // 공지사항 관리 함수들
+  const openNoticeModal = (notice?: Notice) => {
+    if (notice) {
+      setEditingNotice(notice);
+      setNoticeForm({
+        title: notice.title,
+        content: notice.content,
+        isPinned: notice.isPinned,
+      });
+    } else {
+      setEditingNotice(null);
+      setNoticeForm({
+        title: '',
+        content: '',
+        isPinned: false,
+      });
+    }
+    setShowNoticeModal(true);
+  };
+
+  const handleSaveNotice = () => {
+    if (!noticeForm.title.trim() || !noticeForm.content.trim()) {
+      alert('제목과 내용을 입력해주세요.');
+      return;
+    }
+    
+    if (editingNotice) {
+      updateNotice(editingNotice.id, noticeForm);
+      alert('공지사항이 수정되었습니다.');
+    } else {
+      addNotice(noticeForm);
+      alert('공지사항이 등록되었습니다.');
+    }
+    
+    setShowNoticeModal(false);
+    setEditingNotice(null);
+    setNoticeForm({ title: '', content: '', isPinned: false });
+  };
+
+  const handleDeleteNotice = (noticeId: number) => {
+    if (!confirm('이 공지사항을 삭제하시겠습니까?')) return;
+    deleteNotice(noticeId);
+    alert('공지사항이 삭제되었습니다.');
+  };
+
+  const pinnedNotices = notices.filter(n => n.isPinned);
+  const regularNotices = notices.filter(n => !n.isPinned);
+
   // 회칙 저장 핸들러 (개정판 생성)
   const handleSaveRules = () => {
     setIsAmendmentModalOpen(true);
@@ -138,12 +197,26 @@ const ContentManagement = () => {
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-slate-900 mb-3">게시물 관리</h1>
         <p className="text-xl text-slate-600">
-          회칙과 이달의 시를 관리합니다.
+          공지사항, 회칙, 이달의 시를 관리합니다.
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-8 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('notice')}
+          className={`px-6 py-3 font-bold text-lg transition-all relative ${
+            activeTab === 'notice'
+              ? 'text-primary-600'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Bell className="w-5 h-5 inline-block mr-2" />
+          공지사항 관리
+          {activeTab === 'notice' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary-600 rounded-t"></div>
+          )}
+        </button>
         <button
           onClick={() => setActiveTab('rules')}
           className={`px-6 py-3 font-bold text-lg transition-all relative ${
@@ -173,6 +246,129 @@ const ContentManagement = () => {
           )}
         </button>
       </div>
+
+      {/* 공지사항 관리 탭 */}
+      {activeTab === 'notice' && (
+        <div className="space-y-6">
+          {/* Header with Action Button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">공지사항 관리</h2>
+              <p className="text-slate-600 mt-1">회원들에게 공지할 내용을 관리합니다.</p>
+            </div>
+            <button
+              onClick={() => openNoticeModal()}
+              className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              새 공지사항 작성
+            </button>
+          </div>
+
+          {/* 고정된 공지 */}
+          {pinnedNotices.length > 0 && (
+            <Card>
+              <div className="flex items-center gap-3 mb-6">
+                <Pin className="w-6 h-6 text-red-600" />
+                <h3 className="text-xl font-bold text-slate-900">중요 공지 (고정됨)</h3>
+              </div>
+              <div className="space-y-4">
+                {pinnedNotices.map((notice) => (
+                  <div
+                    key={notice.id}
+                    className="p-5 bg-red-50 border-2 border-red-200 rounded-xl"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Badge variant="danger">필독</Badge>
+                          <h4 className="text-xl font-bold text-slate-900">{notice.title}</h4>
+                        </div>
+                        <p className="text-slate-700">{notice.content}</p>
+                      </div>
+                      <div className="flex items-center gap-1 ml-4">
+                        <span className="text-sm text-slate-500 mr-2">{notice.date}</span>
+                        <button
+                          onClick={() => togglePin(notice.id)}
+                          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                          title="고정 해제"
+                        >
+                          <Pin className="w-5 h-5 fill-current" />
+                        </button>
+                        <button
+                          onClick={() => openNoticeModal(notice)}
+                          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="수정"
+                        >
+                          <Edit2 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteNotice(notice.id)}
+                          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                          title="삭제"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* 일반 공지 */}
+          <Card>
+            <h3 className="text-xl font-bold text-slate-900 mb-6">일반 공지</h3>
+            {regularNotices.length > 0 ? (
+              <div className="space-y-4">
+                {regularNotices.map((notice) => (
+                  <div
+                    key={notice.id}
+                    className="p-5 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-slate-900 mb-2">{notice.title}</h4>
+                        <p className="text-slate-700 mb-3">{notice.content}</p>
+                        <span className="text-sm text-slate-500">{notice.date}</span>
+                      </div>
+                      <div className="flex items-center gap-1 ml-4">
+                        <button
+                          onClick={() => togglePin(notice.id)}
+                          className="p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 rounded-lg transition-colors"
+                          title="고정"
+                        >
+                          <Pin className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => openNoticeModal(notice)}
+                          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="수정"
+                        >
+                          <Edit2 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteNotice(notice.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="삭제"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-500">
+                <Bell className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                <p>등록된 일반 공지가 없습니다.</p>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* 회칙 관리 탭 */}
       {activeTab === 'rules' && (
@@ -573,6 +769,89 @@ const ContentManagement = () => {
               >
                 <X className="w-5 h-5" />
                 취소
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 공지사항 작성/수정 모달 */}
+      {showNoticeModal && (
+        <Modal
+          onClose={() => {
+            setShowNoticeModal(false);
+            setEditingNotice(null);
+            setNoticeForm({ title: '', content: '', isPinned: false });
+          }}
+          maxWidth="max-w-3xl"
+        >
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">
+              {editingNotice ? '공지사항 수정' : '새 공지사항 작성'}
+            </h2>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  제목 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={noticeForm.title}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="공지사항 제목을 입력하세요"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  내용 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={noticeForm.content}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, content: e.target.value })}
+                  rows={8}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  placeholder="공지사항 내용을 입력하세요"
+                />
+              </div>
+              
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="isPinned"
+                  checked={noticeForm.isPinned}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, isPinned: e.target.checked })}
+                  className="w-5 h-5 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="isPinned" className="flex items-center gap-2 cursor-pointer">
+                  <Pin className="w-4 h-4 text-slate-600" />
+                  <span className="text-sm font-semibold text-slate-700">
+                    중요 공지로 상단에 고정
+                  </span>
+                </label>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowNoticeModal(false);
+                  setEditingNotice(null);
+                  setNoticeForm({ title: '', content: '', isPinned: false });
+                }}
+                className="flex-1 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition-colors flex items-center justify-center gap-2"
+              >
+                <X className="w-5 h-5" />
+                취소
+              </button>
+              <button
+                onClick={handleSaveNotice}
+                className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Save className="w-5 h-5" />
+                {editingNotice ? '수정' : '등록'}
               </button>
             </div>
           </div>

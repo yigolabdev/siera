@@ -422,7 +422,7 @@ const Home = () => {
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4">
               <Link 
-                to="/home/events" 
+                to="/home/events?apply=true" 
                 className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold transition-all shadow-lg text-center text-sm sm:text-base ${
                   applicationClosed || (isDevMode && applicationStatus === 'full') || mainEvent.participants >= mainEvent.maxParticipants
                     ? 'bg-slate-400 text-slate-600 cursor-not-allowed' 

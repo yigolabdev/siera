@@ -1,6 +1,6 @@
 import { Calendar, MapPin, Users, TrendingUp, CheckCircle, XCircle, Clock, Navigation, UserCheck, Phone, Mail, CreditCard, Copy, X, Shield, Mountain, Settings, CalendarX, Bell, AlertTriangle, Check, Backpack, Cloud, Thermometer, Wind, Droplets, CloudRain, CloudSnow, Sun } from 'lucide-react';
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevMode } from '../contexts/DevModeContext';
 import { useEvents } from '../contexts/EventContext';
@@ -15,6 +15,7 @@ const Events = () => {
   const { currentEvent, getParticipantsByEventId } = useEvents();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
+  const [searchParams] = useSearchParams();
   
   // 날씨 데이터 사용
   const weatherData = mockWeatherData;
@@ -169,6 +170,14 @@ const Events = () => {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
+  
+  // URL 파라미터로 신청 모달 자동 열기
+  useEffect(() => {
+    const apply = searchParams.get('apply');
+    if (apply === 'true' && !applicationClosed && event && event.currentParticipants < event.maxParticipants) {
+      setShowCourseModal(true);
+    }
+  }, [searchParams, applicationClosed, event]);
   
   // 신청 마감일 정보 계산 (개발 모드 상태 반영)
   const applicationDeadline = event ? formatDeadline(event.date) : '';

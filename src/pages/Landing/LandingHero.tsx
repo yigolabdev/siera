@@ -86,9 +86,8 @@ export const LandingHero: React.FC = () => {
 
             <FadeIn delay={600}>
               <p className="text-gray-200 text-sm md:text-lg mb-10 max-w-2xl leading-relaxed font-light mx-auto">
-                건강한 루틴과 검증된 네트워크.<br className="md:hidden" /> 
-                전문직·CEO·임원들이 선택한 품격 있는 교류의 장,<br className="md:hidden" /> 
-                시애라 산악회입니다.
+                건강한 루틴과 검증된 네트워크. 전문직·CEO·임원들이 선택한 품격 있는 교류의 장,<br />
+                시애라 클럽입니다.
               </p>
             </FadeIn>
 

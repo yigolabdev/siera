@@ -72,7 +72,7 @@ const Board = () => {
     {
       id: 2,
       category: 'info',
-      title: '겨울 산행 시 주의사항 공유합니다',
+      title: '겨울 산행 시 주의사항 클럽합니다',
       author: '이등산',
       date: '2026-01-15',
       views: 234,
@@ -297,7 +297,7 @@ const Board = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                 }`}
               >
-                정보공유
+                정보클럽
               </button>
               <button
                 onClick={() => setActiveTab('question')}

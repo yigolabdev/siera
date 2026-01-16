@@ -9,7 +9,7 @@ const Community = () => {
   const categories = [
     { id: 'all', name: '전체' },
     { id: 'general', name: '자유게시판' },
-    { id: 'info', name: '정보공유' },
+    { id: 'info', name: '정보클럽' },
     { id: 'question', name: '질문' },
   ];
   
@@ -28,7 +28,7 @@ const Community = () => {
     {
       id: 2,
       category: 'info',
-      title: '겨울 산행 시 주의사항 공유합니다',
+      title: '겨울 산행 시 주의사항 클럽합니다',
       author: '이영희',
       date: '2024-01-15',
       views: 234,

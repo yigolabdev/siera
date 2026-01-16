@@ -26,7 +26,7 @@ export const LandingTrust: React.FC = () => {
           <FadeIn delay={200} className="bg-white p-8 shadow-sm hover:shadow-md transition-shadow duration-300 border-t-2 border-slate-900">
             <h3 className="text-lg font-bold mb-3">02. 엄격한 가드레일</h3>
             <p className="text-slate-600 text-sm leading-relaxed">
-              영업, 투자 권유, 강매 적발 시 즉시 제명합니다. 회원의 개인정보는 운영 목적 외 절대 사용하지 않습니다.
+              윤리규범에 어긋나는 행동에 대해서는 징계 또는 제명합니다. 회원의 개인정보는 운영 목적으로만 사용합니다.
             </p>
           </FadeIn>
 
@@ -34,7 +34,7 @@ export const LandingTrust: React.FC = () => {
           <FadeIn delay={300} className="bg-white p-8 shadow-sm hover:shadow-md transition-shadow duration-300 border-t-2 border-slate-900">
             <h3 className="text-lg font-bold mb-3">03. 예측 가능한 비용</h3>
             <p className="text-slate-600 text-sm leading-relaxed">
-              2026년 기준 연회비 25만원, 월 참가비 6만원. 모든 비용은 버스 대절, 답사, 안전 운영에만 사용됩니다.
+              연회비 25만원, 월 참가비 6만원 (2026년 기준). 모든 지출은 본회의 목적에 부합되는 범위 내에서만 사용합니다.
             </p>
           </FadeIn>
         </div>

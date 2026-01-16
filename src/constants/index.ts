@@ -84,7 +84,7 @@ export const BOARD_CATEGORIES = {
 export const BOARD_CATEGORY_NAMES = {
   [BOARD_CATEGORIES.NOTICE]: '공지사항',
   [BOARD_CATEGORIES.GENERAL]: '자유게시판',
-  [BOARD_CATEGORIES.INFO]: '정보공유',
+  [BOARD_CATEGORIES.INFO]: '정보클럽',
   [BOARD_CATEGORIES.QUESTION]: '질문',
   [BOARD_CATEGORIES.POEM]: '시(詩)',
 } as const;

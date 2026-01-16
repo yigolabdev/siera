@@ -19,7 +19,7 @@ export const mockPosts: Post[] = [
     userId: '2',
     author: '이영희',
     category: 'info',
-    title: '겨울 산행 시 주의사항 공유합니다',
+    title: '겨울 산행 시 주의사항 클럽합니다',
     content: '겨울철 산행 시 꼭 필요한 준비물과 주의사항입니다.',
     createdAt: '2026-01-15',
     updatedAt: '2026-01-15',

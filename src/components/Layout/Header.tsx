@@ -94,7 +94,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/home" className="flex items-center">
             <h1 className="flex items-baseline gap-2 text-slate-900">
-              <span className="text-2xl md:text-3xl font-bold tracking-tight">시애라</span>
+              <span className="text-2xl md:text-3xl font-bold tracking-tight">시애라 클럽</span>
               <span className="text-lg md:text-xl font-medium tracking-wider">詩愛羅</span>
             </h1>
           </Link>

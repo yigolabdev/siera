@@ -6,9 +6,10 @@ export interface User {
   name: string;
   email: string;
   phoneNumber?: string;
-  occupation?: string;
-  position?: string;
+  gender?: string;
+  birthYear?: string;
   company?: string;
+  position?: string;
   role: UserRole;
   joinDate?: string;
   isApproved: boolean;
@@ -21,8 +22,10 @@ export interface RegisterData {
   email: string;
   password: string;
   phoneNumber: string;
-  occupation: string;
+  gender: string;
+  birthYear: string;
   company: string;
+  position: string;
 }
 
 export interface PendingUser {
@@ -30,8 +33,10 @@ export interface PendingUser {
   name: string;
   email: string;
   phoneNumber: string;
-  occupation: string;
+  gender: string;
+  birthYear: string;
   company: string;
+  position: string;
   referredBy?: string;
   hikingLevel: string;
   applicationMessage?: string;
@@ -94,10 +99,9 @@ export interface HikingEvent {
 export interface TeamMember {
   id: string;
   name: string;
-  occupation: string;
   company: string;
+  position: string;
   phone?: string;
-  position?: string;
 }
 
 export interface Team {
@@ -108,7 +112,6 @@ export interface Team {
   name: string;
   leaderId: string;
   leaderName: string;
-  leaderOccupation: string;
   leaderCompany?: string;
   leaderPosition?: string;
   leaderPhone?: string;
@@ -128,7 +131,8 @@ export interface EventParticipation {
 export interface Participant {
   id: string;
   name: string;
-  occupation: string;
+  company: string;
+  position: string;
   phone: string;
   status: ParticipationStatus;
 }
@@ -212,8 +216,8 @@ export interface Executive {
   name: string;
   title: string;
   category: 'chairman' | 'committee';
-  occupation: string;
   company: string;
+  position: string;
   phone: string;
   email: string;
   profileImage?: string;
@@ -240,8 +244,8 @@ export interface GuestApplication {
   name: string;
   phone: string;
   email: string;
-  occupation: string;
   company: string;
+  position: string;
   reason: string;
   referredBy?: string;
   appliedAt: string;

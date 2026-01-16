@@ -121,7 +121,7 @@ const MemberManagement = () => {
       eventDate: '2026-02-15',
       appliedAt: '2026-01-20 10:30',
       status: 'pending',
-      reason: '등산을 시작한지 1년이 되었고, 시애라 산악회의 체계적인 산행에 참여하고 싶습니다.',
+      reason: '등산을 시작한지 1년이 되었고, 시애라 클럽의 체계적인 산행에 참여하고 싶습니다.',
       referredBy: '김대한',
     },
     {

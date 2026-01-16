@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Mountain, Users, Calendar, Award, Globe, TrendingUp, ArrowLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Mountain, Users, Calendar, Award, Globe, TrendingUp, ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LandingNavbar } from './Landing/LandingNavbar';
 import { LandingFooter } from './Landing/LandingFooter';
@@ -7,6 +7,7 @@ import { FadeIn } from '../components/ui/FadeIn';
 
 const AboutSierra = () => {
   const navigate = useNavigate();
+  const [showOverseasModal, setShowOverseasModal] = useState(false);
 
   // 페이지 로드 시 맨 위로 스크롤
   useEffect(() => {
@@ -79,7 +80,7 @@ const AboutSierra = () => {
                   산행을 통하여 심신을 단련하고 회원 상호간 친목과 협력을 도모합니다.
                 </p>
                 <p className="text-emerald-400 font-semibold text-xl pt-4 border-t border-slate-800">
-                  21년의 전통을 이어온 따뜻한 문화를 공유하는 오프라인 신뢰 네트워크
+                  21년의 전통을 이어온 따뜻한 문화를 클럽하는 오프라인 신뢰 네트워크
                 </p>
               </div>
             </div>
@@ -99,38 +100,58 @@ const AboutSierra = () => {
             </p>
           </FadeIn>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-4 gap-8 items-stretch">
             <FadeIn delay={100}>
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300">
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
                 <Calendar className="w-12 h-12 mb-6 text-emerald-400" />
                 <div className="text-6xl font-bold mb-3">228</div>
                 <div className="text-white text-xl font-medium mb-2">정기산행</div>
-                <div className="text-slate-400 text-sm">(해외 16회)</div>
-                <div className="mt-4 pt-4 border-t border-slate-700 text-sm text-slate-400">
+                <div className="text-slate-400 text-sm">월 1회 국내 정기 산행</div>
+                <div className="mt-auto pt-4 border-t border-slate-700 text-sm text-slate-400">
                   2026년 1월 기준
+                </div>
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={200}>
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
+                <Globe className="w-12 h-12 mb-6 text-emerald-400" />
+                <div className="text-6xl font-bold mb-3">16</div>
+                <div className="text-white text-xl font-medium mb-2">해외산행</div>
+                <div className="text-slate-400 text-sm mb-4">연 1회 해외 산행</div>
+                <div className="mt-auto">
+                  <div className="mb-4 pt-4 border-t border-slate-700 text-sm text-slate-400">
+                    2026년 1월 기준
+                  </div>
+                  <button
+                    onClick={() => setShowOverseasModal(true)}
+                    className="w-full px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg font-medium transition-all duration-300 border border-emerald-500/30 hover:border-emerald-500/50"
+                  >
+                    해외 산행 리스트 보기
+                  </button>
                 </div>
               </div>
             </FadeIn>
 
             <FadeIn delay={300}>
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300">
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
                 <Users className="w-12 h-12 mb-6 text-emerald-400" />
                 <div className="text-6xl font-bold mb-3">99</div>
                 <div className="text-white text-xl font-medium mb-2">정회원</div>
                 <div className="text-slate-400 text-sm">활동 회원</div>
-                <div className="mt-4 pt-4 border-t border-slate-700 text-sm text-slate-400">
+                <div className="mt-auto pt-4 border-t border-slate-700 text-sm text-slate-400">
                   2026년 1월 기준
                 </div>
               </div>
             </FadeIn>
 
-            <FadeIn delay={500}>
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300">
+            <FadeIn delay={400}>
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
                 <Award className="w-12 h-12 mb-6 text-emerald-400" />
                 <div className="text-6xl font-bold mb-3">21</div>
                 <div className="text-white text-xl font-medium mb-2">전통의 역사</div>
                 <div className="text-slate-400 text-sm">변함없는 가치</div>
-                <div className="mt-4 pt-4 border-t border-slate-700 text-sm text-slate-400">
+                <div className="mt-auto pt-4 border-t border-slate-700 text-sm text-slate-400">
                   2005년 ~ 현재
                 </div>
               </div>
@@ -378,6 +399,81 @@ const AboutSierra = () => {
 
       {/* Footer */}
       <LandingFooter />
+
+      {/* 해외 산행 리스트 모달 */}
+      {showOverseasModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            {/* 모달 헤더 */}
+            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <Globe className="w-6 h-6 text-emerald-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white">해외 산행 리스트</h3>
+              </div>
+              <button
+                onClick={() => setShowOverseasModal(false)}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400 hover:text-white" />
+              </button>
+            </div>
+
+            {/* 모달 컨텐츠 */}
+            <div className="p-6">
+              <div className="space-y-3">
+                {[
+                  { year: '2007', location: '중국 황산' },
+                  { year: '2008', location: '일본 고베 롯고산' },
+                  { year: '2009', location: '중국 태산' },
+                  { year: '2010', location: '일본 금강산 (곤고산)' },
+                  { year: '2011', location: '중국 안탕산' },
+                  { year: '2012', location: '말레이시아 키나발루' },
+                  { year: '2013', location: '일본 구주산' },
+                  { year: '2014', location: '몽골 장백산' },
+                  { year: '2015', location: '일본 아오모리' },
+                  { year: '2016', location: '대만 르웨탄' },
+                  { year: '2017', location: '호주 그레이트오션로드' },
+                  { year: '2018', location: '홍콩 맥리호스' },
+                  { year: '2019', location: '일본 북알프스' },
+                  { year: '2023', location: '베트남 판시판' },
+                  { year: '2024', location: '대만 초령고도/무얼차후산' },
+                  { year: '2025', location: '일본 홋카이도 대설산' },
+                  { year: '2026', location: '중국 칭다오 노산', scheduled: true },
+                ].map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors border border-slate-700/50"
+                  >
+                    <div className="flex-shrink-0 w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                      <span className="text-emerald-400 font-bold">{item.year}</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white text-lg font-medium">
+                        {item.location}
+                        {item.scheduled && (
+                          <span className="ml-2 text-sm text-emerald-400 font-semibold">(예정)</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="sticky bottom-0 bg-slate-900 border-t border-slate-700 p-6">
+              <button
+                onClick={() => setShowOverseasModal(false)}
+                className="w-full px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

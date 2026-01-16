@@ -254,7 +254,7 @@ const EventPrintView = () => {
           {/* 헤더 - 좌우 배치 */}
           <div className="header">
             <div className="header-left">
-              <h1 className="main-title">시애라 (詩愛羅) 산악회</h1>
+              <h1 className="main-title">시애라 (詩愛羅) 클럽</h1>
               <div className="subtitle">Sierra Hiking Club</div>
             </div>
             <div className="header-right">
@@ -392,7 +392,7 @@ const EventPrintView = () => {
               {/* 푸터 */}
               <div className="poem-footer">
                 <div className="footer-content">
-                  <span className="footer-logo">시애라 (詩愛羅) 산악회</span>
+                  <span className="footer-logo">시애라 (詩愛羅) 클럽</span>
                   <span className="footer-divider">·</span>
                   <span className="footer-date">
                     {new Date(event.date).toLocaleDateString('ko-KR', { 

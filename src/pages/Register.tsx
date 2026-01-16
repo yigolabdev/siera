@@ -12,8 +12,10 @@ const Register = () => {
     password: '',
     passwordConfirm: '',
     phoneNumber: '',
-    occupation: '',
+    gender: '',
+    birthYear: '',
     company: '',
+    position: '',
     referredBy: '',
     hikingLevel: '',
     applicationMessage: '',
@@ -69,12 +71,22 @@ const Register = () => {
       newErrors.phoneNumber = '전화번호를 입력해주세요.';
     }
 
-    if (!formData.occupation.trim()) {
-      newErrors.occupation = '직업을 입력해주세요.';
+    if (!formData.gender) {
+      newErrors.gender = '성별을 선택해주세요.';
+    }
+
+    if (!formData.birthYear.trim()) {
+      newErrors.birthYear = '출생연도를 입력해주세요.';
+    } else if (!/^\d{4}$/.test(formData.birthYear)) {
+      newErrors.birthYear = '올바른 연도를 입력해주세요. (예: 1990)';
     }
 
     if (!formData.company.trim()) {
-      newErrors.company = '회사/기관을 입력해주세요.';
+      newErrors.company = '소속을 입력해주세요.';
+    }
+
+    if (!formData.position.trim()) {
+      newErrors.position = '직책을 입력해주세요.';
     }
 
     if (!formData.hikingLevel) {
@@ -97,14 +109,17 @@ const Register = () => {
       email: formData.email,
       password: formData.password,
       phoneNumber: formData.phoneNumber,
-      occupation: formData.occupation,
+      gender: formData.gender,
+      birthYear: formData.birthYear,
       company: formData.company,
+      position: formData.position,
     });
 
     if (success) {
       alert(
         '회원가입 신청이 완료되었습니다!\n\n' +
-        '관리자 승인 후 이용 가능합니다.\n' +
+        '정기산행에 2회 게스트로 참여하신 후,\n' +
+        '운영위원회 승인을 거쳐 가입이 완료됩니다.\n' +
         '승인 완료 시 이메일로 안내드립니다.'
       );
       navigate('/');
@@ -126,7 +141,7 @@ const Register = () => {
           <div className="text-center">
             <h1 className="text-4xl font-bold text-white mb-2">회원가입 신청</h1>
             <p className="text-lg text-slate-400">
-              시애라 산악회에 오신 것을 환영합니다
+              시애라 클럽에 오신 것을 환영합니다
             </p>
           </div>
         </div>
@@ -136,8 +151,8 @@ const Register = () => {
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="font-semibold mb-1 text-white">가입 승인 안내</p>
-              <p className="text-white">회원가입 신청 후 관리자 승인이 필요합니다. 승인 완료 시 이메일로 안내드립니다.</p>
+              <p className="font-semibold mb-1 text-white">가입 절차 안내</p>
+              <p className="text-white">입회를 희망하는 분은 정기산행에 2회 게스트로 참여하신 후, 운영위원회의 승인을 거쳐서 회원가입이 완료됩니다.</p>
             </div>
           </div>
         </div>
@@ -245,6 +260,47 @@ const Register = () => {
                     <p className="mt-2 text-sm text-red-400">{errors.phoneNumber}</p>
                   )}
                 </div>
+
+                <div>
+                  <label className="block text-white font-semibold mb-2 text-sm">
+                    성별 <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className={`w-full px-5 py-4 rounded-xl border-2 ${
+                      errors.gender ? 'border-red-500' : 'border-slate-700'
+                    } bg-slate-800/50 text-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all cursor-pointer`}
+                  >
+                    <option value="">성별을 선택해주세요</option>
+                    <option value="male">남성</option>
+                    <option value="female">여성</option>
+                  </select>
+                  {errors.gender && (
+                    <p className="mt-2 text-sm text-red-400">{errors.gender}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-white font-semibold mb-2 text-sm">
+                    출생연도 <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="birthYear"
+                    value={formData.birthYear}
+                    onChange={handleChange}
+                    className={`w-full px-5 py-4 rounded-xl border-2 ${
+                      errors.birthYear ? 'border-red-500' : 'border-slate-700'
+                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
+                    placeholder="1990"
+                    maxLength={4}
+                  />
+                  {errors.birthYear && (
+                    <p className="mt-2 text-sm text-red-400">{errors.birthYear}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -256,26 +312,7 @@ const Register = () => {
               <div className="space-y-5">
                 <div>
                   <label className="block text-white font-semibold mb-2 text-sm">
-                    직업 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="occupation"
-                    value={formData.occupation}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.occupation ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="예: 회사 대표이사"
-                  />
-                  {errors.occupation && (
-                    <p className="mt-2 text-sm text-red-400">{errors.occupation}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    회사/기관 <span className="text-red-400">*</span>
+                    소속 <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -291,6 +328,25 @@ const Register = () => {
                     <p className="mt-2 text-sm text-red-400">{errors.company}</p>
                   )}
                 </div>
+
+                <div>
+                  <label className="block text-white font-semibold mb-2 text-sm">
+                    직책 <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="position"
+                    value={formData.position}
+                    onChange={handleChange}
+                    className={`w-full px-5 py-4 rounded-xl border-2 ${
+                      errors.position ? 'border-red-500' : 'border-slate-700'
+                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
+                    placeholder="예: 대표이사, 전무, 부장 등"
+                  />
+                  {errors.position && (
+                    <p className="mt-2 text-sm text-red-400">{errors.position}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -300,28 +356,6 @@ const Register = () => {
                 산행 정보
               </h3>
               <div className="space-y-5">
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    추천인
-                  </label>
-                  <input
-                    type="text"
-                    name="referredBy"
-                    value={formData.referredBy}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.referredBy ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="시애라 회원의 이름을 입력해주세요 (선택)"
-                  />
-                  {errors.referredBy && (
-                    <p className="mt-2 text-sm text-red-400">{errors.referredBy}</p>
-                  )}
-                  <p className="mt-2 text-sm text-slate-400">
-                    시애라 회원의 추천이 있으면 더욱 좋습니다 (선택사항)
-                  </p>
-                </div>
-
                 <div>
                   <label className="block text-white font-semibold mb-2 text-sm">
                     산행능력 <span className="text-red-400">*</span>
@@ -349,6 +383,28 @@ const Register = () => {
 
                 <div>
                   <label className="block text-white font-semibold mb-2 text-sm">
+                    추천인
+                  </label>
+                  <input
+                    type="text"
+                    name="referredBy"
+                    value={formData.referredBy}
+                    onChange={handleChange}
+                    className={`w-full px-5 py-4 rounded-xl border-2 ${
+                      errors.referredBy ? 'border-red-500' : 'border-slate-700'
+                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
+                    placeholder="시애라 회원의 이름을 입력해주세요 (선택)"
+                  />
+                  {errors.referredBy && (
+                    <p className="mt-2 text-sm text-red-400">{errors.referredBy}</p>
+                  )}
+                  <p className="mt-2 text-sm text-slate-400">
+                    시애라 회원의 추천이 있으면 더욱 좋습니다 (선택사항)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-white font-semibold mb-2 text-sm">
                     가입신청 문구
                   </label>
                   <textarea
@@ -357,10 +413,10 @@ const Register = () => {
                     onChange={handleChange}
                     rows={5}
                     className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all resize-none"
-                    placeholder="시애라 산악회에 가입하고 싶은 이유나 자기소개를 자유롭게 작성해주세요."
+                    placeholder="시애라 클럽에 가입하고 싶은 이유나 자기소개를 자유롭게 작성해주세요."
                   />
                   <p className="mt-2 text-sm text-slate-400">
-                    선택사항입니다. 가입 심사에 도움이 됩니다.
+                    선택사항입니다. 입회 심사에 도움이 됩니다.
                   </p>
                 </div>
               </div>

@@ -44,8 +44,8 @@ const ExecutiveManagement = () => {
     // 회장단
     { id: 1, memberId: 1, name: '정호철', position: '회장', phone: '010-5399-4363', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '○○그룹 회장으로 재직 중이며, 시애라 창립 멤버입니다.' },
     { id: 2, memberId: 2, name: '이응정', position: '운영위원장', phone: '010-8876-0605', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '△△건설 대표이사로 건설 업계 30년 경력의 베테랑입니다.' },
-    { id: 3, memberId: 3, name: '신영인', position: '운영감사', phone: '010-6305-3027', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '□□금융 부사장으로 금융 전문가입니다.' },
     { id: 4, memberId: 4, name: '최원호', position: '등산대장', phone: '010-6546-3387', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '◇◇제약 전무이사로 바이오 산업을 선도하고 있습니다.' },
+    { id: 3, memberId: 3, name: '신영인', position: '운영감사', phone: '010-6305-3027', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '□□금융 부사장으로 금융 전문가입니다.' },
     { id: 5, memberId: 5, name: '유희찬', position: '재무감사', phone: '010-9064-7797', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '☆☆병원 원장으로 의료계에서 활동하고 있습니다.' },
     // 운영위원
     { id: 6, memberId: 6, name: '김용훈', position: '부위원장', phone: '010-7510-8500', category: 'committee', startTerm: '2024-01', endTerm: '2026-12', bio: '※※법률사무소 대표변호사로 기업법무 전문가입니다.' },
@@ -446,7 +446,7 @@ const ExecutiveManagement = () => {
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-slate-900 mb-3">운영진 관리</h1>
         <p className="text-xl text-slate-600">
-          시에라클럽의 회장단과 운영위원 정보를 관리합니다.
+          시에라클럽의 운영진 정보를 관리합니다.
         </p>
       </div>
 
@@ -464,7 +464,7 @@ const ExecutiveManagement = () => {
         </div>
       </div>
 
-      {/* 회장단 섹션 */}
+      {/* 운영진 섹션 */}
       <Card className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -472,14 +472,13 @@ const ExecutiveManagement = () => {
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">회장단</h2>
-              <p className="text-sm text-slate-600">{chairmanBoard.length}명</p>
+              <h2 className="text-2xl font-bold text-slate-900">운영진</h2>
+              <p className="text-sm text-slate-600">{executives.length}명</p>
             </div>
           </div>
           <button
             onClick={() => {
               setIsAdding(true);
-              setNewExecutive({ ...newExecutive, category: 'chairman' });
             }}
             className="px-4 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors flex items-center gap-2"
           >
@@ -489,36 +488,7 @@ const ExecutiveManagement = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {chairmanBoard.map(exec => renderExecutiveCard(exec))}
-        </div>
-      </Card>
-
-      {/* 운영위원 섹션 */}
-      <Card className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">운영위원</h2>
-              <p className="text-sm text-slate-600">{committee.length}명</p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setIsAdding(true);
-              setNewExecutive({ ...newExecutive, category: 'committee' });
-            }}
-            className="px-4 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            추가
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {committee.map(exec => renderExecutiveCard(exec))}
+          {executives.map(exec => renderExecutiveCard(exec))}
         </div>
       </Card>
 
@@ -530,24 +500,6 @@ const ExecutiveManagement = () => {
               새 운영진 추가
             </h3>
             <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  구분 <Badge variant="danger">필수</Badge>
-                </label>
-                <select
-                  value={newExecutive.category}
-                  onChange={(e) =>
-                    setNewExecutive({
-                      ...newExecutive,
-                      category: e.target.value as 'chairman' | 'committee',
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="chairman">회장단</option>
-                  <option value="committee">운영위원</option>
-                </select>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   회원 검색 <Badge variant="danger">필수</Badge>

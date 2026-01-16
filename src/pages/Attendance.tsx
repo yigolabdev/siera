@@ -205,7 +205,7 @@ const Attendance = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <TrendingUp className="w-7 h-7 text-slate-600" />
-            회원별 {activeTab === 'rate' ? '참여율' : '참여 횟수'} 순위
+            회원별 참여 현황
           </h2>
           
           {/* Tabs */}
@@ -297,7 +297,7 @@ const Attendance = () => {
       {/* Info Box */}
       <Card className="mt-6 bg-slate-50 border-2 border-slate-200">
         <p className="text-slate-700">
-          <strong className="text-slate-900">참고:</strong> 참여율은 가입 이후 진행된 전체 산행 대비 참석한 산행의 비율입니다.
+          <strong className="text-slate-900">참고:</strong> 참여율은 2023년 2월 이후 (또는 그 이후 가입한 회원은 가입 이후) 진행된 전체 산행 대비 참석한 산행의 비율입니다.
         </p>
       </Card>
     </div>

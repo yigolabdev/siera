@@ -10,19 +10,19 @@ export const LandingHeritage: React.FC = () => {
   const slides = [
     {
       url: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&h=500&fit=crop',
-      alt: '산악회 단체 사진 1',
+      alt: '클럽 단체 사진 1',
     },
     {
       url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=500&fit=crop',
-      alt: '산악회 산행 모습 1',
+      alt: '클럽 산행 모습 1',
     },
     {
       url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop',
-      alt: '산악회 산행 모습 2',
+      alt: '클럽 산행 모습 2',
     },
     {
       url: 'https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&h=500&fit=crop',
-      alt: '산악회 산행 모습 3',
+      alt: '클럽 산행 모습 3',
     },
   ];
   
@@ -47,10 +47,11 @@ export const LandingHeritage: React.FC = () => {
             </h2>
             <div className="w-20 h-1 bg-white mb-8"></div>
             <p className="text-white text-lg leading-relaxed max-w-md">
-              시애라 산악회는 삼성경제연구소(SERI)의 CEO및 리더층 대상 지식 서비스 플랫폼인 SERICEO 에서 시작하여 각 분야의 리더들과 함께 성장해왔습니다.
+              시애라 클럽는 삼성경제연구소(SERI)의 CEO및 리더층 대상 지식 서비스 플랫폼인 SERICEO 에서 시작하여 각 분야의 리더들과 함께 성장해왔습니다.
               <br /><br />
               단순한 동호회가 아닙니다.<br />
-              21년간 수천명의 리더들이 지켜온 신뢰와 존중의 문화를 이제 당신과 나눕니다.
+              21년간 수천명의 리더들이 지켜온 신뢰와 존중의 문화를 이제<br />
+              당신과 나눕니다.
             </p>
           </FadeIn>
         </div>
@@ -115,7 +116,7 @@ export const LandingHeritage: React.FC = () => {
 
             {/* Caption */}
             <p className="text-center text-white/70 text-sm mt-6">
-              시애라 산악회의 소중한 순간들
+              시애라 클럽의 소중한 순간들
             </p>
           </div>
         </FadeIn>

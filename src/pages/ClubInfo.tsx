@@ -79,7 +79,7 @@ const ClubInfo = () => {
                   <BookOpen className="w-6 h-6 text-slate-700" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900">시애라 산악회 회칙</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">시애라 클럽 회칙</h2>
                   <p className="text-slate-600 mt-1">클럽 운영의 기본 규정</p>
                 </div>
               </div>
@@ -126,7 +126,7 @@ const ClubInfo = () => {
       {activeTab === 'history' && (
         <div className="space-y-6">
           <Card>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">시애라 산악회 연혁</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">시애라 클럽 연혁</h2>
             <p className="text-slate-600 mb-8">2005년 창립 이래 걸어온 발자취</p>
 
             {/* Timeline */}
@@ -141,7 +141,7 @@ const ClubInfo = () => {
                   <ul className="space-y-2 text-slate-700">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
-                      <span>2005년 3월, 등산을 사랑하는 기업 임원들이 모여 '시애라 산악회' 창립</span>
+                      <span>2005년 3월, 등산을 사랑하는 기업 임원들이 모여 '시애라 클럽' 창립</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
@@ -468,7 +468,7 @@ const ClubInfo = () => {
         <div className="space-y-6">
           <Card>
             <h2 className="text-2xl font-bold text-slate-900 mb-6">회원 혜택</h2>
-            <p className="text-slate-600 mb-8">시애라 산악회 회원만의 특별한 혜택</p>
+            <p className="text-slate-600 mb-8">시애라 클럽 회원만의 특별한 혜택</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl">

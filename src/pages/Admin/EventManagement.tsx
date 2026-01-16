@@ -122,7 +122,7 @@ const EventManagement = () => {
       paymentInfo: {
         bankName: '국민은행',
         accountNumber: '123-456-789012',
-        accountHolder: '시애라산악회',
+        accountHolder: '시애라클럽',
         managerName: '김재무',
         managerPhone: '010-1234-5678',
         cost: '60,000원',
@@ -1521,7 +1521,7 @@ const EventManagement = () => {
                           })
                         }
                         className="input-field"
-                        placeholder="시애라 산악회"
+                        placeholder="시애라 클럽"
                       />
                     </div>
 

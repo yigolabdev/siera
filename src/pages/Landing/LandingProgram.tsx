@@ -55,7 +55,7 @@ export const LandingProgram: React.FC = () => {
                 <ul className="text-sm space-y-2 text-slate-600">
                   <li className="flex items-center">
                     <span className="w-1.5 h-1.5 bg-slate-900 rounded-full mr-2"></span>
-                    체력이 약해도 B코스로 참여 가능
+                    등산초보자도 B코스로 참여 가능
                   </li>
                   <li className="flex items-center">
                     <span className="w-1.5 h-1.5 bg-slate-900 rounded-full mr-2"></span>

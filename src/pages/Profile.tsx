@@ -15,9 +15,10 @@ const Profile = () => {
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phoneNumber || '010-1234-5678',
-    occupation: user?.occupation || '',
-    position: user?.position || '',
+    gender: user?.gender || '',
+    birthYear: user?.birthYear || '',
     company: user?.company || '',
+    position: user?.position || '',
     bio: user?.bio || '',
   });
   
@@ -77,9 +78,10 @@ const Profile = () => {
       name: formData.name,
       email: formData.email,
       phoneNumber: formData.phone,
-      occupation: formData.occupation,
-      position: formData.position,
+      gender: formData.gender,
+      birthYear: formData.birthYear,
       company: formData.company,
+      position: formData.position,
       bio: formData.bio,
     });
     alert('프로필이 성공적으로 업데이트되었습니다.');
@@ -212,7 +214,7 @@ const Profile = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="input-field"
-                placeholder="email@example.com"
+                placeholder="admin@siera.com"
               />
             </div>
           </div>
@@ -234,8 +236,41 @@ const Profile = () => {
             
             <div>
               <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+                <User className="w-4 h-4 text-primary-600" />
+                성별 <Badge variant="danger">필수</Badge>
+              </label>
+              <select
+                value={formData.gender}
+                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                className="input-field"
+              >
+                <option value="">선택하세요</option>
+                <option value="남성">남성</option>
+                <option value="여성">여성</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+                <User className="w-4 h-4 text-primary-600" />
+                출생연도 <Badge variant="danger">필수</Badge>
+              </label>
+              <input
+                type="text"
+                value={formData.birthYear}
+                onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                className="input-field"
+                placeholder="1990"
+                maxLength={4}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
                 <Building className="w-4 h-4 text-primary-600" />
-                회사/기관
+                소속
               </label>
               <input
                 type="text"
@@ -251,20 +286,6 @@ const Profile = () => {
             <div>
               <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-primary-600" />
-                직업
-              </label>
-              <input
-                type="text"
-                value={formData.occupation}
-                onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                className="input-field"
-                placeholder="대표이사"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-primary-600" />
                 직책
               </label>
               <input
@@ -274,6 +295,10 @@ const Profile = () => {
                 className="input-field"
                 placeholder="회장"
               />
+            </div>
+            
+            <div>
+              {/* Empty space for layout balance */}
             </div>
           </div>
           

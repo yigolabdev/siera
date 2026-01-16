@@ -16,6 +16,8 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 const Landing = lazy(() => import('./pages/Landing'));
 const AboutSierra = lazy(() => import('./pages/AboutSierra'));
 const Register = lazy(() => import('./pages/Register'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
 const Home = lazy(() => import('./pages/Home'));
 const Events = lazy(() => import('./pages/Events'));
 const Gallery = lazy(() => import('./pages/Gallery'));
@@ -59,6 +61,8 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<AboutSierra />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/guest-application" element={<GuestApplication />} />
             <Route path="/quick-apply" element={<QuickEventApply />} />
             

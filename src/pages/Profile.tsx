@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit } from 'lucide-react';
+import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -267,6 +267,23 @@ const Profile = () => {
               />
             </div>
             
+            <div>
+              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-500" />
+                입회일자
+              </label>
+              <input
+                type="text"
+                value={user?.joinDate || '2024-01-01'}
+                className="input-field bg-slate-100 cursor-not-allowed"
+                disabled
+                readOnly
+              />
+              <p className="text-xs text-slate-500 mt-1">입회일자는 수정할 수 없습니다</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
                 <Building className="w-4 h-4 text-primary-600" />

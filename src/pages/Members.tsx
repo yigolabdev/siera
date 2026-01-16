@@ -141,7 +141,7 @@ const Members = () => {
   const committee = executiveTeam.filter(e => e.category === 'committee');
   
   const members = [
-    // 임원진
+    // 운영진
     {
       id: 1,
       name: '김대한',
@@ -612,7 +612,7 @@ const Members = () => {
           <div className="flex items-center justify-center mb-2">
             <Shield className="w-6 h-6 text-primary-600" />
           </div>
-          <p className="text-slate-600 text-sm mb-2">임원진</p>
+          <p className="text-slate-600 text-sm mb-2">운영진</p>
           <p className="text-3xl font-bold text-slate-900">
             {members.filter(m => m.position !== 'member').length}명
           </p>

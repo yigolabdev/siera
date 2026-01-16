@@ -12,9 +12,22 @@ export const LandingFooter: React.FC = () => {
         
         <div className="flex flex-col md:items-end text-center md:text-right space-y-2">
           <div className="flex gap-4 justify-center md:justify-end">
-            <Link to="/" className="hover:text-white transition-colors">회원 로그인</Link>
-            <a href="#" className="hover:text-white transition-colors">이용약관</a>
-            <a href="#" className="hover:text-white transition-colors font-bold">개인정보처리방침</a>
+            <button 
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => {
+                  const loginForm = document.getElementById('login-form');
+                  if (loginForm) {
+                    loginForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }, 100);
+              }}
+              className="hover:text-white transition-colors"
+            >
+              회원 로그인
+            </button>
+            <Link to="/terms" className="hover:text-white transition-colors">이용약관</Link>
+            <Link to="/privacy" className="hover:text-white transition-colors font-bold">개인정보처리방침</Link>
           </div>
           <p>
             개인정보는 입회 심사 및 운영 연락 목적으로만 수집되며,<br className="md:hidden"/> 탈퇴 시 즉시 파기됩니다.

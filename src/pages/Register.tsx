@@ -117,7 +117,7 @@ const Register = () => {
 
     if (success) {
       alert(
-        '회원가입 신청이 완료되었습니다!\n\n' +
+        '입회 신청이 완료되었습니다!\n\n' +
         '정기산행에 2회 게스트로 참여하신 후,\n' +
         '운영위원회 승인을 거쳐 가입이 완료됩니다.\n' +
         '승인 완료 시 이메일로 안내드립니다.'
@@ -139,7 +139,7 @@ const Register = () => {
             홈으로 돌아가기
           </Link>
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-white mb-2">회원가입 신청</h1>
+            <h1 className="text-4xl font-bold text-white mb-2">입회 신청</h1>
             <p className="text-lg text-slate-400">
               시애라 클럽에 오신 것을 환영합니다
             </p>
@@ -405,7 +405,7 @@ const Register = () => {
 
                 <div>
                   <label className="block text-white font-semibold mb-2 text-sm">
-                    가입신청 문구
+                    입회신청 문구
                   </label>
                   <textarea
                     name="applicationMessage"

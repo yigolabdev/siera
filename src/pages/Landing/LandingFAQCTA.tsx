@@ -78,7 +78,15 @@ export const LandingFAQCTA: React.FC = () => {
                   <p className="text-sm text-slate-400">
                     이미 회원이신가요?{' '}
                     <button 
-                      onClick={() => navigate('/')}
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        setTimeout(() => {
+                          const loginForm = document.getElementById('login-form');
+                          if (loginForm) {
+                            loginForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }, 100);
+                      }}
                       className="text-emerald-400 hover:text-emerald-300 font-semibold underline decoration-emerald-400/30 hover:decoration-emerald-300 transition-colors"
                     >
                       로그인하기

@@ -86,8 +86,7 @@ export const LandingHero: React.FC = () => {
 
             <FadeIn delay={600}>
               <p className="text-gray-200 text-sm md:text-lg mb-10 max-w-2xl leading-relaxed font-light mx-auto">
-                건강한 루틴과 검증된 네트워크. 전문직·CEO·임원들이 선택한 품격 있는 교류의 장,<br />
-                시애라 클럽입니다.
+                건강한 루틴과 검증된 네트워크. 전문직·CEO·임원들이 선택한 품격 있는 교류의 장, 시애라 클럽입니다.
               </p>
             </FadeIn>
 
@@ -110,7 +109,7 @@ export const LandingHero: React.FC = () => {
           </div>
 
           {/* Login Form */}
-          <FadeIn delay={1000} className="w-full max-w-4xl">
+          <FadeIn delay={1000} className="w-full max-w-4xl" id="login-form">
             {/* Desktop: 한 줄 레이아웃 */}
             <div className="hidden md:block bg-slate-900/95 backdrop-blur-sm rounded-xl p-5 shadow-2xl w-full border border-slate-700">
               <form onSubmit={handleLoginSubmit}>

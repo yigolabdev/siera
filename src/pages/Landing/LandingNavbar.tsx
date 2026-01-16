@@ -66,7 +66,7 @@ export const LandingNavbar: React.FC = () => {
             className={`px-6 py-2 text-xs font-bold uppercase tracking-wider border transition-all flex items-center gap-2 ${isScrolled ? 'border-slate-900 hover:bg-slate-900 hover:text-white' : 'border-white hover:bg-white hover:text-slate-900'}`}
           >
            <UserPlus className="w-4 h-4" />
-           가입신청
+           입회신청
          </button>
         </div>
 
@@ -97,7 +97,7 @@ export const LandingNavbar: React.FC = () => {
           className="mt-8 px-8 py-3 bg-white text-slate-900 text-sm font-bold tracking-widest uppercase flex items-center gap-2"
         >
           <UserPlus className="w-5 h-5" />
-          가입신청하기
+          입회신청하기
         </button>
       </div>
     </nav>

@@ -398,6 +398,15 @@ export function validateFile(
   return { isValid: true };
 }
 
+// 이미지 파일 검증 (alias)
+export function isValidImageFile(file: File): { valid: boolean; error?: string } {
+  const result = validateFile(file);
+  return {
+    valid: result.isValid,
+    error: result.error,
+  };
+}
+
 /**
  * 여러 파일 검증
  */

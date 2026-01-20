@@ -37,7 +37,7 @@ export function useDebounceCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 300
 ): (...args: Parameters<T>) => void {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const debouncedCallback = useCallback(
     (...args: Parameters<T>) => {
@@ -374,7 +374,7 @@ function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+  let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);

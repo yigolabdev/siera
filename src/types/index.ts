@@ -10,12 +10,16 @@ export interface User {
   birthYear?: string;
   company?: string;
   position?: string;
+  occupation?: string; // 호환성 (company + position 결합)
   role: UserRole;
   joinDate?: string;
   isApproved: boolean;
   profileImage?: string;
   bio?: string;
 }
+
+// Member는 User의 alias
+export type Member = User;
 
 export interface RegisterData {
   name: string;
@@ -26,6 +30,7 @@ export interface RegisterData {
   birthYear: string;
   company: string;
   position: string;
+  occupation?: string; // 호환성
 }
 
 export interface PendingUser {
@@ -37,6 +42,7 @@ export interface PendingUser {
   birthYear: string;
   company: string;
   position: string;
+  occupation?: string; // 호환성
   referredBy?: string;
   hikingLevel: string;
   applicationMessage?: string;

@@ -251,7 +251,7 @@ const EventManagement = () => {
   }, [events]);
 
   // Event Management Handlers
-  const handleEdit = (event: Event) => {
+  const handleEdit = (event: HikingEvent) => {
     setEditingEvent(event);
     setFormData(event);
     setIsEditing(true);
@@ -429,7 +429,7 @@ const EventManagement = () => {
   };
 
   // 상태별 액션 버튼 렌더링
-  const getStatusActions = (event: Event) => {
+  const getStatusActions = (event: HikingEvent) => {
     const today = new Date();
     const eventDate = new Date(event.date);
     const deadlineDate = event.applicationDeadline ? new Date(event.applicationDeadline) : null;
@@ -705,9 +705,9 @@ const EventManagement = () => {
           leaderId: t.leaderId,
           leaderName: t.leaderName,
           leaderPhone: t.leaderPhone,
-          leaderCompany: t.company || '', // company 필드 사용
-          leaderPosition: t.position || t.leaderOccupation || '', // position 필드 우선 사용
-          leaderOccupation: t.position || t.leaderOccupation || '', // 호환성
+          leaderCompany: t.leaderCompany || '', // leaderCompany 필드 사용
+          leaderPosition: t.leaderPosition || t.leaderOccupation || '', // leaderPosition 필드 우선 사용
+          leaderOccupation: t.leaderPosition || t.leaderOccupation || '', // 호환성
           members: t.members.map(m => ({
             id: m.id,
             name: m.name,
@@ -758,9 +758,9 @@ const EventManagement = () => {
           leaderId: t.leaderId,
           leaderName: t.leaderName,
           leaderPhone: t.leaderPhone,
-          leaderCompany: t.company || '', // company 필드 사용
-          leaderPosition: t.position || t.leaderOccupation || '', // position 필드 우선 사용
-          leaderOccupation: t.position || t.leaderOccupation || '', // 호환성
+          leaderCompany: t.leaderCompany || '', // leaderCompany 필드 사용
+          leaderPosition: t.leaderPosition || t.leaderOccupation || '', // leaderPosition 필드 우선 사용
+          leaderOccupation: t.leaderPosition || t.leaderOccupation || '', // 호환성
           members: t.members.map(m => ({
             id: m.id,
             name: m.name,

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePoems } from '../../contexts/PoemContext';
+import { Team, TeamMember } from '../../types';
 import { X } from 'lucide-react';
 
 const EventPrintView = () => {

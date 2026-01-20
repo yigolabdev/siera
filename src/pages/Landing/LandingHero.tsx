@@ -111,7 +111,7 @@ export const LandingHero: React.FC = () => {
           </div>
 
           {/* Login Form */}
-          <FadeIn delay={1000} className="w-full max-w-4xl" id="login-form">
+          <FadeIn delay={1000} className="w-full max-w-4xl">
             {/* Desktop: 한 줄 레이아웃 */}
             <div className="hidden md:block bg-slate-900/95 backdrop-blur-sm rounded-xl p-5 shadow-2xl w-full border border-slate-700">
               <form onSubmit={handleLoginSubmit}>

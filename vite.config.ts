@@ -27,7 +27,7 @@ export default defineConfig({
         drop_console: true, // 프로덕션에서 console.log 제거
         drop_debugger: true,
       },
-    },
+    } as any, // Vite 타입 이슈 우회
   },
   // 개발 서버 설정
   server: {

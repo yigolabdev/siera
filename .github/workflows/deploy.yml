@@ -24,12 +24,12 @@ jobs:
       
       # 3. 의존성 설치
       - name: Install dependencies
-        working-directory: ./hiking-club
+        working-directory: hiking-club
         run: npm ci
       
       # 4. 환경 변수 설정
       - name: Create .env.production file
-        working-directory: ./hiking-club
+        working-directory: hiking-club
         run: |
           echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env.production
           echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env.production
@@ -41,7 +41,7 @@ jobs:
       
       # 5. TypeScript 타입 체크
       - name: Type check
-        working-directory: ./hiking-club
+        working-directory: hiking-club
         run: npm run build
       
       # 6. AWS 자격 증명 설정
@@ -54,13 +54,13 @@ jobs:
       
       # 7. S3에 배포
       - name: Deploy to S3
-        working-directory: ./hiking-club
+        working-directory: hiking-club
         run: |
           aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete --cache-control max-age=31536000,public
           
       # 8. S3 index.html 캐시 무효화 (SPA 라우팅)
       - name: Set index.html cache
-        working-directory: ./hiking-club
+        working-directory: hiking-club
         run: |
           aws s3 cp dist/index.html s3://${{ secrets.AWS_S3_BUCKET }}/index.html --cache-control max-age=0,no-cache,no-store,must-revalidate --content-type text/html
       

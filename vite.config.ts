@@ -20,14 +20,11 @@ export default defineConfig({
     },
     // 소스맵 생성 (프로덕션)
     sourcemap: false,
-    // 최소화 활성화
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // 프로덕션에서 console.log 제거
-        drop_debugger: true,
-      },
-    } as any, // Vite 타입 이슈 우회
+    // 최소화 활성화 (esbuild 사용 - 더 빠르고 추가 설치 불필요)
+    minify: 'esbuild',
+    esbuild: {
+      drop: ['console', 'debugger'], // 프로덕션에서 console.log 제거
+    },
   },
   // 개발 서버 설정
   server: {

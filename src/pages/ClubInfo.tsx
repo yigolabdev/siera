@@ -97,26 +97,55 @@ const ClubInfo = () => {
           </Card>
 
           {/* 개정 이력 */}
-          {rulesData.amendments.length > 1 && (
+          {rulesData.amendments.length > 0 && (
             <Card>
               <div className="flex items-center gap-3 mb-6">
-                <Calendar className="w-6 h-6 text-slate-700" />
-                <h3 className="text-xl font-bold text-slate-900">개정 이력</h3>
+                <div className="p-3 bg-blue-100 rounded-xl flex-shrink-0">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">개정 이력</h3>
+                  <p className="text-sm text-slate-600">회칙 변경 내역</p>
+                </div>
               </div>
 
               <div className="space-y-3">
-                {[...rulesData.amendments].reverse().map((amendment, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-slate-50 border border-slate-200 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <Badge variant="default">버전 {amendment.version}</Badge>
-                      <span className="text-sm text-slate-600">{amendment.date}</span>
+                {[...rulesData.amendments].reverse().map((amendment, index) => {
+                  const isLatest = index === 0;
+                  return (
+                    <div
+                      key={`${amendment.version}-${index}`}
+                      className={`p-5 rounded-xl border-2 transition-all ${
+                        isLatest 
+                          ? 'bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-300'
+                          : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge variant={isLatest ? "primary" : "default"}>
+                            버전 {amendment.version}
+                          </Badge>
+                          {isLatest && (
+                            <Badge variant="success">최신</Badge>
+                          )}
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Calendar className="w-4 h-4" />
+                            <span className="font-semibold">{amendment.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-slate-700 leading-relaxed">{amendment.description}</p>
                     </div>
-                    <p className="text-slate-700 text-sm">{amendment.description}</p>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-sm text-slate-600">
+                  <strong className="text-slate-900">📌 안내:</strong> 회칙 개정은 대의원회의 의결을 거쳐 진행됩니다. 
+                  최신 버전이 현재 시행 중인 회칙입니다.
+                </p>
               </div>
             </Card>
           )}

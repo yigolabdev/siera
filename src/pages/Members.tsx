@@ -626,15 +626,6 @@ const Members = () => {
             {members.filter(m => m.position === 'member').length}명
           </p>
         </Card>
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <TrendingUp className="w-6 h-6 text-primary-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-2">평균 참여율</p>
-          <p className="text-3xl font-bold text-slate-900">
-            {Math.round(members.reduce((sum, m) => sum + m.attendanceRate, 0) / members.length)}%
-          </p>
-        </Card>
       </div>
       
       {/* Search and Filter */}
@@ -666,11 +657,6 @@ const Members = () => {
                   alt={member.name}
                   className="w-20 h-20 rounded-full object-cover border-4 border-slate-100"
                 />
-                {member.attendanceRate >= 90 && (
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center border-2 border-white">
-                    <Award className="w-3 h-3 text-white" />
-                  </div>
-                )}
               </div>
               <div className="flex-grow min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -691,15 +677,10 @@ const Members = () => {
               </div>
             )}
             
-            <div className="pt-4 border-t border-slate-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Calendar className="w-4 h-4" />
-                  <span>{member.joinDate}</span>
-                </div>
-                <Badge variant="primary">
-                  참여율 {member.attendanceRate}%
-                </Badge>
+            <div className="pt-4 border-t border-slate-200">
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Calendar className="w-4 h-4" />
+                <span>{member.joinDate}</span>
               </div>
             </div>
           </Card>
@@ -847,20 +828,8 @@ const Members = () => {
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-slate-600 mb-1">가입일</p>
+                    <p className="text-xs text-slate-600 mb-1">입회 시기</p>
                     <p className="font-semibold text-slate-900">{selectedMember.joinDate}</p>
-                  </div>
-                </div>
-              </Card>
-              
-              <Card className="bg-slate-50 border-slate-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-600 mb-1">참여율</p>
-                    <p className="font-semibold text-slate-900">{selectedMember.attendanceRate}%</p>
                   </div>
                 </div>
               </Card>
@@ -884,12 +853,6 @@ const Members = () => {
           maxWidth="max-w-6xl"
         >
         <div className="p-6">
-          <div className="mb-8">
-            <p className="text-slate-600 text-lg">
-              2026년 시애라 운영진을 소개합니다.
-            </p>
-          </div>
-          
           {/* 회장단 */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">

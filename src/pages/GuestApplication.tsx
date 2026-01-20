@@ -9,8 +9,8 @@ const GuestApplication = () => {
     name: '',
     email: '',
     phoneNumber: '',
-    occupation: '',
     company: '',
+    position: '',
     referredBy: '',
   });
 
@@ -150,22 +150,7 @@ const GuestApplication = () => {
               <div className="space-y-5">
                 <div>
                   <label className="block text-white font-semibold mb-2 text-sm">
-                    직업 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="occupation"
-                    value={formData.occupation}
-                    onChange={handleChange}
-                    className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all"
-                    placeholder="예: 회사 대표이사"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    회사/기관 <span className="text-red-400">*</span>
+                    소속 <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -174,6 +159,21 @@ const GuestApplication = () => {
                     onChange={handleChange}
                     className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all"
                     placeholder="○○그룹"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-white font-semibold mb-2 text-sm">
+                    직책 <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="position"
+                    value={formData.position}
+                    onChange={handleChange}
+                    className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all"
+                    placeholder="예: 대표이사, 전무, 부장 등"
                     required
                   />
                 </div>
@@ -187,7 +187,7 @@ const GuestApplication = () => {
               </h3>
               <div>
                 <label className="block text-white font-semibold mb-2 text-sm">
-                  누구의 추천으로 오셨나요? <span className="text-red-400">*</span>
+                  추천인
                 </label>
                 <input
                   type="text"
@@ -195,11 +195,10 @@ const GuestApplication = () => {
                   value={formData.referredBy}
                   onChange={handleChange}
                   className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all"
-                  placeholder="추천인 이름을 입력해주세요"
-                  required
+                  placeholder="시애라 회원의 이름을 입력해주세요 (선택)"
                 />
                 <p className="mt-2 text-sm text-slate-400">
-                  시애라 회원의 추천이 필요합니다
+                  시애라 회원의 추천이 있으면 더욱 좋습니다 (선택사항)
                 </p>
               </div>
             </div>

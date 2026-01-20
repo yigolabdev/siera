@@ -594,7 +594,7 @@ const MemberManagement = () => {
                     </div>
                     <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Calendar className="w-4 h-4" />
-                      <span>가입: {member.joinDate}</span>
+                      <span>입회: {member.joinDate}</span>
                     </div>
                   </div>
 
@@ -1036,6 +1036,10 @@ const MemberManagement = () => {
                 <h4 className="text-lg font-bold text-slate-900 mb-3">기본 정보</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <p className="text-sm text-slate-600 mb-1">이름</p>
+                    <p className="text-slate-900 font-medium">{selectedPendingUser.name}</p>
+                  </div>
+                  <div>
                     <p className="text-sm text-slate-600 mb-1">이메일</p>
                     <p className="text-slate-900 font-medium">{selectedPendingUser.email}</p>
                   </div>
@@ -1044,31 +1048,48 @@ const MemberManagement = () => {
                     <p className="text-slate-900 font-medium">{selectedPendingUser.phoneNumber}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">직업</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.occupation}</p>
+                    <p className="text-sm text-slate-600 mb-1">성별</p>
+                    <p className="text-slate-900 font-medium">
+                      {selectedPendingUser.gender === 'male' ? '남성' : selectedPendingUser.gender === 'female' ? '여성' : '정보 없음'}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">회사/기관</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.company}</p>
+                    <p className="text-sm text-slate-600 mb-1">출생연도</p>
+                    <p className="text-slate-900 font-medium">{selectedPendingUser.birthYear || '정보 없음'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-600 mb-1">신청일</p>
+                    <p className="text-slate-900 font-medium">{formatDate(selectedPendingUser.appliedAt)}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Additional Info */}
+              {/* Professional Info */}
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-3">추가 정보</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-3">직업 정보</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">추천인</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.referredBy || '없음'}</p>
+                    <p className="text-sm text-slate-600 mb-1">소속</p>
+                    <p className="text-slate-900 font-medium">{selectedPendingUser.company}</p>
                   </div>
+                  <div>
+                    <p className="text-sm text-slate-600 mb-1">직책</p>
+                    <p className="text-slate-900 font-medium">{selectedPendingUser.position}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hiking Info */}
+              <div>
+                <h4 className="text-lg font-bold text-slate-900 mb-3">산행 정보</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-slate-600 mb-1">산행 능력</p>
                     <p className="text-slate-900 font-medium">{getHikingLevelLabel(selectedPendingUser.hikingLevel)}</p>
                   </div>
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-slate-600 mb-1">신청일</p>
-                    <p className="text-slate-900 font-medium">{formatDate(selectedPendingUser.appliedAt)}</p>
+                  <div>
+                    <p className="text-sm text-slate-600 mb-1">추천인</p>
+                    <p className="text-slate-900 font-medium">{selectedPendingUser.referredBy || '없음'}</p>
                   </div>
                 </div>
               </div>
@@ -1078,14 +1099,14 @@ const MemberManagement = () => {
                 <div>
                   <h4 className="text-lg font-bold text-slate-900 mb-3">신청 메시지</h4>
                   <Card className="bg-slate-50">
-                    <p className="text-slate-700 whitespace-pre-wrap">{selectedPendingUser.applicationMessage}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{selectedPendingUser.applicationMessage}</p>
                   </Card>
                 </div>
               )}
 
               {/* Actions */}
               {selectedPendingUser.status === 'pending' && (
-                <div className="flex gap-4 pt-4">
+                <div className="flex gap-4 pt-4 border-t border-slate-200">
                   <button
                     onClick={() => handleReject(selectedPendingUser.id)}
                     className="flex-1 px-6 py-3 bg-red-100 text-red-700 border-2 border-red-300 rounded-xl font-bold hover:bg-red-200 transition-all"

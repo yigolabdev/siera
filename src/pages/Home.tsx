@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Calendar, Image, Users, TrendingUp, Bell, MapPin, Mountain, CheckCircle, XCircle, Clock, Settings, CalendarX, Cloud, Thermometer, Wind, Droplets, CloudRain, CloudSnow, Sun } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useDevMode } from '../contexts/DevModeContext';
 import { useEvents } from '../contexts/EventContext';
 import { useMembers } from '../contexts/MemberContext';

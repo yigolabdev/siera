@@ -1,5 +1,6 @@
-import { X, RefreshCw } from 'lucide-react';
+import { X, RefreshCw, TrendingUp } from 'lucide-react';
 import { useDevMode, ApplicationStatus } from '../contexts/DevModeContext';
+import { Link } from 'react-router-dom';
 
 interface DevModePanelProps {
   onClose: () => void;
@@ -65,6 +66,31 @@ const DevModePanel = ({ onClose }: DevModePanelProps) => {
 
         {/* Body */}
         <div className="p-6 space-y-8">
+          {/* Developer Menu Links */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <h3 className="text-lg font-bold text-slate-900">개발자 메뉴</h3>
+            </div>
+            <div className="space-y-2">
+              <Link
+                to="/home/attendance"
+                onClick={onClose}
+                className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all flex items-center gap-3"
+              >
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-slate-900">참여율 통계</p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    회원별 산행 참여율 및 통계 (향후 일반 회원 오픈 예정)
+                  </p>
+                </div>
+              </Link>
+            </div>
+          </div>
+
           {/* Regular Application Status */}
           <div>
             <div className="flex items-center gap-2 mb-4">

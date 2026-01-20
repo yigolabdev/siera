@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
@@ -6,188 +5,27 @@ import { useMembers } from '../../contexts/MemberContext';
 import { usePoems } from '../../contexts/PoemContext';
 import { X } from 'lucide-react';
 
-// 조편성 목업 데이터
-const mockTeams = [
-  {
-    id: '1',
-    number: 1,
-    name: '1조',
-    leaderId: '1',
-    leaderName: '김영희',
-    leaderCompany: '삼성전자',
-    leaderPosition: '부장',
-    members: [
-      { id: '2', name: '이철수', phone: '010-1234-5678', company: 'LG전자', position: '차장' },
-      { id: '3', name: '박민수', phone: '010-2345-6789', company: '현대자동차', position: '과장' },
-      { id: '4', name: '정수진', phone: '010-3456-7890', company: 'SK하이닉스', position: '부장' },
-      { id: '5', name: '김지훈', phone: '010-4567-8901', company: '카카오', position: '차장' },
-      { id: '6', name: '이수연', phone: '010-5678-9012', company: '네이버', position: '과장' },
-      { id: '7', name: '박태양', phone: '010-6789-0123', company: '쿠팡', position: '대리' },
-      { id: '8', name: '최민지', phone: '010-7890-1234', company: '배달의민족', position: '차장' },
-      { id: '9', name: '정하늘', phone: '010-8901-2345', company: '토스', position: '부장' },
-    ]
-  },
-  {
-    id: '2',
-    number: 2,
-    name: '2조',
-    leaderId: '10',
-    leaderName: '최지훈',
-    leaderCompany: '포스코',
-    leaderPosition: '이사',
-    members: [
-      { id: '11', name: '강민지', phone: '010-9012-3456', company: '네이버', position: '부장' },
-      { id: '12', name: '윤서연', phone: '010-0123-4567', company: '쿠팡', position: '차장' },
-      { id: '13', name: '한동욱', phone: '010-1234-5678', company: '배달의민족', position: '과장' },
-      { id: '14', name: '송민호', phone: '010-2345-6789', company: 'GS건설', position: '부장' },
-      { id: '15', name: '조은비', phone: '010-3456-7890', company: '롯데', position: '차장' },
-      { id: '16', name: '백승훈', phone: '010-4567-8901', company: 'CJ', position: '과장' },
-      { id: '17', name: '임채영', phone: '010-5678-9012', company: '한화', position: '대리' },
-      { id: '18', name: '강동원', phone: '010-6789-0123', company: 'SK', position: '부장' },
-    ]
-  },
-  {
-    id: '3',
-    number: 3,
-    name: '3조',
-    leaderId: '19',
-    leaderName: '임하늘',
-    leaderCompany: '신한은행',
-    leaderPosition: '부장',
-    members: [
-      { id: '20', name: '홍길동', phone: '010-7890-1234', company: 'KB국민은행', position: '차장' },
-      { id: '21', name: '권나라', phone: '010-8901-2345', company: '우리은행', position: '과장' },
-      { id: '22', name: '서준영', phone: '010-9012-3456', company: '하나은행', position: '부장' },
-      { id: '23', name: '양수정', phone: '010-0123-4567', company: 'IBK기업은행', position: '차장' },
-      { id: '24', name: '문재인', phone: '010-1234-5678', company: '농협은행', position: '과장' },
-      { id: '25', name: '오세훈', phone: '010-2345-6789', company: 'SC은행', position: '대리' },
-      { id: '26', name: '남궁민', phone: '010-3456-7890', company: '씨티은행', position: '부장' },
-      { id: '27', name: '독고영재', phone: '010-4567-8901', company: '케이뱅크', position: '차장' },
-    ]
-  },
-  {
-    id: '4',
-    number: 4,
-    name: '4조',
-    leaderId: '28',
-    leaderName: '선우은숙',
-    leaderCompany: '아모레퍼시픽',
-    leaderPosition: '상무',
-    members: [
-      { id: '29', name: '황보라', phone: '010-5678-9012', company: 'LG생활건강', position: '부장' },
-      { id: '30', name: '제갈량', phone: '010-6789-0123', company: '유한킴벌리', position: '차장' },
-      { id: '31', name: '사공민', phone: '010-7890-1234', company: '오뚜기', position: '과장' },
-      { id: '32', name: '동방석', phone: '010-8901-2345', company: '현대모비스', position: '부장' },
-      { id: '33', name: '서문석', phone: '010-9012-3456', company: '만도', position: '차장' },
-      { id: '34', name: '황희찬', phone: '010-0123-4567', company: 'LG이노텍', position: '과장' },
-      { id: '35', name: '공유', phone: '010-1234-5678', company: '삼성SDI', position: '대리' },
-      { id: '36', name: '진선규', phone: '010-2345-6789', company: 'KT', position: '부장' },
-    ]
-  },
-  {
-    id: '5',
-    number: 5,
-    name: '5조',
-    leaderId: '37',
-    leaderName: '탁재훈',
-    leaderCompany: 'LG유플러스',
-    leaderPosition: '이사',
-    members: [
-      { id: '38', name: '표예진', phone: '010-3456-7890', company: 'SKT', position: '부장' },
-      { id: '39', name: '설경구', phone: '010-4567-8901', company: 'KT&G', position: '차장' },
-      { id: '40', name: '이정재', phone: '010-5678-9012', company: '삼성물산', position: '과장' },
-      { id: '41', name: '박서준', phone: '010-6789-0123', company: '현대건설', position: '부장' },
-      { id: '42', name: '김태리', phone: '010-7890-1234', company: 'SK건설', position: '차장' },
-      { id: '43', name: '전여빈', phone: '010-8901-2345', company: '대림산업', position: '과장' },
-      { id: '44', name: '마동석', phone: '010-9012-3456', company: 'GS건설', position: '대리' },
-      { id: '45', name: '한소희', phone: '010-0123-4567', company: '현대엔지니어링', position: '부장' },
-    ]
-  },
-  {
-    id: '6',
-    number: 6,
-    name: '6조',
-    leaderId: '46',
-    leaderName: '송강호',
-    leaderCompany: '삼성전자',
-    leaderPosition: '상무',
-    members: [
-      { id: '47', name: '이병헌', phone: '010-1234-5678', company: 'LG전자', position: '부장' },
-      { id: '48', name: '하정우', phone: '010-2345-6789', company: '현대자동차', position: '차장' },
-      { id: '49', name: '류준열', phone: '010-3456-7890', company: '기아자동차', position: '과장' },
-      { id: '50', name: '박보검', phone: '010-4567-8901', company: 'SK이노베이션', position: '부장' },
-      { id: '51', name: '정우성', phone: '010-5678-9012', company: 'LG화학', position: '차장' },
-      { id: '52', name: '송중기', phone: '010-6789-0123', company: 'LG에너지솔루션', position: '과장' },
-      { id: '53', name: '현빈', phone: '010-7890-1234', company: '포스코케미칼', position: '대리' },
-      { id: '54', name: '이동휘', phone: '010-8901-2345', company: 'SK케미칼', position: '부장' },
-    ]
-  },
-  {
-    id: '7',
-    number: 7,
-    name: '7조',
-    leaderId: '55',
-    leaderName: '조진웅',
-    leaderCompany: '롯데쇼핑',
-    leaderPosition: '이사',
-    members: [
-      { id: '56', name: '김혜수', phone: '010-9012-3456', company: '신세계', position: '부장' },
-      { id: '57', name: '전지현', phone: '010-0123-4567', company: '현대백화점', position: '차장' },
-      { id: '58', name: '손예진', phone: '010-1234-5678', company: '갤러리아', position: '과장' },
-      { id: '59', name: '이나영', phone: '010-2345-6789', company: '이마트', position: '부장' },
-      { id: '60', name: '공효진', phone: '010-3456-7890', company: '홈플러스', position: '차장' },
-      { id: '61', name: '김태희', phone: '010-4567-8901', company: '코스트코', position: '과장' },
-      { id: '62', name: '송혜교', phone: '010-5678-9012', company: 'GS리테일', position: '대리' },
-      { id: '63', name: '박신혜', phone: '010-6789-0123', company: 'CU편의점', position: '부장' },
-    ]
-  },
-  {
-    id: '8',
-    number: 8,
-    name: '8조',
-    leaderId: '64',
-    leaderName: '유아인',
-    leaderCompany: '카카오엔터',
-    leaderPosition: '본부장',
-    members: [
-      { id: '65', name: '이제훈', phone: '010-7890-1234', company: 'HYBE', position: '부장' },
-      { id: '66', name: '조정석', phone: '010-8901-2345', company: 'SM엔터', position: '차장' },
-      { id: '67', name: '이광수', phone: '010-9012-3456', company: 'JYP', position: '과장' },
-      { id: '68', name: '김수현', phone: '010-0123-4567', company: 'YG', position: '부장' },
-      { id: '69', name: '서강준', phone: '010-1234-5678', company: '안테나', position: '차장' },
-      { id: '70', name: '박형식', phone: '010-2345-6789', company: '플레디스', position: '과장' },
-      { id: '71', name: '임시완', phone: '010-3456-7890', company: '키이스트', position: '대리' },
-      { id: '72', name: '강하늘', phone: '010-4567-8901', company: 'FNC', position: '부장' },
-    ]
-  },
-];
-
 const EventPrintView = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { getEventById, getTeamsByEventId } = useEvents();
   const { getMembersByPosition } = useMembers();
-  const { getCurrentMonthPoem } = usePoems();
+  const { getPoemByMonth, getCurrentMonthPoem } = usePoems();
   
   const event = getEventById(eventId || '');
-  let teams = getTeamsByEventId(eventId || '');
-  const monthlyPoem = getCurrentMonthPoem();
+  const teams = getTeamsByEventId(eventId || '');
   
-  // 조편성 데이터가 없으면 목업 사용
-  if (!teams || teams.length === 0) {
-    teams = mockTeams.map(team => ({
-      ...team,
-      eventId: eventId || '',
-      leaderOccupation: team.leaderPosition || '',
-      leaderPhone: '010-0000-0000',
-      members: team.members.map(member => ({
-        ...member,
-        occupation: member.position || ''
-      }))
-    })) as any;
+  // 🔥 산행 날짜의 월에 해당하는 시를 가져옴
+  let monthlyPoem;
+  if (event) {
+    const eventDate = new Date(event.date);
+    const eventMonth = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}`;
+    monthlyPoem = getPoemByMonth(eventMonth) || getCurrentMonthPoem();
+  } else {
+    monthlyPoem = getCurrentMonthPoem();
   }
   
-  // 비상연락처 임시 데이터 (데이터가 없을 경우)
+  // 비상연락처 (실제 데이터 사용)
   // @ts-ignore
   const emergencyContact = event?.emergencyContactName && event?.emergencyContactPhone 
     ? {
@@ -195,8 +33,8 @@ const EventPrintView = () => {
         phone: event.emergencyContactPhone
       }
     : {
-        name: '김철수',
-        phone: '010-1234-5678'
+        name: '비상연락처 미지정',
+        phone: '-'
       };
   
   // 운영진 정보 가져오기
@@ -220,6 +58,24 @@ const EventPrintView = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-xl text-slate-600">산행 정보를 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
+
+  // 조편성이 없는 경우 메시지 표시
+  if (!teams || teams.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-slate-600 mb-4">조편성 정보가 없습니다.</p>
+          <p className="text-sm text-slate-500">산행 관리에서 조편성을 먼저 진행해주세요.</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-4 px-6 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+          >
+            돌아가기
+          </button>
+        </div>
       </div>
     );
   }
@@ -335,15 +191,17 @@ const EventPrintView = () => {
                   <div className="team-leader">
                     <div className="leader-name">
                       {team.leaderName}
-                      <span className="leader-detail"> ({team.leaderCompany} · {(team as any).leaderPosition})</span>
+                      <span className="leader-detail">
+                        {' '}({team.leaderCompany || ''}{team.leaderCompany && team.leaderPosition ? ' · ' : ''}{team.leaderPosition || ''})
+                      </span>
                     </div>
                   </div>
                   <div className="team-members">
                     {team.members.map((member, idx) => (
                       <div key={idx} className="member-item">
                         <span className="member-name">{member.name}</span>
-                        <span className="member-company">{member.company}</span>
-                        <span className="member-position">{(member as any).position}</span>
+                        <span className="member-company">{member.company || ''}</span>
+                        <span className="member-position">{member.position || member.occupation || ''}</span>
                       </div>
                     ))}
                   </div>
@@ -367,7 +225,9 @@ const EventPrintView = () => {
 
                 {/* 시 제목 */}
                 <div className="poem-title-section">
-                  <div className="poem-label">이달의 詩</div>
+                  <div className="poem-label">
+                    {new Date(event.date).toLocaleDateString('ko-KR', { month: 'long' })}의 詩
+                  </div>
                   <div className="poem-title-row">
                     <h1 className="poem-title">{monthlyPoem.title}</h1>
                     <div className="poem-author">— {monthlyPoem.author}</div>

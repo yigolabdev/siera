@@ -1,0 +1,134 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ========================================
+    // 헬퍼 함수
+    // ========================================
+    
+    // 사용자 인증 확인
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // 승인된 회원 확인
+    function isApproved() {
+      return isAuthenticated() && 
+             request.auth.token.isApproved == true;
+    }
+    
+    // 관리자 권한 확인
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.role == 'chairman' || 
+              request.auth.token.role == 'vice_chairman' ||
+              request.auth.token.role == 'secretary');
+    }
+    
+    // 본인 확인
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // 파일 크기 제한 (10MB)
+    function isValidSize() {
+      return request.resource.size <= 10 * 1024 * 1024;
+    }
+    
+    // 이미지 파일 확인
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // ========================================
+    // 프로필 이미지
+    // profiles/{userId}/{fileName}
+    // ========================================
+    match /profiles/{userId}/{fileName} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 업로드: 본인만, 이미지 파일, 10MB 이하
+      allow write: if isOwner(userId) && 
+                     isImage() && 
+                     isValidSize();
+      
+      // 삭제: 본인만
+      allow delete: if isOwner(userId);
+    }
+    
+    // ========================================
+    // 갤러리 이미지
+    // gallery/{eventId}/{fileName}
+    // ========================================
+    match /gallery/{eventId}/{fileName} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 업로드: 승인된 회원, 이미지 파일, 10MB 이하
+      allow write: if isAuthenticated() && 
+                     isApproved() &&
+                     isImage() && 
+                     isValidSize();
+      
+      // 삭제: 관리자만
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 이벤트 이미지
+    // events/{eventId}/{fileName}
+    // ========================================
+    match /events/{eventId}/{fileName} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 업로드, 삭제: 관리자만, 이미지 파일, 10MB 이하
+      allow write: if isAdmin() && 
+                     isImage() && 
+                     isValidSize();
+      
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 공지사항 첨부파일
+    // notices/{noticeId}/{fileName}
+    // ========================================
+    match /notices/{noticeId}/{fileName} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 업로드, 삭제: 관리자만, 20MB 이하
+      allow write: if isAdmin() && 
+                     request.resource.size <= 20 * 1024 * 1024;
+      
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 게시판 첨부파일
+    // posts/{postId}/{fileName}
+    // ========================================
+    match /posts/{postId}/{fileName} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 업로드: 승인된 회원, 5MB 이하
+      allow write: if isAuthenticated() && 
+                     isApproved() &&
+                     request.resource.size <= 5 * 1024 * 1024;
+      
+      // 삭제: 관리자만
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 기본 거부
+    // ========================================
+    // 위에 명시되지 않은 모든 경로는 접근 거부
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -18,6 +18,21 @@ export const LandingFAQCTA: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold mb-2 flex items-center">
                   <span className="text-slate-400 mr-2">Q.</span> 
+                  입회 절차는 어떻게 되나요?
+                </h3>
+                <p className="text-slate-600 pl-6 leading-relaxed">
+                  A. 시애라클럽은 소수 정예로 운영되는 검증된 산악회입니다.<br />
+                  <span className="block mt-2 font-semibold text-slate-700">입회 절차:</span>
+                  <span className="block mt-1">① 기존 회원 추천 → ② 게스트 참가 (최대 3회) → ③ 가입 신청 → ④ 운영위원회 심의 → ⑤ 승인</span>
+                  <span className="block mt-2 text-sm text-slate-500">
+                    * 가입 자격: 본회의 목적에 공감하며 건전한 등산 문화를 추구하는 만 25세 이상 성인
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold mb-2 flex items-center">
+                  <span className="text-slate-400 mr-2">Q.</span> 
                   혼자 가도 되나요?
                 </h3>
                 <p className="text-slate-600 pl-6 leading-relaxed">

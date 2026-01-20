@@ -1,6 +1,6 @@
 import { Bell, Pin, CreditCard, MessageSquare, ThumbsUp, Eye, Calendar, Search, Plus, X, Send, ChevronDown, ChevronUp, Edit2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useNotices } from '../contexts/NoticeContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -31,7 +31,7 @@ interface Post {
 const Board = () => {
   const { user, isAdmin } = useAuth();
   const { notices } = useNotices();
-  const [activeTab, setActiveTab] = useState<'notice' | 'general' | 'info' | 'question' | 'poem'>('notice');
+  const [activeTab, setActiveTab] = useState<'notice' | 'general' | 'poem'>('notice');
   const [searchTerm, setSearchTerm] = useState('');
   const [showWriteModal, setShowWriteModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -50,8 +50,6 @@ const Board = () => {
     { id: 1, postId: 1, author: '강백운', content: '정말 좋은 날씨였죠! 다음에 또 함께해요~', date: '2026-01-16', likes: 5 },
     { id: 2, postId: 1, author: '윤설악', content: '사진도 멋지게 나왔어요!', date: '2026-01-16', likes: 3 },
     { id: 3, postId: 1, author: '김산행', content: '다음 산행도 기대됩니다', date: '2026-01-17', likes: 2, parentId: 2 },
-    { id: 4, postId: 2, author: '이등산', content: '유익한 정보 감사합니다!', date: '2026-01-15', likes: 8 },
-    { id: 5, postId: 3, author: '박트레킹', content: '저는 ○○ 브랜드 추천드립니다', date: '2026-01-14', likes: 4 },
   ]);
   const [newComment, setNewComment] = useState('');
   const [replyToComment, setReplyToComment] = useState<number | null>(null);
@@ -70,28 +68,6 @@ const Board = () => {
       content: '날씨도 좋고 회원분들과 즐거운 시간 보냈습니다. 정상에서 본 경치가 정말 환상적이었어요. 다들 수고 많으셨고 다음 산행도 기대됩니다!',
     },
     {
-      id: 2,
-      category: 'info',
-      title: '겨울 산행 시 주의사항 클럽합니다',
-      author: '이등산',
-      date: '2026-01-15',
-      views: 234,
-      comments: 1,
-      likes: 45,
-      content: '겨울철 산행 시 꼭 필요한 준비물과 주의사항입니다. 아이젠, 스패츠, 보온병, 여벌 옷 등을 챙기시고 안전한 산행 하세요!',
-    },
-    {
-      id: 3,
-      category: 'question',
-      title: '등산화 추천 부탁드립니다',
-      author: '박트레킹',
-      date: '2026-01-14',
-      views: 189,
-      comments: 1,
-      likes: 8,
-      content: '새로 등산화를 구매하려고 하는데 추천해주세요. 발이 넓은 편이라 편한 제품으로 부탁드립니다.',
-    },
-    {
       id: 4,
       category: 'general',
       title: '다음 달 설악산 산행 기대됩니다',
@@ -101,17 +77,6 @@ const Board = () => {
       comments: 0,
       likes: 32,
       content: '설악산 대청봉 정상까지 함께 힘내봅시다! 날씨가 좋았으면 좋겠네요.',
-    },
-    {
-      id: 5,
-      category: 'info',
-      title: '산행 후 스트레칭 방법',
-      author: '정봉우리',
-      date: '2026-01-12',
-      views: 267,
-      comments: 0,
-      likes: 38,
-      content: '산행 후 근육통 예방을 위한 스트레칭 방법입니다. 하산 직후와 귀가 후 스트레칭을 꼭 해주세요!',
     },
     {
       id: 6,
@@ -251,10 +216,6 @@ const Board = () => {
     switch (category) {
       case 'general':
         return <Badge variant="info">자유</Badge>;
-      case 'info':
-        return <Badge variant="success">정보</Badge>;
-      case 'question':
-        return <Badge variant="warning">질문</Badge>;
       case 'poem':
         return <Badge variant="primary">시</Badge>;
       default:
@@ -288,26 +249,6 @@ const Board = () => {
                 }`}
               >
                 자유게시판
-              </button>
-              <button
-                onClick={() => setActiveTab('info')}
-                className={`py-4 px-2 border-b-2 font-bold text-base transition-colors whitespace-nowrap ${
-                  activeTab === 'info'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
-              >
-                정보클럽
-              </button>
-              <button
-                onClick={() => setActiveTab('question')}
-                className={`py-4 px-2 border-b-2 font-bold text-base transition-colors whitespace-nowrap ${
-                  activeTab === 'question'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
-              >
-                질문
               </button>
               <button
                 onClick={() => setActiveTab('poem')}

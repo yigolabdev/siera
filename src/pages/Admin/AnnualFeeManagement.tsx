@@ -374,7 +374,7 @@ const AnnualFeeManagement = () => {
                         <span className="font-medium">연락처:</span> {member.phone}
                       </div>
                       <div>
-                        <span className="font-medium">가입일:</span> {member.joinDate}
+                        <span className="font-medium">입회 시기:</span> {member.joinDate}
                       </div>
                       {member.paymentDate && (
                         <div className="md:col-span-2">

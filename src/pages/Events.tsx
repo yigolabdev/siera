@@ -1,7 +1,7 @@
 import { Calendar, MapPin, Users, TrendingUp, CheckCircle, XCircle, Clock, Navigation, UserCheck, Phone, Mail, CreditCard, Copy, X, Shield, Mountain, Settings, CalendarX, Bell, AlertTriangle, Check, Backpack, Cloud, Thermometer, Wind, Droplets, CloudRain, CloudSnow, Sun } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useDevMode } from '../contexts/DevModeContext';
 import { useEvents } from '../contexts/EventContext';
 import Card from '../components/ui/Card';
@@ -533,6 +533,8 @@ const Events = () => {
                           item.type === 'departure' ? 'bg-success-500' :
                           item.type === 'arrival' ? 'bg-info-500' :
                           item.type === 'return' ? 'bg-warning-500' :
+                          item.type === 'lunch' ? 'bg-orange-500' :
+                          item.type === 'networking' ? 'bg-purple-500' :
                           'bg-primary-500'
                         }`}></div>
                         
@@ -542,10 +544,14 @@ const Events = () => {
                               item.type === 'departure' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
                               item.type === 'arrival' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
                               item.type === 'return' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                              item.type === 'lunch' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                              item.type === 'networking' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
                               'bg-slate-100 text-slate-800 border border-slate-300'
                             }`}>
                               {item.type === 'departure' && '출발'}
                               {item.type === 'stop' && '정차'}
+                              {item.type === 'lunch' && '점심'}
+                              {item.type === 'networking' && '네트워킹'}
                               {item.type === 'return' && '복귀'}
                               {item.type === 'arrival' && '도착'}
                             </span>
@@ -765,7 +771,14 @@ const Events = () => {
                     <span className="text-sm font-bold text-slate-500 min-w-[32px]">{index + 1}</span>
                     <div className="flex-1">
                       <p className="font-bold text-slate-900">{participant.name}</p>
-                      <p className="text-sm text-slate-600">{participant.occupation}</p>
+                      <p className="text-sm text-slate-600">
+                        {participant.company && participant.position 
+                          ? `${participant.company} · ${participant.position}`
+                          : participant.company 
+                            ? participant.company
+                            : participant.position || participant.occupation || '정보 없음'
+                        }
+                      </p>
                     </div>
                     <Badge variant={participant.status === 'confirmed' ? 'success' : 'warning'}>
                       {participant.status === 'confirmed' ? '확정' : '대기'}

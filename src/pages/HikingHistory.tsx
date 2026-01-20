@@ -1,7 +1,7 @@
 import { Calendar, MapPin, Users, Award, Mountain, ChevronRight, Image as ImageIcon, MessageSquare, Plus, Edit2, Trash2, X, CalendarX } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContextEnhanced';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';

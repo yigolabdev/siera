@@ -701,14 +701,17 @@ const ContentManagement = () => {
                     버전 <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="text"
+                    type="date"
                     value={amendmentForm.version}
-                    onChange={(e) => setAmendmentForm({ ...amendmentForm, version: e.target.value })}
+                    onChange={(e) => {
+                      const date = e.target.value; // YYYY-MM-DD
+                      const formatted = date.replace(/-/g, '.'); // YYYY.MM.DD
+                      setAmendmentForm({ ...amendmentForm, version: formatted });
+                    }}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="예: 2026.01.15"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    * YYYY.MM.DD 형식 권장
+                    * 날짜 선택 시 자동으로 YYYY.MM.DD 형식으로 변환됩니다
                   </p>
                 </div>
                 
@@ -717,12 +720,18 @@ const ContentManagement = () => {
                     시행일 <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="text"
-                    value={amendmentForm.date}
-                    onChange={(e) => setAmendmentForm({ ...amendmentForm, date: e.target.value })}
+                    type="date"
+                    value={amendmentForm.date ? amendmentForm.date.replace(/년|월|일| /g, '').replace(/\./g, '-').padStart(10, '0') : ''}
+                    onChange={(e) => {
+                      const date = new Date(e.target.value);
+                      const formatted = `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, '0')}월 ${String(date.getDate()).padStart(2, '0')}일`;
+                      setAmendmentForm({ ...amendmentForm, date: formatted });
+                    }}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="예: 2026년 1월 15일"
                   />
+                  <p className="text-xs text-slate-500 mt-1">
+                    현재: {amendmentForm.date || '선택하지 않음'}
+                  </p>
                 </div>
               </div>
               

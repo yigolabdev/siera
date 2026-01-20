@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContextEnhanced';
 import { DevModeProvider } from './contexts/DevModeContext';
 import { EventProvider } from './contexts/EventContext';
 import { MemberProvider } from './contexts/MemberContext';
@@ -36,6 +36,7 @@ const PaymentManagement = lazy(() => import('./pages/Admin/PaymentManagement'));
 const AnnualFeeManagement = lazy(() => import('./pages/Admin/AnnualFeeManagement'));
 const ExecutiveManagement = lazy(() => import('./pages/Admin/ExecutiveManagement'));
 const ContentManagement = lazy(() => import('./pages/Admin/ContentManagement'));
+const AdminManual = lazy(() => import('./pages/Admin/AdminManual'));
 
 // 로딩 컴포넌트
 const PageLoader = () => (
@@ -96,6 +97,7 @@ function App() {
               <Route path="executives" element={<ExecutiveManagement />} />
               <Route path="events" element={<EventManagement />} />
               <Route path="content" element={<ContentManagement />} />
+              <Route path="manual" element={<AdminManual />} />
             </Route>
             
             {/* Print View - 별도 레이아웃 없이 */}

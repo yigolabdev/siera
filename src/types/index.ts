@@ -46,7 +46,7 @@ export interface PendingUser {
 
 // ==================== Event Types ====================
 export type Difficulty = '하' | '중하' | '중' | '중상' | '상';
-export type ScheduleType = 'departure' | 'stop' | 'return' | 'arrival';
+export type ScheduleType = 'departure' | 'stop' | 'lunch' | 'networking' | 'return' | 'arrival';
 
 export interface ScheduleItem {
   time: string;
@@ -71,6 +71,7 @@ export interface PaymentInfo {
   deadline?: string;
   managerName: string;
   managerPhone: string;
+  cost?: string; // 참가비 (admin에서 사용)
 }
 
 export interface HikingEvent {
@@ -78,21 +79,27 @@ export interface HikingEvent {
   title: string;
   date: string;
   location: string;
-  mountain: string;
+  mountain?: string;
   altitude?: string;
   difficulty: Difficulty;
   description: string;
   maxParticipants: number;
-  currentParticipants: number;
+  currentParticipants?: number; // 현재 참여자 수 (계산됨)
   cost: string;
   imageUrl?: string;
   schedule?: ScheduleItem[];
   courses?: Course[];
   teams?: Team[];
   paymentInfo?: PaymentInfo;
+  emergencyContactId?: string; // 당일 비상연락처 (운영진 ID)
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   isSpecial?: boolean;
+  isPublished?: boolean; // 공개 여부
+  status?: 'draft' | 'open' | 'closed' | 'ongoing' | 'completed'; // 산행 상태
+  applicationDeadline?: string; // 신청 마감일 (YYYY-MM-DD)
+  createdAt?: string; // 생성일
+  isRegistered?: boolean; // 현재 사용자의 신청 여부 (클라이언트 사이드)
 }
 
 // ==================== Team Types ====================
@@ -100,8 +107,10 @@ export interface TeamMember {
   id: string;
   name: string;
   company: string;
-  position: string;
+  position?: string; // 직책 (선택)
+  occupation?: string; // 직책 (호환성)
   phone?: string;
+  isGuest?: boolean; // 게스트 여부
 }
 
 export interface Team {
@@ -114,6 +123,7 @@ export interface Team {
   leaderName: string;
   leaderCompany?: string;
   leaderPosition?: string;
+  leaderOccupation?: string; // 호환성
   leaderPhone?: string;
   members: TeamMember[];
 }
@@ -135,6 +145,7 @@ export interface Participant {
   position: string;
   phone: string;
   status: ParticipationStatus;
+  occupation?: string; // 호환성 (company + position 결합)
 }
 
 // ==================== Gallery Types ====================

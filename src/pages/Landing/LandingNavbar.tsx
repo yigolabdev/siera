@@ -47,8 +47,8 @@ export const LandingNavbar: React.FC = () => {
     <nav className={navClasses}>
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
         {/* Logo */}
-        <button onClick={scrollToTop} className="text-xl tracking-[0.2em] font-bold uppercase z-50">
-          SIERRA
+        <button onClick={scrollToTop} className="text-xl tracking-wide font-bold z-50">
+          시애라클럽 <span className="text-sm font-normal">詩愛羅</span>
         </button>
 
         {/* Desktop Menu */}

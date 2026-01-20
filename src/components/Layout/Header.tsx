@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mountain, User, LogOut, Shield, Settings, Menu, X } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContextEnhanced';
 import { useDevMode } from '../../contexts/DevModeContext';
 import { useState } from 'react';
 import DevModePanel from '../DevModePanel';
@@ -19,12 +19,13 @@ const Header = () => {
     { name: '사진 갤러리', path: '/home/gallery' },
     { name: '게시판', path: '/home/board' },
     { name: '회원명부', path: '/home/members' },
-    { name: '참여율', path: '/home/attendance' },
+    // 참여율은 개발자 메뉴로 이동 (향후 일반 회원 오픈 예정)
     { name: '이전 산행', path: '/home/hiking-history' },
     { name: '시애라(詩愛羅)', path: '/home/club-info' },
   ];
   
   const adminNavigation = [
+    { name: '사용 매뉴얼', path: '/admin/manual' },
     { name: '게시물 관리', path: '/admin/content' },
     { name: '입금 관리', path: '/admin/payment' },
     { name: '산행 관리', path: '/admin/events' },

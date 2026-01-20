@@ -1,83 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Calendar, MapPin, Users, Save, X, CreditCard, Phone, UserPlus, CheckCircle, Shield, AlertCircle, Lock, Mountain, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, Calendar, MapPin, Users, Save, X, CreditCard, Phone, UserPlus, CheckCircle, Shield, AlertCircle, Lock, Mountain, Printer, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
-
-interface PaymentInfo {
-  bankName: string;
-  accountNumber: string;
-  accountHolder: string;
-  managerName: string;
-  managerPhone: string;
-  cost: string; // 참가비
-}
-
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  mountain?: string;
-  altitude?: string;
-  difficulty: '하' | '중하' | '중' | '중상' | '상';
-  description: string;
-  maxParticipants: number;
-  cost: string;
-  schedule: ScheduleItem[];
-  courses?: Course[];
-  paymentInfo?: PaymentInfo;
-  isPublished: boolean; // 공개 여부
-  isSpecial?: boolean; // 특별산행 여부 (1박 산행, 해외 산행 등)
-  emergencyContactId?: string; // 당일 비상연락처 (운영진 ID)
-  emergencyContactName?: string; // 비상연락처 이름 (표시용)
-  emergencyContactPhone?: string; // 비상연락처 전화번호 (표시용)
-}
-
-interface ScheduleItem {
-  time: string;
-  location: string;
-  type: 'departure' | 'stop' | 'return' | 'arrival';
-}
-
-interface Course {
-  id: string;
-  name: string;
-  description: string;
-  distance: string;
-  schedule: ScheduleItem[];
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  occupation: string;
-  company: string;
-  phone?: string;
-  isGuest?: boolean;  // 게스트 여부
-}
-
-interface Team {
-  id: string;
-  name: string;
-  number?: number;
-  eventId: string;  // 산행 ID
-  eventTitle?: string;  // 산행 제목 (표시용)
-  leaderId: string;
-  leaderName: string;
-  leaderOccupation: string;
-  leaderPhone?: string;
-  members: TeamMember[];
-}
+import { HikingEvent, PaymentInfo, ScheduleItem, Course, Team, TeamMember } from '../../types';
 
 type TabType = 'events' | 'teams';
 
 const EventManagement = () => {
   const navigate = useNavigate();
-  const { setTeamsForEvent } = useEvents();
+  const { setTeamsForEvent, getParticipantsByEventId } = useEvents();
   const { members, getMembersByPosition } = useMembers();
   const [activeTab, setActiveTab] = useState<TabType>('events');
 
@@ -103,7 +38,7 @@ const EventManagement = () => {
   ];
 
   // Event Management State
-  const [events, setEvents] = useState<Event[]>([
+  const [events, setEvents] = useState<HikingEvent[]>([
     {
       id: '1',
       title: '북한산 백운대 등반',
@@ -127,14 +62,17 @@ const EventManagement = () => {
         managerPhone: '010-1234-5678',
         cost: '60,000원',
       },
-      isPublished: true, // 입금 정보 완료 + 공개
-      isSpecial: false, // 정기 산행
+      isPublished: true,
+      isSpecial: false,
+      status: 'open', // 신청 접수중
+      applicationDeadline: '2026-01-10',
+      createdAt: '2026-01-01',
     },
   ]);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [formData, setFormData] = useState<Event>({
+  const [editingEvent, setEditingEvent] = useState<HikingEvent | null>(null);
+  const [formData, setFormData] = useState<HikingEvent>({
     id: '',
     title: '',
     date: '',
@@ -168,8 +106,10 @@ const EventManagement = () => {
       managerPhone: '',
       cost: '60,000원',
     },
-    isPublished: false, // 초기값은 비공개
-    isSpecial: false, // 초기값은 정기 산행
+    isPublished: false,
+    isSpecial: false,
+    status: 'draft', // 초기 상태는 작성중
+    applicationDeadline: '',
   });
 
   // Team Management State
@@ -223,47 +163,28 @@ const EventManagement = () => {
     members: [],
   });
 
-  // Mock registered members for team assignment
-  const allMembers: TeamMember[] = [
-    { id: '1', name: '김산행', occupation: '○○그룹', company: '회장' },
-    { id: '2', name: '이등산', occupation: '△△건설', company: '대표이사' },
-    { id: '3', name: '박트레킹', occupation: '□□금융', company: '부사장' },
-    { id: '4', name: '최하이킹', occupation: '◇◇제약', company: '전무이사' },
-    { id: '5', name: '정봉우리', occupation: '☆☆병원', company: '원장' },
-    { id: '6', name: '홍정상', occupation: '※※법률사무소', company: '대표변호사' },
-    { id: '7', name: '강백운', occupation: '◎◎IT', company: '대표' },
-    { id: '8', name: '윤설악', occupation: '▽▽건축', company: '사장' },
-    { id: '9', name: '임지리', occupation: '★★무역', company: '부사장' },
-    { id: '10', name: '조한라', occupation: '◆◆투자', company: '이사' },
-    { id: '11', name: '문북한', occupation: '◈◈컨설팅', company: '전무' },
-    { id: '12', name: '신계룡', occupation: '▲▲물류', company: '대표' },
-    { id: '13', name: '장태백', occupation: '▼▼제조', company: '사장' },
-    { id: '14', name: '권덕유', occupation: '◐◐통신', company: '이사' },
-    { id: '15', name: '서오대', occupation: '◑◑교육', company: '교수' },
-    { id: '16', name: '오속리', occupation: '◒◒인프라', company: '대표' },
-    { id: '17', name: '배치악', occupation: '◓◓미디어', company: '본부장' },
-    { id: '18', name: '류월출', occupation: '◔◔바이오', company: '연구소장' },
-    { id: '19', name: '전청계', occupation: '◕◕에너지', company: '전무' },
-    { id: '20', name: '황무등', occupation: '◖◖자산운용', company: '대표' },
-  ];
-
-  // 산행별 신청자 목록 (Mock 데이터)
-  const eventApplicants: { [eventId: string]: string[] } = {
-    '1': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'], // 북한산 백운대 신청자 12명
-    // 다른 산행의 신청자는 추후 추가
-  };
-
   // 선택된 산행의 조 편성만 필터링 (먼저 정의)
   const filteredTeams = selectedEventIdForTeam 
     ? teams.filter(team => team.eventId === selectedEventIdForTeam)
     : [];
 
-  // 선택된 산행에 신청한 회원만 필터링
+  // 선택된 산행에 신청하고 입금까지 완료된 회원만 필터링
   const getApplicantsForEvent = (eventId: string): TeamMember[] => {
     if (!eventId) return [];
     
-    const applicantIds = eventApplicants[eventId] || [];
-    return allMembers.filter(member => applicantIds.includes(member.id));
+    // 실제 참가자 데이터에서 입금 완료된 사람만 가져오기
+    const eventParticipants = getParticipantsByEventId(eventId);
+    const confirmedParticipants = eventParticipants.filter(p => p.status === 'confirmed');
+    
+    // TeamMember 형식으로 변환
+    return confirmedParticipants.map(p => ({
+      id: p.id,
+      name: p.name,
+      company: p.company,
+      position: p.position,
+      occupation: p.occupation || `${p.company} ${p.position}`,
+      phone: p.phone,
+    }));
   };
 
   // 이미 다른 조에 배정된 회원 제외
@@ -288,6 +209,46 @@ const EventManagement = () => {
 
   // 현재 조 편성에 사용할 회원 목록
   const availableMembers = getAvailableMembers(selectedEventIdForTeam);
+
+  // ==================== 자동 아카이빙 (산행 다음날 자동 완료) ====================
+  useEffect(() => {
+    const checkAndArchiveEvents = () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      let updated = false;
+      const updatedEvents = events.map(event => {
+        // 산행이 진행중(ongoing)이고, 산행 날짜가 지났으면 자동 완료
+        if (event.status === 'ongoing') {
+          const eventDate = new Date(event.date);
+          eventDate.setHours(0, 0, 0, 0);
+          
+          // 산행 다음날 (산행 당일 + 1일)
+          const dayAfterEvent = new Date(eventDate);
+          dayAfterEvent.setDate(dayAfterEvent.getDate() + 1);
+          
+          if (today >= dayAfterEvent) {
+            updated = true;
+            console.log(`[자동 아카이빙] ${event.title} 산행이 완료 처리되었습니다.`);
+            return { ...event, status: 'completed' as const };
+          }
+        }
+        return event;
+      });
+      
+      if (updated) {
+        setEvents(updatedEvents);
+      }
+    };
+    
+    // 컴포넌트 마운트 시 체크
+    checkAndArchiveEvents();
+    
+    // 매일 자정에 체크 (개발 환경에서는 1분마다)
+    const interval = setInterval(checkAndArchiveEvents, 60000); // 1분마다 체크
+    
+    return () => clearInterval(interval);
+  }, [events]);
 
   // Event Management Handlers
   const handleEdit = (event: Event) => {
@@ -399,7 +360,161 @@ const EventManagement = () => {
       },
       isPublished: false,
       isSpecial: false,
+      status: 'draft',
+      applicationDeadline: '',
     });
+  };
+
+  // ==================== 상태 전환 함수들 ====================
+  
+  // 1단계 → 2단계: 산행 공개 (신청 접수 시작)
+  const handleOpenApplication = (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    
+    if (!event.paymentInfo?.bankName || !event.paymentInfo?.accountNumber) {
+      alert('입금 정보를 먼저 입력해주세요.');
+      return;
+    }
+    
+    if (!event.applicationDeadline) {
+      alert('신청 마감일을 먼저 설정해주세요.');
+      return;
+    }
+    
+    if (confirm('산행을 공개하고 신청 접수를 시작하시겠습니까?')) {
+      setEvents(events.map(e => 
+        e.id === eventId 
+          ? { ...e, status: 'open', isPublished: true }
+          : e
+      ));
+      alert('산행이 공개되었습니다. 회원들이 신청할 수 있습니다.');
+    }
+  };
+
+  // 4단계: 신청 마감
+  const handleCloseApplication = (eventId: string) => {
+    if (confirm('산행 신청을 마감하시겠습니까?\n마감 후에는 추가 신청을 받을 수 없습니다.')) {
+      setEvents(events.map(e => 
+        e.id === eventId 
+          ? { ...e, status: 'closed' }
+          : e
+      ));
+      alert('산행 신청이 마감되었습니다.\n이제 조 편성을 진행해주세요.');
+    }
+  };
+
+  // 6단계: 산행 진행중으로 변경 (당일)
+  const handleStartHiking = (eventId: string) => {
+    if (confirm('산행을 시작하시겠습니까?')) {
+      setEvents(events.map(e => 
+        e.id === eventId 
+          ? { ...e, status: 'ongoing' }
+          : e
+      ));
+      alert('산행이 시작되었습니다. 안전한 산행 되세요!');
+    }
+  };
+
+  // 7단계: 산행 완료 (다음날 자동 또는 수동)
+  const handleCompleteHiking = (eventId: string) => {
+    if (confirm('산행을 완료 처리하시겠습니까?\n완료된 산행은 이전 산행 목록으로 이동됩니다.')) {
+      setEvents(events.map(e => 
+        e.id === eventId 
+          ? { ...e, status: 'completed' }
+          : e
+      ));
+      alert('산행이 완료되었습니다. 수고하셨습니다!');
+    }
+  };
+
+  // 상태별 액션 버튼 렌더링
+  const getStatusActions = (event: Event) => {
+    const today = new Date();
+    const eventDate = new Date(event.date);
+    const deadlineDate = event.applicationDeadline ? new Date(event.applicationDeadline) : null;
+    
+    today.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+    if (deadlineDate) deadlineDate.setHours(0, 0, 0, 0);
+    
+    const isEventDay = eventDate.getTime() === today.getTime();
+    const isAfterEvent = today > eventDate;
+    
+    switch (event.status) {
+      case 'draft':
+        return (
+          <button
+            onClick={() => handleOpenApplication(event.id)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+          >
+            <CheckCircle className="w-4 h-4" />
+            신청 접수 시작
+          </button>
+        );
+      
+      case 'open':
+        return (
+          <button
+            onClick={() => handleCloseApplication(event.id)}
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors flex items-center gap-2"
+          >
+            <Lock className="w-4 h-4" />
+            신청 마감
+          </button>
+        );
+      
+      case 'closed':
+        if (isEventDay) {
+          return (
+            <button
+              onClick={() => handleStartHiking(event.id)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Mountain className="w-4 h-4" />
+              산행 시작
+            </button>
+          );
+        }
+        return (
+          <Badge variant="info">조 편성 완료</Badge>
+        );
+      
+      case 'ongoing':
+        return (
+          <button
+            onClick={() => handleCompleteHiking(event.id)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center gap-2"
+          >
+            <CheckCircle className="w-4 h-4" />
+            산행 완료
+          </button>
+        );
+      
+      case 'completed':
+        return <Badge variant="default">완료됨</Badge>;
+      
+      default:
+        return null;
+    }
+  };
+
+  // 상태별 뱃지 색상 및 텍스트
+  const getStatusBadge = (status: Event['status']) => {
+    switch (status) {
+      case 'draft':
+        return <Badge variant="default">작성중</Badge>;
+      case 'open':
+        return <Badge variant="success">신청 접수중</Badge>;
+      case 'closed':
+        return <Badge variant="warning">신청 마감</Badge>;
+      case 'ongoing':
+        return <Badge variant="primary">산행중</Badge>;
+      case 'completed':
+        return <Badge variant="info">완료</Badge>;
+      default:
+        return null;
+    }
   };
 
   const handleScheduleChange = (index: number, field: 'time' | 'location', value: string) => {
@@ -422,7 +537,7 @@ const EventManagement = () => {
     }
   };
 
-  const updateScheduleType = (index: number, type: 'departure' | 'stop' | 'return' | 'arrival') => {
+  const updateScheduleType = (index: number, type: 'departure' | 'stop' | 'lunch' | 'networking' | 'return' | 'arrival') => {
     const newSchedule = [...formData.schedule];
     newSchedule[index] = { ...newSchedule[index], type };
     setFormData({ ...formData, schedule: newSchedule });
@@ -578,7 +693,7 @@ const EventManagement = () => {
     
     setTeams(updatedTeams);
     
-    // Context에도 저장
+    // Context에도 저장 (필드 매핑 수정)
     if (selectedEventIdForTeam) {
       const contextTeams = updatedTeams
         .filter(t => t.eventId === selectedEventIdForTeam)
@@ -590,12 +705,17 @@ const EventManagement = () => {
           leaderId: t.leaderId,
           leaderName: t.leaderName,
           leaderPhone: t.leaderPhone,
-          leaderCompany: t.leaderOccupation,
+          leaderCompany: t.company || '', // company 필드 사용
+          leaderPosition: t.position || t.leaderOccupation || '', // position 필드 우선 사용
+          leaderOccupation: t.position || t.leaderOccupation || '', // 호환성
           members: t.members.map(m => ({
             id: m.id,
             name: m.name,
-            phone: m.phone,
-            company: m.company,
+            phone: m.phone || '',
+            company: m.company || '',
+            position: m.position || m.occupation || '', // position 필드 우선
+            occupation: m.position || m.occupation || '', // 호환성
+            isGuest: m.isGuest || false,
           })),
         }));
       setTeamsForEvent(selectedEventIdForTeam, contextTeams);
@@ -625,7 +745,7 @@ const EventManagement = () => {
     });
   };
 
-  // Context 업데이트 헬퍼 함수
+  // Context 업데이트 헬퍼 함수 (필드 매핑 수정)
   const syncTeamsToContext = (updatedTeams: Team[]) => {
     if (selectedEventIdForTeam) {
       const contextTeams = updatedTeams
@@ -638,12 +758,17 @@ const EventManagement = () => {
           leaderId: t.leaderId,
           leaderName: t.leaderName,
           leaderPhone: t.leaderPhone,
-          leaderCompany: t.leaderOccupation,
+          leaderCompany: t.company || '', // company 필드 사용
+          leaderPosition: t.position || t.leaderOccupation || '', // position 필드 우선 사용
+          leaderOccupation: t.position || t.leaderOccupation || '', // 호환성
           members: t.members.map(m => ({
             id: m.id,
             name: m.name,
-            phone: m.phone,
-            company: m.company,
+            phone: m.phone || '',
+            company: m.company || '',
+            position: m.position || m.occupation || '', // position 필드 우선
+            occupation: m.position || m.occupation || '', // 호환성
+            isGuest: m.isGuest || false,
           })),
         }));
       setTeamsForEvent(selectedEventIdForTeam, contextTeams);
@@ -964,6 +1089,52 @@ const EventManagement = () => {
             </Card>
           )}
 
+          {/* 산행 관리 프로세스 안내 */}
+          {!isEditing && (
+            <Card className="mb-8 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
+              <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <Mountain className="w-6 h-6 text-blue-600" />
+                산행 관리 프로세스
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+                {[
+                  { step: 1, title: '산행 등록', desc: '새 산행 등록', icon: Plus, color: 'blue' },
+                  { step: 2, title: '신청 접수', desc: '회원 신청 받기', icon: UserPlus, color: 'green' },
+                  { step: 3, title: '입금 관리', desc: '입금 확인', icon: CreditCard, color: 'purple' },
+                  { step: 4, title: '신청 마감', desc: '접수 종료', icon: Lock, color: 'amber' },
+                  { step: 5, title: '조 편성', desc: '팀 구성', icon: Users, color: 'indigo' },
+                  { step: 6, title: '산행 진행', desc: '당일 산행', icon: Mountain, color: 'emerald' },
+                  { step: 7, title: '완료 처리', desc: '아카이빙', icon: CheckCircle, color: 'slate' },
+                ].map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.step} className="flex flex-col items-center">
+                      <div className={`w-16 h-16 rounded-full bg-${item.color}-100 border-2 border-${item.color}-300 flex items-center justify-center mb-2`}>
+                        <Icon className={`w-8 h-8 text-${item.color}-600`} />
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs font-bold text-slate-500 mb-1">STEP {item.step}</div>
+                        <div className="text-sm font-bold text-slate-900">{item.title}</div>
+                        <div className="text-xs text-slate-600 mt-1">{item.desc}</div>
+                      </div>
+                      {index < 6 && (
+                        <div className="hidden md:block absolute top-8 left-1/2 w-full h-0.5 bg-slate-300" 
+                             style={{ transform: 'translateX(50%)' }}></div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
+                <p className="text-sm text-slate-700">
+                  <strong className="text-blue-700">📌 프로세스 가이드:</strong> 산행 등록 후 신청을 받고, 
+                  입금을 확인한 뒤 신청을 마감합니다. 조 편성 완료 후 산행 당일에 진행하고, 
+                  다음날 자동으로 완료 처리됩니다.
+                </p>
+              </div>
+            </Card>
+          )}
+
           {isEditing ? (
             <div className="card">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">
@@ -1020,13 +1191,43 @@ const EventManagement = () => {
                   </div>
                   <div>
                     <label className="block text-slate-700 font-medium mb-2">
-                      날짜 <span className="text-red-500">*</span>
+                      산행 날짜 <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       className="input-field"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-2">
+                      신청 마감일 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.applicationDeadline || ''}
+                      onChange={(e) => setFormData({ ...formData, applicationDeadline: e.target.value })}
+                      className="input-field"
+                      max={formData.date} // 산행 날짜 이전만 선택 가능
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      * 신청 마감일은 산행 날짜 이전이어야 합니다
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-2">
+                      최대 인원 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.maxParticipants}
+                      onChange={(e) => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) })}
+                      className="input-field"
+                      min="1"
                     />
                   </div>
                 </div>
@@ -1087,17 +1288,6 @@ const EventManagement = () => {
                       <option value="상">상</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-slate-700 font-medium mb-2">
-                      최대 인원 <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.maxParticipants}
-                      onChange={(e) => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) })}
-                      className="input-field"
-                    />
-                  </div>
                 </div>
 
                 <div>
@@ -1114,10 +1304,13 @@ const EventManagement = () => {
                 </div>
 
                 {/* 당일 비상연락처 */}
-                <div>
-                  <label className="block text-slate-700 font-medium mb-2">
-                    당일 비상연락처
-                  </label>
+                <div className="p-5 bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Phone className="w-5 h-5 text-red-600" />
+                    <label className="block text-slate-900 font-bold text-base">
+                      당일 비상연락처
+                    </label>
+                  </div>
                   <select
                     value={formData.emergencyContactId || ''}
                     onChange={(e) => {
@@ -1129,22 +1322,32 @@ const EventManagement = () => {
                         emergencyContactPhone: selectedExecutive?.phone || '',
                       });
                     }}
-                    className="input-field"
+                    className="input-field bg-white"
                   >
-                    <option value="">선택 안함</option>
+                    <option value="">운영진 중 선택하세요</option>
                     {executives.map((exec) => (
                       <option key={exec.id} value={exec.id}>
-                        {exec.name} ({exec.occupation}) - {exec.phone}
+                        {exec.name} - {exec.occupation} ({exec.phone})
                       </option>
                     ))}
                   </select>
                   {formData.emergencyContactId && (
-                    <p className="mt-2 text-sm text-slate-600">
-                      선택된 연락처: <strong className="text-slate-900">{formData.emergencyContactName}</strong> - {formData.emergencyContactPhone}
-                    </p>
+                    <div className="mt-3 p-3 bg-white rounded-lg border border-red-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-semibold text-slate-700">선택된 비상연락처</span>
+                      </div>
+                      <p className="text-base font-bold text-slate-900">
+                        {formData.emergencyContactName}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        📞 {formData.emergencyContactPhone}
+                      </p>
+                    </div>
                   )}
-                  <p className="text-xs text-slate-500 mt-1">
-                    산행 당일 비상 상황 시 연락할 운영진을 선택하세요
+                  <p className="text-xs text-slate-600 mt-2 flex items-start gap-1">
+                    <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <span>산행 당일 비상 상황 발생 시 연락할 운영진을 선택하세요. 프린트된 안내서에 표시됩니다.</span>
                   </p>
                 </div>
 
@@ -1175,6 +1378,8 @@ const EventManagement = () => {
                             >
                               <option value="departure">출발</option>
                               <option value="stop">정차</option>
+                              <option value="lunch">점심</option>
+                              <option value="networking">네트워킹</option>
                               <option value="return">복귀</option>
                               <option value="arrival">도착</option>
                             </select>
@@ -1641,18 +1846,20 @@ const EventManagement = () => {
                                 D-{daysUntil}
                               </Badge>
                             )}
-                            {isPast && <Badge variant="info">종료</Badge>}
-                            {event.isPublished ? (
-                              <Badge variant="success">공개됨</Badge>
-                            ) : (
-                              <Badge variant="warning">비공개</Badge>
-                            )}
+                            {isPast && event.status !== 'completed' && <Badge variant="info">종료</Badge>}
+                            {getStatusBadge(event.status)}
                           </div>
                           <div className="flex flex-wrap gap-3 text-slate-600">
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-4 w-4" />
                               <span>{event.date}</span>
                             </div>
+                            {event.applicationDeadline && (
+                              <div className="flex items-center space-x-1 text-amber-600">
+                                <Clock className="h-4 w-4" />
+                                <span>마감: {event.applicationDeadline}</span>
+                              </div>
+                            )}
                             <div className="flex items-center space-x-1">
                               <MapPin className="h-4 w-4" />
                               <span>{event.location}</span>
@@ -1667,31 +1874,47 @@ const EventManagement = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => window.open(`/admin/events/print/${event.id}`, '_blank')}
-                            className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-                            title="프린트"
-                          >
-                            <Printer className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(event)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="수정"
-                          >
-                            <Edit className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(event.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="삭제"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => window.open(`/admin/events/print/${event.id}`, '_blank')}
+                              className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                              title="프린트"
+                            >
+                              <Printer className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(event)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="수정"
+                            >
+                              <Edit className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(event.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="삭제"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+                          {getStatusActions(event)}
                         </div>
                       </div>
                       <p className="text-slate-700 mb-4">{event.description}</p>
+                      
+                      {/* 비상연락처 표시 */}
+                      {event.emergencyContactName && (
+                        <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-red-600" />
+                            <span className="text-sm font-bold text-slate-900">당일 비상연락처:</span>
+                            <span className="text-sm text-slate-700">
+                              {event.emergencyContactName} ({event.emergencyContactPhone})
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* 입금 정보 미완료 경고 */}
                       {!event.isPublished && !isPast && (
@@ -1713,7 +1936,7 @@ const EventManagement = () => {
                         <div className="space-y-1 text-sm">
                           {event.schedule.map((item, index) => (
                             <div key={index}>
-                              {item.time} {item.type === 'departure' && '출발'}{item.type === 'stop' && '정차'}{item.type === 'return' && '복귀'}{item.type === 'arrival' && '도착'} @ {item.location}
+                              {item.time} {item.type === 'departure' && '출발'}{item.type === 'stop' && '정차'}{item.type === 'lunch' && '점심'}{item.type === 'networking' && '네트워킹'}{item.type === 'return' && '복귀'}{item.type === 'arrival' && '도착'} @ {item.location}
                             </div>
                           ))}
                         </div>
@@ -2137,9 +2360,13 @@ const EventManagement = () => {
           {availableMembers.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="text-xl text-slate-500 mb-2">신청자가 없습니다</p>
+              <p className="text-xl text-slate-500 mb-2">입금 완료된 신청자가 없습니다</p>
               <p className="text-sm text-slate-400">
-                선택한 산행에 신청한 회원이 없거나, 모든 신청자가 이미 조에 배정되었습니다.
+                선택한 산행에 입금이 완료된 회원이 없거나,<br />
+                모든 입금 완료자가 이미 조에 배정되었습니다.
+              </p>
+              <p className="text-xs text-slate-400 mt-3">
+                💡 입금 관리 페이지에서 입금 확인 후 조편성을 진행하세요.
               </p>
             </div>
           ) : (
@@ -2177,15 +2404,18 @@ const EventManagement = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className={`font-bold ${
-                          !isSelectingLeader && isSelected 
-                            ? 'text-slate-500' 
-                            : isChecked 
-                            ? 'text-primary-900'
-                            : 'text-slate-900'
-                        }`}>
-                          {member.name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={`font-bold ${
+                            !isSelectingLeader && isSelected 
+                              ? 'text-slate-500' 
+                              : isChecked 
+                              ? 'text-primary-900'
+                              : 'text-slate-900'
+                          }`}>
+                            {member.name}
+                          </p>
+                          <Badge variant="success" className="text-xs">입금완료</Badge>
+                        </div>
                         <p className={`text-sm ${
                           !isSelectingLeader && isSelected 
                             ? 'text-slate-400' 
@@ -2193,7 +2423,7 @@ const EventManagement = () => {
                             ? 'text-primary-700'
                             : 'text-slate-600'
                         }`}>
-                          {member.occupation} {member.company}
+                          {member.company} · {member.position || member.occupation}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // esbuild 설정 (최상위 레벨)
+  esbuild: {
+    drop: ['console', 'debugger'], // 프로덕션에서 console.log 제거
+  },
   build: {
     // 청크 크기 경고 기준 (KB)
     chunkSizeWarningLimit: 1000,
@@ -22,9 +26,6 @@ export default defineConfig({
     sourcemap: false,
     // 최소화 활성화 (esbuild 사용 - 더 빠르고 추가 설치 불필요)
     minify: 'esbuild',
-    esbuild: {
-      drop: ['console', 'debugger'], // 프로덕션에서 console.log 제거
-    },
   },
   // 개발 서버 설정
   server: {

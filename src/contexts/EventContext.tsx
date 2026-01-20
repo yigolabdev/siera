@@ -1,28 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { HikingEvent, Participant } from '../types';
+import { HikingEvent, Participant, Team, TeamMember } from '../types';
 import { mockEvents, mockParticipants } from '../data/mockEvents';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-// 조 편성 타입 정의
-export interface TeamMember {
-  id: string;
-  name: string;
-  phone: string;
-  company: string;
-}
-
-export interface Team {
-  id: string;
-  eventId: string;
-  number: number;
-  name: string;
-  leaderId: string;
-  leaderName: string;
-  leaderPhone: string;
-  leaderCompany: string;
-  members: TeamMember[];
-}
 
 interface EventContextType {
   events: HikingEvent[];

@@ -500,7 +500,7 @@ const EventManagement = () => {
   };
 
   // 상태별 뱃지 색상 및 텍스트
-  const getStatusBadge = (status: Event['status']) => {
+  const getStatusBadge = (status: HikingEvent['status']) => {
     switch (status) {
       case 'draft':
         return <Badge variant="default">작성중</Badge>;

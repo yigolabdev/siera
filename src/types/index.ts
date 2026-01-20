@@ -16,6 +16,7 @@ export interface User {
   isApproved: boolean;
   profileImage?: string;
   bio?: string;
+  attendanceRate?: number; // 참여율 (%)
 }
 
 // Member는 User의 alias

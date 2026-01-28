@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FadeIn } from '../../components/ui/FadeIn';
-import { ChevronDown, LogIn, AlertCircle } from 'lucide-react';
+import { ChevronDown, LogIn } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContextEnhanced';
 import Modal from '../../components/ui/Modal';
 
@@ -12,17 +12,18 @@ export const LandingHero: React.FC = () => {
   });
   const [rememberMe, setRememberMe] = useState(false);
   const [showMobileLoginModal, setShowMobileLoginModal] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   // Load saved email on mount
-  useEffect(() => {
-    const savedEmail = localStorage.getItem('savedEmail');
-    if (savedEmail) {
-      setLoginFormData(prev => ({ ...prev, email: savedEmail }));
+  const [savedEmail, setSavedEmail] = useState('');
+  
+  React.useEffect(() => {
+    const saved = localStorage.getItem('savedEmail');
+    if (saved) {
+      setLoginFormData(prev => ({ ...prev, email: saved }));
       setRememberMe(true);
+      setSavedEmail(saved);
     }
   }, []);
 
@@ -218,46 +219,6 @@ export const LandingHero: React.FC = () => {
                   게스트로 신청하기
                 </button>
               </div>
-            </div>
-
-            {/* Development Quick Login - 최소화 (관리자만) */}
-            <div className="mt-3 ml-auto flex flex-col items-end gap-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  setIsLoggingIn(true);
-                  setLoginStatus({ type: 'info', message: '로그인 중...' });
-                  try {
-                    const success = await login('choi@yigolab.com', 'chlgywns12#');
-                    if (success) {
-                      setLoginStatus({ type: 'success', message: '✅ 로그인 성공! 이동 중...' });
-                      setTimeout(() => navigate('/home'), 1000);
-                    } else {
-                      setLoginStatus({ type: 'error', message: '❌ 로그인 실패: 잘못된 이메일 또는 비밀번호' });
-                    }
-                  } catch (error: any) {
-                    setLoginStatus({ type: 'error', message: `❌ 오류: ${error.message}` });
-                  } finally {
-                    setIsLoggingIn(false);
-                  }
-                }}
-                disabled={isLoggingIn}
-                className="px-3 py-1.5 bg-orange-100 text-orange-900 rounded-lg text-xs font-bold hover:bg-orange-200 transition-all border border-orange-300 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <AlertCircle className="w-3 h-3" />
-                {isLoggingIn ? '로그인 중...' : '개발용 임시 로그인'}
-              </button>
-              
-              {/* 상태 메시지 */}
-              {loginStatus && (
-                <div className={`px-3 py-2 rounded-lg text-xs font-medium ${
-                  loginStatus.type === 'success' ? 'bg-green-100 text-green-900 border border-green-300' :
-                  loginStatus.type === 'error' ? 'bg-red-100 text-red-900 border border-red-300' :
-                  'bg-blue-100 text-blue-900 border border-blue-300'
-                }`}>
-                  {loginStatus.message}
-                </div>
-              )}
             </div>
           </FadeIn>
         </div>

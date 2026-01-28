@@ -118,7 +118,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const result = await firebaseSignIn(email, password);
 
       if (result.success && result.user) {
-        // 사용자 정보는 onAuthChange에서 처리됨
+        // Firebase Auth 상태 변경을 기다림
+        // onAuthChange가 사용자 정보를 설정할 때까지 대기
+        await new Promise<void>((resolve) => {
+          const checkUser = setInterval(() => {
+            if (user !== null) {
+              clearInterval(checkUser);
+              resolve();
+            }
+          }, 100);
+          
+          // 5초 타임아웃
+          setTimeout(() => {
+            clearInterval(checkUser);
+            resolve();
+          }, 5000);
+        });
+        
         return true;
       }
 
@@ -132,7 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   /**
    * 로그아웃

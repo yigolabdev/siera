@@ -245,13 +245,14 @@ service cloud.firestore {
     // 참가 신청 (participations) 컬렉션
     // ========================================
     match /participations/{participationId} {
-      // 읽기: 인증되고 승인된 회원만
-      allow read: if isAuthenticated() && isApproved();
+      // 읽기: 인증된 사용자 (승인되지 않은 회원도 자신의 신청 내역을 볼 수 있어야 함)
+      allow read: if isAuthenticated();
       
-      // 생성: 승인된 회원 (본인의 참가 신청만)
+      // 생성: 인증된 사용자 (승인되지 않은 회원과 비회원 게스트도 신청 가능)
+      // isGuest가 true인 경우 또는 본인의 UID로 신청하는 경우
       allow create: if isAuthenticated() && 
-                      isApproved() &&
-                      request.auth.uid == request.resource.data.userId;
+                      (request.resource.data.isGuest == true ||
+                       request.auth.uid == request.resource.data.userId);
       
       // 수정: 본인 또는 관리자
       allow update: if isOwner(resource.data.userId) || isAdmin();

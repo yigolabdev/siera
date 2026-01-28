@@ -29,6 +29,7 @@ const Gallery = () => {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedEventForUpload, setSelectedEventForUpload] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 완료된 산행 목록 (과거 산행)
@@ -116,12 +117,37 @@ const Gallery = () => {
   };
 
   const handleUpload = async () => {
-    if (uploadFiles.length === 0 || !selectedEventForUpload) return;
+    if (uploadFiles.length === 0) {
+      alert('업로드할 사진을 선택해주세요.');
+      return;
+    }
+    
+    if (!selectedEventForUpload) {
+      alert('산행을 선택해주세요.');
+      return;
+    }
+    
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
     
     const event = events.find(e => e.id === selectedEventForUpload);
-    if (!event) return;
+    if (!event) {
+      alert('선택한 산행을 찾을 수 없습니다.');
+      return;
+    }
 
+    setIsUploading(true);
+    
     try {
+      console.log('📤 사진 업로드 시작:', {
+        fileCount: uploadFiles.length,
+        eventId: event.id,
+        eventTitle: event.title,
+        user: user.email
+      });
+      
       const files = uploadFiles.map(uf => uf.file);
       const captions = uploadFiles.map(uf => uf.caption);
       
@@ -133,9 +159,21 @@ const Gallery = () => {
       setSelectedEventForUpload('');
       
       alert('사진이 업로드되었습니다!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('사진 업로드 실패:', error);
-      alert('사진 업로드에 실패했습니다.');
+      
+      // 더 자세한 에러 메시지
+      let errorMessage = '사진 업로드에 실패했습니다.';
+      if (error.message) {
+        errorMessage += `\n\n오류: ${error.message}`;
+      }
+      if (error.code === 'storage/unauthorized') {
+        errorMessage += '\n\n로그아웃 후 다시 로그인해주세요.';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsUploading(false);
     }
   };
 

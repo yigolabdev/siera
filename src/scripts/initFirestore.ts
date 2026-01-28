@@ -11,7 +11,7 @@
  * 또는 이 파일을 참고하여 Context 파일에서 초기 데이터 생성
  */
 
-import { db } from './lib/firebase/config';
+import { db } from '../lib/firebase/config';
 import { collection, doc, setDoc } from 'firebase/firestore';
 
 /**
@@ -464,8 +464,8 @@ export const checkCollections = () => {
   console.log('\n상세 구조는 FIRESTORE_STRUCTURE.md 참고');
 };
 
-// 자동 실행 방지
-if (require.main === module) {
-  console.log(SETUP_GUIDE);
-  checkCollections();
-}
+// 자동 실행 방지 (빌드 시에는 실행하지 않음)
+// if (require.main === module) {
+//   console.log(SETUP_GUIDE);
+//   checkCollections();
+// }

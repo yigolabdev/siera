@@ -168,10 +168,11 @@ export interface Participant {
   eventId?: string;
   memberId?: string;  // members 컬렉션 참조
   name: string;
-  company: string;
-  position: string;
+  email?: string;
+  company?: string;
+  position?: string;
   occupation?: string; // Deprecated: Use company instead
-  phoneNumber: string;
+  phoneNumber?: string;
   status: ParticipationStatus;
 }
 

@@ -326,7 +326,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       const participationsResult = await getDocuments<Participation>('participations');
       if (participationsResult.success && participationsResult.data) {
         const eventParticipations = participationsResult.data.filter(p => p.eventId === eventId);
-        const participants = eventParticipations.map(participation => ({
+        const participants: Participant[] = eventParticipations.map(participation => ({
           id: participation.userId,
           name: participation.userName,
           email: participation.userEmail,

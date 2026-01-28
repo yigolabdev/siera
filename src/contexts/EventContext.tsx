@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { HikingEvent, Participant, Team, TeamMember } from '../types';
-import { mockEvents, mockParticipants } from '../data/mockEvents';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 
@@ -33,7 +32,6 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   const [teams, setTeams] = useState<Record<string, Team[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [useFirebase, setUseFirebase] = useState(false); // Firebase 사용 여부
   
   // Firebase 초기 데이터 로드
   useEffect(() => {
@@ -45,13 +43,11 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
       
-      // Firebase에서 이벤트 로드 시도
+      // Firebase에서 이벤트 로드
       const eventsResult = await getDocuments<HikingEvent>('events');
       
-      if (eventsResult.success && eventsResult.data && eventsResult.data.length > 0) {
-        // Firebase 데이터 사용
+      if (eventsResult.success && eventsResult.data) {
         setEvents(eventsResult.data);
-        setUseFirebase(true);
         console.log('✅ Firebase에서 이벤트 데이터 로드:', eventsResult.data.length);
         
         // Firebase에서 조편성 데이터 로드
@@ -68,18 +64,27 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
           setTeams(teamsByEvent);
           console.log('✅ Firebase에서 조편성 데이터 로드:', teamsResult.data.length);
         }
+        
+        // Firebase에서 참가자 데이터 로드
+        const participantsResult = await getDocuments<Participant & { eventId: string }>('participants');
+        if (participantsResult.success && participantsResult.data) {
+          // eventId별로 그룹화
+          const participantsByEvent: Record<string, Participant[]> = {};
+          participantsResult.data.forEach(participant => {
+            if (!participantsByEvent[participant.eventId]) {
+              participantsByEvent[participant.eventId] = [];
+            }
+            participantsByEvent[participant.eventId].push(participant);
+          });
+          setParticipants(participantsByEvent);
+          console.log('✅ Firebase에서 참가자 데이터 로드:', participantsResult.data.length);
+        }
       } else {
-        // Mock 데이터 사용 (Fallback)
-        setEvents(mockEvents);
-        setParticipants(mockParticipants);
-        setUseFirebase(false);
-        console.log('ℹ️ Mock 데이터 사용 (Firebase 데이터 없음)');
+        console.log('ℹ️ Firebase에서 로드된 데이터가 없습니다.');
       }
     } catch (err: any) {
-      console.warn('⚠️ Firebase 로드 실패, Mock 데이터 사용:', err.message);
-      setEvents(mockEvents);
-      setParticipants(mockParticipants);
-      setUseFirebase(false);
+      console.error('❌ Firebase 로드 실패:', err.message);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -121,61 +126,47 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
 
   const addEvent = useCallback(async (event: HikingEvent) => {
     try {
-      if (useFirebase) {
-        const result = await setDocument('events', event.id, event);
-        if (result.success) {
-          setEvents(prev => [...prev, event]);
-        } else {
-          throw new Error(result.error || '이벤트 추가 실패');
-        }
-      } else {
+      const result = await setDocument('events', event.id, event);
+      if (result.success) {
         setEvents(prev => [...prev, event]);
+      } else {
+        throw new Error(result.error || '이벤트 추가 실패');
       }
     } catch (err: any) {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId: event.id });
       throw err;
     }
-  }, [useFirebase]);
+  }, []);
 
   const updateEvent = useCallback(async (id: string, updatedEvent: Partial<HikingEvent>) => {
     try {
-      if (useFirebase) {
-        const result = await firestoreUpdate('events', id, updatedEvent);
-        if (result.success) {
-          setEvents(prev => prev.map(event => 
-            event.id === id ? { ...event, ...updatedEvent } : event
-          ));
-        } else {
-          throw new Error(result.error || '이벤트 수정 실패');
-        }
-      } else {
+      const result = await firestoreUpdate('events', id, updatedEvent);
+      if (result.success) {
         setEvents(prev => prev.map(event => 
           event.id === id ? { ...event, ...updatedEvent } : event
         ));
+      } else {
+        throw new Error(result.error || '이벤트 수정 실패');
       }
     } catch (err: any) {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId: id });
       throw err;
     }
-  }, [useFirebase]);
+  }, []);
 
   const deleteEvent = useCallback(async (id: string) => {
     try {
-      if (useFirebase) {
-        const result = await deleteDocument('events', id);
-        if (result.success) {
-          setEvents(prev => prev.filter(event => event.id !== id));
-        } else {
-          throw new Error(result.error || '이벤트 삭제 실패');
-        }
-      } else {
+      const result = await deleteDocument('events', id);
+      if (result.success) {
         setEvents(prev => prev.filter(event => event.id !== id));
+      } else {
+        throw new Error(result.error || '이벤트 삭제 실패');
       }
     } catch (err: any) {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId: id });
       throw err;
     }
-  }, [useFirebase]);
+  }, []);
 
   const getEventById = useCallback((id: string) => {
     const event = events.find(event => event.id === id);
@@ -196,73 +187,51 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
 
   const addParticipant = useCallback(async (eventId: string, participant: Participant) => {
     try {
-      if (useFirebase) {
-        const participantData = {
-          ...participant,
-          eventId,
-          createdAt: new Date().toISOString(),
-        };
-        const result = await setDocument('participants', participant.id, participantData);
-        if (result.success) {
-          setParticipants(prev => ({
-            ...prev,
-            [eventId]: [...(prev[eventId] || []), participant],
-          }));
-          
-          // 이벤트의 currentParticipants 업데이트
-          setEvents(prev => prev.map(event => 
-            event.id === eventId 
-              ? { ...event, currentParticipants: (event.currentParticipants || 0) + 1 }
-              : event
-          ));
-        } else {
-          throw new Error(result.error || '참석자 추가 실패');
-        }
-      } else {
+      const participantData = {
+        ...participant,
+        eventId,
+        createdAt: new Date().toISOString(),
+      };
+      const result = await setDocument('participants', participant.id, participantData);
+      if (result.success) {
         setParticipants(prev => ({
           ...prev,
           [eventId]: [...(prev[eventId] || []), participant],
         }));
         
+        // 이벤트의 currentParticipants 업데이트
         setEvents(prev => prev.map(event => 
           event.id === eventId 
             ? { ...event, currentParticipants: (event.currentParticipants || 0) + 1 }
             : event
         ));
+      } else {
+        throw new Error(result.error || '참석자 추가 실패');
       }
     } catch (err: any) {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, participantId: participant.id });
       throw err;
     }
-  }, [useFirebase]);
+  }, []);
 
   const updateParticipantStatus = useCallback(async (eventId: string, participantId: string, status: 'confirmed' | 'pending') => {
     try {
-      if (useFirebase) {
-        const result = await firestoreUpdate('participants', participantId, { status });
-        if (result.success) {
-          setParticipants(prev => ({
-            ...prev,
-            [eventId]: (prev[eventId] || []).map(p => 
-              p.id === participantId ? { ...p, status } : p
-            ),
-          }));
-        } else {
-          throw new Error(result.error || '참석자 상태 수정 실패');
-        }
-      } else {
+      const result = await firestoreUpdate('participants', participantId, { status });
+      if (result.success) {
         setParticipants(prev => ({
           ...prev,
           [eventId]: (prev[eventId] || []).map(p => 
             p.id === participantId ? { ...p, status } : p
           ),
         }));
+      } else {
+        throw new Error(result.error || '참석자 상태 수정 실패');
       }
     } catch (err: any) {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, participantId });
       throw err;
     }
-  }, [useFirebase]);
+  }, []);
 
   // 조 편성 관련 함수
   const getTeamsByEventId = useCallback((eventId: string) => {
@@ -271,14 +240,12 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
 
   const setTeamsForEvent = useCallback(async (eventId: string, eventTeams: Team[]) => {
     try {
-      if (useFirebase) {
-        // Firebase에 조 편성 데이터 저장
-        // 각 팀을 개별 문서로 저장
-        const promises = eventTeams.map(team => 
-          setDocument('teams', team.id, { ...team, eventId })
-        );
-        await Promise.all(promises);
-      }
+      // Firebase에 조 편성 데이터 저장
+      // 각 팀을 개별 문서로 저장
+      const promises = eventTeams.map(team => 
+        setDocument('teams', team.id, { ...team, eventId })
+      );
+      await Promise.all(promises);
       
       setTeams(prev => ({
         ...prev,
@@ -288,7 +255,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId });
       throw err;
     }
-  }, [useFirebase]);
+  }, []);
   
   // 이벤트 새로고침
   const refreshEvents = useCallback(async () => {

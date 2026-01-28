@@ -9,8 +9,6 @@ import { usePoems } from '../contexts/PoemContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
-import { mockWeatherData, calculateStats } from '../data/mockData';
-import { mockNotices } from '../data/mockPosts';
 
 const Home = () => {
   const { user } = useAuth();
@@ -22,8 +20,27 @@ const Home = () => {
   // 참석 여부 상태 (실제로는 백엔드에서 가져와야 함)
   const [myParticipationStatus, setMyParticipationStatus] = useState<'attending' | 'not-attending' | 'pending' | null>('attending');
   
-  // 날씨 데이터 사용
-  const weatherData = mockWeatherData;
+  // 날씨 데이터 (추후 실제 API 연동)
+  const weatherData = {
+    temperature: 8,
+    feelsLike: 5,
+    condition: 'cloudy' as const,
+    precipitation: 20,
+    windSpeed: 3.5,
+    humidity: 65,
+    uvIndex: 'moderate' as 'low' | 'moderate' | 'high' | 'very-high',
+  };
+  
+  // 회원 통계 계산
+  const calculateStats = {
+    getTotalMembers: (members: any[]) => members.length,
+    getActiveMembers: (members: any[]) => members.filter(m => m.attendanceRate > 0).length,
+    getAverageAttendanceRate: (members: any[]) => {
+      if (members.length === 0) return 0;
+      const sum = members.reduce((acc, m) => acc + (m.attendanceRate || 0), 0);
+      return Math.round(sum / members.length);
+    },
+  };
 
   // 날씨 상태에 따른 아이콘 및 텍스트
   const getWeatherIcon = (condition: string) => {
@@ -104,13 +121,8 @@ const Home = () => {
     }
   };
   
-  // 공지사항 데이터 (상위 3개만)
-  const recentNotices = mockNotices.slice(0, 3).map(notice => ({
-    id: parseInt(notice.id),
-    title: notice.title,
-    date: notice.createdAt,
-    isPinned: notice.isPinned,
-  }));
+  // 공지사항 데이터 (추후 Firebase 연동)
+  const recentNotices = [];
   
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
@@ -359,8 +371,8 @@ const Home = () => {
               <span className="text-slate-600">
                 체감온도 <span className="font-semibold text-slate-900">{weatherData.feelsLike}°C</span>
               </span>
-              <Badge variant={weatherData.uvIndex === 'low' ? 'success' : weatherData.uvIndex === 'moderate' ? 'warning' : 'danger'}>
-                자외선 {weatherData.uvIndex === 'low' ? '낮음' : weatherData.uvIndex === 'moderate' ? '보통' : '높음'}
+              <Badge variant={weatherData.uvIndex === 'low' ? 'success' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? 'danger' : 'warning'}>
+                자외선 {weatherData.uvIndex === 'low' ? '낮음' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? '높음' : '보통'}
               </Badge>
             </div>
             

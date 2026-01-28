@@ -7,7 +7,6 @@ import { useEvents } from '../contexts/EventContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
-import { mockWeatherData } from '../data/mockData';
 
 const Events = () => {
   const { user } = useAuth();
@@ -20,8 +19,16 @@ const Events = () => {
   // URL에서 eventId 가져오기
   const eventIdFromUrl = searchParams.get('eventId');
   
-  // 날씨 데이터 사용
-  const weatherData = mockWeatherData;
+  // 날씨 데이터 (추후 실제 API 연동)
+  const weatherData = {
+    temperature: 8,
+    feelsLike: 5,
+    condition: 'cloudy' as const,
+    precipitation: 20,
+    windSpeed: 3.5,
+    humidity: 65,
+    uvIndex: 'moderate' as 'low' | 'moderate' | 'high' | 'very-high',
+  };
 
   // 날씨 상태에 따른 아이콘 및 텍스트
   const getWeatherIcon = (condition: string) => {
@@ -377,8 +384,8 @@ const Events = () => {
                 <span className="text-slate-600">
                   체감온도 <span className="font-semibold text-slate-900">{weatherData.feelsLike}°C</span>
                 </span>
-                <Badge variant={weatherData.uvIndex === 'low' ? 'success' : weatherData.uvIndex === 'moderate' ? 'warning' : 'danger'}>
-                  자외선 {weatherData.uvIndex === 'low' ? '낮음' : weatherData.uvIndex === 'moderate' ? '보통' : '높음'}
+                <Badge variant={weatherData.uvIndex === 'low' ? 'success' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? 'danger' : 'warning'}>
+                  자외선 {weatherData.uvIndex === 'low' ? '낮음' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? '높음' : '보통'}
                 </Badge>
               </div>
               

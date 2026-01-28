@@ -5,8 +5,7 @@ import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Badge from '../components/ui/Badge';
-import { mockEvents, mockParticipants } from '../data/mockEvents';
-import { mockUsers } from '../data/mockUsers';
+import { useEvents } from '../contexts/EventContext';
 import { formatDate, formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
 
 interface ApplicationResult {
@@ -18,6 +17,7 @@ interface ApplicationResult {
 }
 
 export default function QuickEventApply() {
+  const { events } = useEvents();
   const [name, setName] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,25 +29,13 @@ export default function QuickEventApply() {
     const now = new Date();
     const twoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, 0);
     
-    return mockEvents
+    return events
       .filter((event) => {
         const eventDate = new Date(event.date);
-        return eventDate >= now && eventDate <= twoMonthsLater;
-      })
-      .map(event => {
-        // 신청 가능한 상태로 날짜와 참가자 수 조정
-        const futureDate = new Date();
-        futureDate.setDate(futureDate.getDate() + 20);
-        
-        return {
-          ...event,
-          date: futureDate.toISOString().split('T')[0],
-          currentParticipants: 12,
-          maxParticipants: 25,
-        };
+        return eventDate >= now && eventDate <= twoMonthsLater && event.isPublished !== false;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, []);
+  }, [events]);
 
   // 선택된 산행 또는 첫 번째 산행
   const currentEvent = useMemo(() => {
@@ -57,10 +45,9 @@ export default function QuickEventApply() {
     return availableEvents[0] || null;
   }, [availableEvents, selectedEventId]);
 
-  // 신청자 목록
+  // 신청자 목록 (추후 Firebase 연동)
   const participants = useMemo(() => {
-    if (!currentEvent) return [];
-    return mockParticipants[currentEvent.id] || [];
+    return [];
   }, [currentEvent]);
 
   // 상태별 신청자 수
@@ -104,46 +91,15 @@ export default function QuickEventApply() {
     // 시뮬레이션: 서버 통신 지연
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // DB에서 이름으로 회원 찾기
-    const user = mockUsers.find(
-      (u) => u.name.trim() === name.trim() && u.isApproved && u.role !== 'guest'
-    );
-
-    if (!user) {
-      setResult({
-        success: false,
-        message: '등록된 회원을 찾을 수 없습니다. 이름을 정확히 입력해주세요.',
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    // 정원 확인
-    if (currentEvent.currentParticipants >= currentEvent.maxParticipants) {
-      setResult({
-        success: false,
-        message: `${currentEvent.title}은(는) 정원이 마감되었습니다.`,
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    // 신청 처리 (실제로는 서버에 저장)
-    // TODO: 실제 백엔드 API 호출로 교체
-    console.log('산행 신청:', { 
-      userId: user.id, 
-      userName: user.name, 
-      eventId: currentEvent.id,
-      course: selectedCourse 
-    });
-
+    // 간단한 신청 처리 (추후 Firebase 연동)
     setResult({
       success: true,
-      message: '산행 신청이 완료되었습니다!',
-      userName: user.name,
+      message: '산행 신청이 완료되었습니다.',
+      userName: name,
       eventTitle: currentEvent.title,
-      selectedCourse: selectedCourse, // 선택한 코스 저장
+      selectedCourse: selectedCourse,
     });
+
     setIsLoading(false);
     setName('');
     setSelectedCourse('');

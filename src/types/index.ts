@@ -32,6 +32,9 @@ export interface RegisterData {
   company: string;
   position: string;
   occupation?: string; // 호환성
+  referredBy?: string; // 추천인
+  hikingLevel?: string; // 산행 능력
+  applicationMessage?: string; // 신청 메시지
 }
 
 export interface PendingUser {

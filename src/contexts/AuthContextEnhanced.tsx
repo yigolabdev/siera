@@ -186,28 +186,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
       }
 
-      // Firestore에 사용자 정보 저장
-      const newUser: User = {
+      // pendingUsers 컬렉션에 승인 대기 사용자 추가
+      const pendingUserData = {
         id: result.user.uid,
         name: userData.name,
         email: userData.email,
         phoneNumber: userData.phoneNumber,
-        occupation: userData.occupation,
-        position: userData.position,
+        gender: userData.gender,
+        birthYear: userData.birthYear,
         company: userData.company,
-        role: 'member',
-        isApproved: false, // 관리자 승인 필요
-        joinDate: new Date().toISOString().split('T')[0],
+        position: userData.position,
+        referredBy: userData.referredBy,
+        hikingLevel: userData.hikingLevel,
+        applicationMessage: userData.applicationMessage,
+        appliedAt: new Date().toISOString(),
+        status: 'pending' as const,
       };
 
-      const saveResult = await setDocument('members', result.user.uid, newUser);
+      const pendingResult = await setDocument('pendingUsers', result.user.uid, pendingUserData);
 
-      if (!saveResult.success) {
+      if (!pendingResult.success) {
+        console.error('pendingUsers 저장 실패:', pendingResult.error);
         return {
           success: false,
-          message: '사용자 정보 저장에 실패했습니다.',
+          message: '회원가입 정보 저장에 실패했습니다.',
         };
       }
+
+      console.log('✅ 회원가입 신청 완료:', {
+        uid: result.user.uid,
+        email: userData.email,
+        name: userData.name,
+      });
 
       return {
         success: true,

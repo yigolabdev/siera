@@ -119,6 +119,9 @@ const Register = () => {
         birthYear: formData.birthYear,
         company: formData.company,
         position: formData.position,
+        referredBy: formData.referredBy,
+        hikingLevel: formData.hikingLevel,
+        applicationMessage: formData.applicationMessage,
       });
 
       if (success) {

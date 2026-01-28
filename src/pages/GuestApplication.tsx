@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Mountain, User, Mail, Phone, Briefcase, Building, UserPlus, ArrowLeft, Clock, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Mountain, User, Mail, Phone, Briefcase, Building, UserPlus, ArrowLeft, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
+import { useEvents } from '../contexts/EventContext';
 
 const GuestApplication = () => {
   const navigate = useNavigate();
+  const { events, isLoading } = useEvents();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,14 +21,22 @@ const GuestApplication = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  // 이번 달 정기 산행
-  const currentEvent = {
-    id: '1',
-    title: '앙봉산 정상 등반',
-    date: '2026-01-15',
-    location: '경기도 가평군',
-    cost: '60,000원',
-  };
+  // 신청 가능한 산행 (현재부터 2개월 이내)
+  const currentEvent = useMemo(() => {
+    const now = new Date();
+    const twoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    
+    const availableEvents = events
+      .filter((event) => {
+        const eventDate = new Date(event.date);
+        return eventDate >= now && 
+               eventDate <= twoMonthsLater && 
+               event.isPublished !== false;
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    return availableEvents[0] || null;
+  }, [events]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -37,6 +47,11 @@ const GuestApplication = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!currentEvent) {
+      alert('현재 신청 가능한 산행이 없습니다.');
+      return;
+    }
     
     // 마감일 확인
     if (isApplicationClosed(currentEvent.date)) {
@@ -51,9 +66,66 @@ const GuestApplication = () => {
   };
   
   // 신청 마감일 정보 계산
-  const applicationDeadline = formatDeadline(currentEvent.date);
-  const daysUntilDeadline = getDaysUntilDeadline(currentEvent.date);
-  const applicationClosed = isApplicationClosed(currentEvent.date);
+  const applicationDeadline = currentEvent ? formatDeadline(currentEvent.date) : '';
+  const daysUntilDeadline = currentEvent ? getDaysUntilDeadline(currentEvent.date) : 0;
+  const applicationClosed = currentEvent ? isApplicationClosed(currentEvent.date) : true;
+
+  // 로딩 중
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 산행이 없는 경우
+  if (!currentEvent) {
+    return (
+      <div className="min-h-screen bg-slate-950 py-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="mb-8">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              홈으로 돌아가기
+            </Link>
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-white mb-2">게스트 산행 신청</h1>
+              <p className="text-lg text-slate-400">
+                회원이 아니어도 게스트로 산행에 참여하실 수 있습니다
+              </p>
+            </div>
+          </div>
+
+          {/* Empty State */}
+          <div className="bg-slate-900/80 backdrop-blur-sm rounded-3xl p-12 border border-slate-800 shadow-2xl text-center">
+            <Calendar className="w-20 h-20 text-slate-600 mx-auto mb-6" />
+            <h2 className="text-2xl font-bold text-white mb-3">
+              현재 게스트 신청 가능한 산행이 없습니다
+            </h2>
+            <p className="text-slate-400 mb-8">
+              다음 산행 일정을 기다려주세요.<br />
+              정기 산행은 매월 진행됩니다.
+            </p>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors"
+            >
+              <Mountain className="w-5 h-5" />
+              홈으로 돌아가기
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 py-12">
@@ -253,12 +325,25 @@ const GuestApplication = () => {
                     <Mountain className="w-5 h-5" />
                     <span className="text-base">{currentEvent.location}</span>
                   </div>
+                  {currentEvent.mountain && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-base">
+                        {currentEvent.mountain}
+                        {currentEvent.altitude && ` (${currentEvent.altitude})`}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
                     <span className="text-base">{formatDate(currentEvent.date)}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-base font-bold text-emerald-400">참가비: {currentEvent.cost}</span>
                   </div>
+                  {currentEvent.description && (
+                    <div className="pt-2 mt-2 border-t border-slate-700">
+                      <p className="text-sm text-slate-300">{currentEvent.description}</p>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-4 text-sm text-slate-400">
                   * 신청 후 참가비 입금이 완료되어야 최종 신청이 확정됩니다. 입금 계좌는 승인 후 안내드립니다.

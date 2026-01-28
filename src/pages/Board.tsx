@@ -1,95 +1,44 @@
-import { Bell, Pin, CreditCard, MessageSquare, ThumbsUp, Eye, Calendar, Search, Plus, X, Send, ChevronDown, ChevronUp, Edit2, Trash2 } from 'lucide-react';
+import { Bell, Pin, MessageSquare, ThumbsUp, Eye, Search, Plus, X, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useNotices } from '../contexts/NoticeContext';
+import { usePosts, Comment as PostComment, Post } from '../contexts/PostContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
-import Modal from '../components/ui/Modal';
-
-interface Comment {
-  id: number;
-  postId: number;
-  author: string;
-  content: string;
-  date: string;
-  likes: number;
-  parentId?: number;
-}
-
-interface Post {
-  id: number;
-  category: string;
-  title: string;
-  author: string;
-  date: string;
-  views: number;
-  comments: number;
-  likes: number;
-  content: string;
-}
 
 const Board = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const { notices } = useNotices();
+  const { 
+    posts, 
+    comments, 
+    isLoading, 
+    addPost, 
+    deletePost, 
+    togglePostLike, 
+    addComment, 
+    deleteComment, 
+    toggleCommentLike, 
+    incrementPostViews,
+    getPostComments 
+  } = usePosts();
+  
   const [activeTab, setActiveTab] = useState<'notice' | 'general' | 'poem'>('notice');
   const [searchTerm, setSearchTerm] = useState('');
   const [showWriteModal, setShowWriteModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
-  const [likedComments, setLikedComments] = useState<Set<number>>(new Set());
   
   // 글쓰기 폼
   const [writeForm, setWriteForm] = useState({
-    category: 'general',
+    category: 'general' as 'general' | 'poem',
     title: '',
     content: '',
   });
   
   // 댓글 관련
-  const [comments, setComments] = useState<Comment[]>([
-    { id: 1, postId: 1, author: '강백운', content: '정말 좋은 날씨였죠! 다음에 또 함께해요~', date: '2026-01-16', likes: 5 },
-    { id: 2, postId: 1, author: '윤설악', content: '사진도 멋지게 나왔어요!', date: '2026-01-16', likes: 3 },
-    { id: 3, postId: 1, author: '김산행', content: '다음 산행도 기대됩니다', date: '2026-01-17', likes: 2, parentId: 2 },
-  ]);
   const [newComment, setNewComment] = useState('');
-  const [replyToComment, setReplyToComment] = useState<number | null>(null);
-  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
-  
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: 1,
-      category: 'general',
-      title: '지난 주 북한산 산행 정말 좋았습니다!',
-      author: '김산행',
-      date: '2026-01-16',
-      views: 156,
-      comments: 3,
-      likes: 24,
-      content: '날씨도 좋고 회원분들과 즐거운 시간 보냈습니다. 정상에서 본 경치가 정말 환상적이었어요. 다들 수고 많으셨고 다음 산행도 기대됩니다!',
-    },
-    {
-      id: 4,
-      category: 'general',
-      title: '다음 달 설악산 산행 기대됩니다',
-      author: '최하이킹',
-      date: '2026-01-13',
-      views: 178,
-      comments: 0,
-      likes: 32,
-      content: '설악산 대청봉 정상까지 함께 힘내봅시다! 날씨가 좋았으면 좋겠네요.',
-    },
-    {
-      id: 6,
-      category: 'poem',
-      title: '산을 오르며',
-      author: '강시인',
-      date: '2026-01-11',
-      views: 145,
-      comments: 0,
-      likes: 28,
-      content: `한 걸음 한 걸음\n돌계단을 오를 때마다\n숨이 차오르고\n\n하지만 멈추지 않네\n정상을 향한 발걸음\n\n구름 사이로 보이는\n아득한 세상\n\n여기 산 위에서\n나는 비로소 나를 만난다`,
-    },
-  ]);
+  const [replyToComment, setReplyToComment] = useState<string | null>(null);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   
   const pinnedNotices = notices.filter(n => n.isPinned);
   const regularNotices = notices.filter(n => !n.isPinned);
@@ -104,103 +53,80 @@ const Board = () => {
   });
   
   // 글쓰기
-  const handleWritePost = () => {
+  const handleWritePost = async () => {
     if (!writeForm.title.trim() || !writeForm.content.trim()) {
       alert('제목과 내용을 입력해주세요.');
       return;
     }
     
-    const newPost: Post = {
-      id: posts.length + 1,
-      category: activeTab === 'notice' ? 'general' : activeTab as string,
-      title: writeForm.title,
-      author: user?.name || '익명',
-      date: new Date().toISOString().split('T')[0],
-      views: 0,
-      comments: 0,
-      likes: 0,
-      content: writeForm.content,
-    };
-    
-    setPosts([newPost, ...posts]);
-    setWriteForm({ category: 'general', title: '', content: '' });
-    setShowWriteModal(false);
-    alert('게시글이 등록되었습니다!');
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      await addPost({
+        category: activeTab === 'notice' ? 'general' : activeTab,
+        title: writeForm.title,
+        author: user.name,
+        authorId: user.id,
+        date: new Date().toISOString().split('T')[0],
+        content: writeForm.content,
+      });
+      
+      setWriteForm({ category: 'general', title: '', content: '' });
+      setShowWriteModal(false);
+      alert('게시글이 등록되었습니다!');
+    } catch (error) {
+      console.error('게시글 작성 실패:', error);
+      alert('게시글 작성에 실패했습니다.');
+    }
   };
   
   // 게시글 좋아요
-  const handleLikePost = (postId: number, e: React.MouseEvent) => {
+  const handleLikePost = async (postId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLikedPosts(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(postId)) {
-        newSet.delete(postId);
-      } else {
-        newSet.add(postId);
-      }
-      return newSet;
-    });
+    if (!user) return;
     
-    setPosts(prev => prev.map(post => 
-      post.id === postId 
-        ? { ...post, likes: likedPosts.has(postId) ? post.likes - 1 : post.likes + 1 }
-        : post
-    ));
+    await togglePostLike(postId, user.id);
   };
   
   // 댓글 작성
-  const handleAddComment = () => {
-    if (!newComment.trim() || !selectedPost) return;
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !selectedPost || !user) return;
     
-    const comment: Comment = {
-      id: comments.length + 1,
-      postId: selectedPost.id,
-      author: user?.name || '익명',
-      content: newComment,
-      date: new Date().toISOString().split('T')[0],
-      likes: 0,
-      parentId: replyToComment || undefined,
-    };
-    
-    setComments([...comments, comment]);
-    setPosts(prev => prev.map(post =>
-      post.id === selectedPost.id
-        ? { ...post, comments: post.comments + 1 }
-        : post
-    ));
-    setNewComment('');
-    setReplyToComment(null);
+    try {
+      await addComment({
+        postId: selectedPost.id,
+        author: user.name,
+        authorId: user.id,
+        content: newComment,
+        date: new Date().toISOString().split('T')[0],
+        parentId: replyToComment || undefined,
+      });
+      
+      setNewComment('');
+      setReplyToComment(null);
+    } catch (error) {
+      console.error('댓글 작성 실패:', error);
+      alert('댓글 작성에 실패했습니다.');
+    }
   };
   
   // 댓글 좋아요
-  const handleLikeComment = (commentId: number) => {
-    setLikedComments(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(commentId)) {
-        newSet.delete(commentId);
-      } else {
-        newSet.add(commentId);
-      }
-      return newSet;
-    });
-    
-    setComments(prev => prev.map(comment =>
-      comment.id === commentId
-        ? { ...comment, likes: likedComments.has(commentId) ? comment.likes - 1 : comment.likes + 1 }
-        : comment
-    ));
+  const handleLikeComment = async (commentId: string) => {
+    if (!user) return;
+    await toggleCommentLike(commentId, user.id);
   };
   
-  // 게시글 조회수 증가
-  const handleViewPost = (post: Post) => {
-    setPosts(prev => prev.map(p =>
-      p.id === post.id ? { ...p, views: p.views + 1 } : p
-    ));
-    setSelectedPost({ ...post, views: post.views + 1 });
+  // 게시글 조회
+  const handleViewPost = async (post: Post) => {
+    await incrementPostViews(post.id);
+    setSelectedPost(post);
   };
   
   // 대댓글 토글
-  const toggleCommentExpand = (commentId: number) => {
+  const toggleCommentExpand = (commentId: string) => {
     setExpandedComments(prev => {
       const newSet = new Set(prev);
       if (newSet.has(commentId)) {
@@ -222,6 +148,9 @@ const Board = () => {
         return <Badge variant="info">자유</Badge>;
     }
   };
+
+  // 현재 게시글의 댓글 가져오기
+  const postComments = selectedPost ? getPostComments(selectedPost.id) : [];
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -346,57 +275,67 @@ const Board = () => {
             </button>
           </div>
           
-          {/* Posts List */}
-          <div className="space-y-4">
-            {filteredPosts.map((post) => (
-              <Card
-                key={post.id} 
-                className="cursor-pointer hover:shadow-lg hover:border-primary-600 transition-all"
-                onClick={() => handleViewPost(post)}
-              >
-                <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                  <div className="flex items-center gap-2 flex-wrap flex-1">
-                    {getCategoryBadge(post.category)}
-                    <h3 className="text-xl font-bold text-slate-900">
-                      {post.title}
-                    </h3>
-                  </div>
-                </div>
-                
-                <p className="text-slate-600 mb-4 line-clamp-2">{post.content}</p>
-                
-                <div className="flex items-center justify-between text-sm text-slate-500 flex-wrap gap-3">
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-slate-700">{post.author}</span>
-                    <span>{post.date}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                      <span>{post.views}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{post.comments}</span>
-                    </div>
-                    <button
-                      onClick={(e) => handleLikePost(post.id, e)}
-                      className="flex items-center gap-1 hover:text-primary-600 transition-colors"
-                    >
-                      <ThumbsUp 
-                        className={`h-4 w-4 ${likedPosts.has(post.id) ? 'fill-primary-600 text-primary-600' : ''}`}
-                      />
-                      <span className={likedPosts.has(post.id) ? 'text-primary-600 font-bold' : ''}>
-                        {post.likes}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-slate-600 mt-4">게시글을 불러오는 중...</p>
+            </div>
+          )}
           
-          {filteredPosts.length === 0 && (
+          {/* Posts List */}
+          {!isLoading && (
+            <div className="space-y-4">
+              {filteredPosts.map((post) => (
+                <Card
+                  key={post.id} 
+                  className="cursor-pointer hover:shadow-lg hover:border-primary-600 transition-all"
+                  onClick={() => handleViewPost(post)}
+                >
+                  <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-2 flex-wrap flex-1">
+                      {getCategoryBadge(post.category)}
+                      <h3 className="text-xl font-bold text-slate-900">
+                        {post.title}
+                      </h3>
+                    </div>
+                  </div>
+                  
+                  <p className="text-slate-600 mb-4 line-clamp-2">{post.content}</p>
+                  
+                  <div className="flex items-center justify-between text-sm text-slate-500 flex-wrap gap-3">
+                    <div className="flex items-center gap-4">
+                      <span className="font-semibold text-slate-700">{post.author}</span>
+                      <span>{post.date}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" />
+                        <span>{post.views}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>{post.comments}</span>
+                      </div>
+                      <button
+                        onClick={(e) => handleLikePost(post.id, e)}
+                        className="flex items-center gap-1 hover:text-primary-600 transition-colors"
+                      >
+                        <ThumbsUp 
+                          className={`h-4 w-4 ${user && post.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
+                        />
+                        <span className={user && post.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}>
+                          {post.likes}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+          
+          {!isLoading && filteredPosts.length === 0 && (
             <Card className="text-center py-12">
               <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <p className="text-xl text-slate-500 mb-3">
@@ -508,9 +447,9 @@ const Board = () => {
                     className="flex items-center space-x-1 hover:text-primary-600 transition-colors"
                   >
                     <ThumbsUp 
-                      className={`h-4 w-4 ${likedPosts.has(selectedPost.id) ? 'fill-primary-600 text-primary-600' : ''}`}
+                      className={`h-4 w-4 ${user && selectedPost.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
                     />
-                    <span className={likedPosts.has(selectedPost.id) ? 'text-primary-600 font-bold' : ''}>
+                    <span className={user && selectedPost.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}>
                       {selectedPost.likes}
                     </span>
                   </button>
@@ -535,15 +474,15 @@ const Board = () => {
               {/* 댓글 섹션 */}
               <div className="border-t pt-6">
                 <h4 className="text-xl font-bold text-slate-900 mb-4">
-                  댓글 {comments.filter(c => c.postId === selectedPost.id).length}개
+                  댓글 {postComments.length}개
                 </h4>
                 
                 {/* 댓글 목록 */}
                 <div className="space-y-4 mb-6">
-                  {comments
-                    .filter(c => c.postId === selectedPost.id && !c.parentId)
+                  {postComments
+                    .filter(c => !c.parentId)
                     .map((comment) => {
-                      const replies = comments.filter(c => c.parentId === comment.id);
+                      const replies = postComments.filter(c => c.parentId === comment.id);
                       const isExpanded = expandedComments.has(comment.id);
                       
                       return (
@@ -559,9 +498,9 @@ const Board = () => {
                                 className="flex items-center space-x-1 text-gray-500 hover:text-primary-600 transition-colors"
                               >
                                 <ThumbsUp 
-                                  className={`h-4 w-4 ${likedComments.has(comment.id) ? 'fill-primary-600 text-primary-600' : ''}`}
+                                  className={`h-4 w-4 ${user && comment.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
                                 />
-                                <span className={`text-sm ${likedComments.has(comment.id) ? 'text-primary-600 font-bold' : ''}`}>
+                                <span className={`text-sm ${user && comment.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}`}>
                                   {comment.likes}
                                 </span>
                               </button>
@@ -600,9 +539,9 @@ const Board = () => {
                                           className="flex items-center space-x-1 text-gray-500 hover:text-primary-600 transition-colors"
                                         >
                                           <ThumbsUp 
-                                            className={`h-4 w-4 ${likedComments.has(reply.id) ? 'fill-primary-600 text-primary-600' : ''}`}
+                                            className={`h-4 w-4 ${user && reply.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
                                           />
-                                          <span className={`text-sm ${likedComments.has(reply.id) ? 'text-primary-600 font-bold' : ''}`}>
+                                          <span className={`text-sm ${user && reply.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}`}>
                                             {reply.likes}
                                           </span>
                                         </button>
@@ -625,7 +564,7 @@ const Board = () => {
                     <div className="mb-2 flex items-center justify-between p-2 bg-blue-50 rounded">
                       <span className="text-sm text-gray-700">
                         <span className="font-bold">
-                          {comments.find(c => c.id === replyToComment)?.author}
+                          {postComments.find(c => c.id === replyToComment)?.author}
                         </span>
                         님에게 답글 작성 중
                       </span>
@@ -665,4 +604,3 @@ const Board = () => {
 };
 
 export default Board;
-

@@ -9,6 +9,7 @@ import { RulesProvider } from './contexts/RulesContext';
 import { NoticeProvider } from './contexts/NoticeContext';
 import { GalleryProvider } from './contexts/GalleryContext';
 import { HikingHistoryProvider } from './contexts/HikingHistoryContext';
+import { PostProvider } from './contexts/PostContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout/Layout';
@@ -55,13 +56,14 @@ function App() {
           <MemberProvider>
             <GalleryProvider>
               <HikingHistoryProvider>
-                <PoemProvider>
-                  <RulesProvider>
-                    <NoticeProvider>
-                      <Router>
-                        <ScrollToTop />
-                        <Suspense fallback={<PageLoader />}>
-                          <Routes>
+                <PostProvider>
+                  <PoemProvider>
+                    <RulesProvider>
+                      <NoticeProvider>
+                        <Router>
+                          <ScrollToTop />
+                          <Suspense fallback={<PageLoader />}>
+                            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<AboutSierra />} />
@@ -119,12 +121,13 @@ function App() {
                     </NoticeProvider>
                   </RulesProvider>
                 </PoemProvider>
-              </HikingHistoryProvider>
-            </GalleryProvider>
-          </MemberProvider>
-        </EventProvider>
-      </AuthProvider>
-    </DevModeProvider>
+              </PostProvider>
+            </HikingHistoryProvider>
+          </GalleryProvider>
+        </MemberProvider>
+      </EventProvider>
+    </AuthProvider>
+  </DevModeProvider>
   );
 }
 

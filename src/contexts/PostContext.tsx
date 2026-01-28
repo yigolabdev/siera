@@ -59,11 +59,17 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Firebase에서 게시글 데이터 로드
+  // Firebase에서 게시글 데이터 로드 - user가 로드된 후에만 실행
   useEffect(() => {
+    // user가 undefined인 경우 (초기 로딩 중) 대기
+    if (user === undefined) {
+      return;
+    }
+    
+    // user가 null이거나 user 객체가 있는 경우 데이터 로드
     loadPosts();
     loadComments();
-  }, []);
+  }, [user]); // user 의존성 추가
 
   const loadPosts = async () => {
     try {

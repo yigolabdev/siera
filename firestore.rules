@@ -94,8 +94,8 @@ service cloud.firestore {
     // 공지사항 (notices) 컬렉션
     // ========================================
     match /notices/{noticeId} {
-      // 읽기: 인증되고 승인된 회원만
-      allow read: if isAuthenticated() && isApproved();
+      // 읽기: 모든 인증된 사용자 (공지사항은 공개)
+      allow read: if isAuthenticated();
       
       // 생성, 수정, 삭제: 관리자만
       allow create, update, delete: if isAdmin();

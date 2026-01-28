@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
-import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit, Calendar } from 'lucide-react';
+import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit, Calendar, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { uploadFile, deleteFile } from '../lib/firebase/storage';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
@@ -11,10 +12,13 @@ const Profile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    phone: user?.phoneNumber || '010-1234-5678',
+    phone: user?.phoneNumber || '',
     gender: user?.gender || '',
     birthYear: user?.birthYear || '',
     company: user?.company || '',
@@ -48,6 +52,10 @@ const Profile = () => {
         return;
       }
       
+      // 선택된 파일 저장
+      setSelectedFile(file);
+      
+      // 미리보기
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
@@ -56,11 +64,32 @@ const Profile = () => {
     }
   };
   
-  const handleRemoveImage = () => {
-    setProfileImage(null);
-    updateProfileImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const handleRemoveImage = async () => {
+    if (!user) return;
+    
+    setIsUploadingImage(true);
+    try {
+      // Firebase Storage에서 기존 이미지 삭제
+      if (user.profileImage && user.profileImage.includes('firebase')) {
+        const imagePath = `profiles/${user.id}/profile.jpg`;
+        await deleteFile(imagePath);
+      }
+      
+      // 프로필 이미지 제거
+      await updateProfileImage(null);
+      
+      setProfileImage(null);
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      alert('프로필 이미지가 삭제되었습니다.');
+    } catch (error) {
+      console.error('이미지 삭제 실패:', error);
+      alert('이미지 삭제에 실패했습니다.');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
   
@@ -68,23 +97,62 @@ const Profile = () => {
     fileInputRef.current?.click();
   };
   
-  const handleSaveProfile = () => {
-    // 프로필 이미지 저장
-    if (profileImage) {
-      updateProfileImage(profileImage);
+  const handleSaveProfile = async () => {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
     }
-    // 프로필 정보 업데이트
-    updateUser({
-      name: formData.name,
-      email: formData.email,
-      phoneNumber: formData.phone,
-      gender: formData.gender,
-      birthYear: formData.birthYear,
-      company: formData.company,
-      position: formData.position,
-      bio: formData.bio,
-    });
-    alert('프로필이 성공적으로 업데이트되었습니다.');
+    
+    setIsSaving(true);
+    try {
+      // 1. 프로필 이미지 업로드 (선택된 파일이 있는 경우)
+      let imageUrl = profileImage;
+      
+      if (selectedFile) {
+        console.log('📤 프로필 이미지 업로드 시작...');
+        const imagePath = `profiles/${user.id}/profile.jpg`;
+        
+        // 기존 이미지 삭제
+        if (user.profileImage && user.profileImage.includes('firebase')) {
+          await deleteFile(imagePath).catch(err => console.log('기존 이미지 삭제 실패 (무시):', err));
+        }
+        
+        // 새 이미지 업로드
+        const uploadResult = await uploadFile(imagePath, selectedFile);
+        
+        if (uploadResult.success && uploadResult.url) {
+          imageUrl = uploadResult.url;
+          console.log('✅ 이미지 업로드 성공:', imageUrl);
+        } else {
+          throw new Error('이미지 업로드 실패');
+        }
+      }
+      
+      // 2. 프로필 정보 업데이트
+      await updateUser({
+        name: formData.name,
+        phoneNumber: formData.phone,
+        gender: formData.gender,
+        birthYear: formData.birthYear,
+        company: formData.company,
+        position: formData.position,
+        bio: formData.bio,
+        profileImage: imageUrl || undefined,
+      });
+      
+      // 3. 프로필 이미지 URL 저장
+      if (imageUrl && imageUrl !== user.profileImage) {
+        await updateProfileImage(imageUrl);
+      }
+      
+      setSelectedFile(null);
+      alert('프로필이 성공적으로 업데이트되었습니다.');
+    } catch (error: any) {
+      console.error('프로필 저장 실패:', error);
+      alert('프로필 저장에 실패했습니다.\n\n' + (error.message || '다시 시도해주세요.'));
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   const handleChangePassword = () => {
@@ -164,10 +232,20 @@ const Profile = () => {
             {profileImage && (
               <button
                 onClick={handleRemoveImage}
-                className="px-4 py-3 bg-red-50 text-red-600 border-2 border-red-200 rounded-xl font-semibold hover:bg-red-100 active:scale-[0.98] transition-all flex items-center gap-2"
+                disabled={isUploadingImage || isSaving}
+                className="px-4 py-3 bg-red-50 text-red-600 border-2 border-red-200 rounded-xl font-semibold hover:bg-red-100 active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Trash2 className="w-4 h-4" />
-                사진 삭제
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    삭제 중...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    사진 삭제
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -346,10 +424,20 @@ const Profile = () => {
         <div className="flex justify-end mt-6 pt-6 border-t border-slate-200">
           <button
             onClick={handleSaveProfile}
-            className="btn-primary flex items-center gap-2"
+            disabled={isSaving || isUploadingImage}
+            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="w-5 h-5" />
-            프로필 저장
+            {isSaving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                저장 중...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                프로필 저장
+              </>
+            )}
           </button>
         </div>
       </Card>

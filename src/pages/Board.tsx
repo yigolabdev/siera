@@ -284,7 +284,33 @@ const Board = () => {
           )}
           
           {/* Posts List */}
-          {!isLoading && (
+          {!isLoading && filteredPosts.length === 0 && (
+            <Card className="text-center py-16 border-2 border-dashed border-slate-200">
+              <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-xl font-bold text-slate-900 mb-2">
+                {searchTerm ? '검색 결과가 없습니다' : '첫 번째 게시글을 작성해보세요!'}
+              </p>
+              <p className="text-slate-600 mb-6">
+                {searchTerm 
+                  ? '다른 검색어로 시도해보세요.' 
+                  : activeTab === 'poem' 
+                    ? '감동적인 시를 공유해주세요.'
+                    : '회원들과 자유롭게 소통해보세요.'
+                }
+              </p>
+              {!searchTerm && (
+                <button 
+                  onClick={() => setShowWriteModal(true)}
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>글쓰기</span>
+                </button>
+              )}
+            </Card>
+          )}
+          
+          {!isLoading && filteredPosts.length > 0 && (
             <div className="space-y-4">
               {filteredPosts.map((post) => (
                 <Card

@@ -7,7 +7,7 @@ export interface Executive {
   memberId?: string;
   name: string;
   position: string;
-  phone: string;
+  phoneNumber: string;
   email?: string;
   category: 'chairman' | 'committee';
   startTerm?: string; // YYYY-MM

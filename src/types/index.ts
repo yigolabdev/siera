@@ -119,7 +119,7 @@ export interface TeamMember {
   company: string;
   position?: string; // 직책 (선택)
   occupation?: string; // 직책 (호환성)
-  phone?: string;
+  phoneNumber?: string;
   isGuest?: boolean; // 게스트 여부
 }
 
@@ -153,7 +153,7 @@ export interface Participant {
   name: string;
   company: string;
   position: string;
-  phone: string;
+  phoneNumber: string;
   status: ParticipationStatus;
   occupation?: string; // 호환성 (company + position 결합)
 }

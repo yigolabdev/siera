@@ -1,29 +1,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-export interface Member {
-  id: number;
-  name: string;
-  position: 'chairman' | 'committee' | 'member';
-  occupation: string;
-  company: string;
-  joinDate: string;
-  email: string;
-  phone: string;
-  profileImage: string;
-  attendanceRate: number;
-  bio: string;
-}
+import { Member } from '../types';
 
 interface MemberContextType {
   members: Member[];
   isLoading: boolean;
   error: string | null;
   addMember: (member: Member) => Promise<void>;
-  updateMember: (id: number, member: Partial<Member>) => Promise<void>;
-  deleteMember: (id: number) => Promise<void>;
-  getMemberById: (id: number) => Member | undefined;
+  updateMember: (id: string, member: Partial<Member>) => Promise<void>;
+  deleteMember: (id: string) => Promise<void>;
+  getMemberById: (id: string) => Member | undefined;
   getActiveMembers: () => Member[];
   getTotalMembers: () => number;
   getMembersByPosition: (position: 'chairman' | 'committee' | 'member') => Member[];
@@ -70,7 +57,7 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
         ...member,
         createdAt: new Date().toISOString(),
       };
-      const result = await setDocument('members', member.id.toString(), memberData);
+      const result = await setDocument('members', member.id, memberData);
       if (result.success) {
         setMembers(prev => [...prev, member]);
       } else {
@@ -82,9 +69,9 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const updateMember = useCallback(async (id: number, updatedMember: Partial<Member>) => {
+  const updateMember = useCallback(async (id: string, updatedMember: Partial<Member>) => {
     try {
-      const result = await firestoreUpdate('members', id.toString(), updatedMember);
+      const result = await firestoreUpdate('members', id, updatedMember);
       if (result.success) {
         setMembers(prev => prev.map(member => 
           member.id === id ? { ...member, ...updatedMember } : member
@@ -98,9 +85,9 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const deleteMember = useCallback(async (id: number) => {
+  const deleteMember = useCallback(async (id: string) => {
     try {
-      const result = await deleteDocument('members', id.toString());
+      const result = await deleteDocument('members', id);
       if (result.success) {
         setMembers(prev => prev.filter(member => member.id !== id));
       } else {
@@ -112,12 +99,12 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const getMemberById = useCallback((id: number) => {
+  const getMemberById = useCallback((id: string) => {
     return members.find(member => member.id === id);
   }, [members]);
 
   const getActiveMembers = useCallback(() => {
-    return members; // isActive 필드 추가 시 필터링
+    return members.filter(m => m.isApproved); // isApproved로 활성 회원 필터링
   }, [members]);
 
   const getTotalMembers = useCallback(() => {
@@ -125,7 +112,7 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
   }, [members]);
 
   const getMembersByPosition = useCallback((position: 'chairman' | 'committee' | 'member') => {
-    return members.filter(member => member.position === position);
+    return members.filter(member => member.role === position); // position -> role 사용
   }, [members]);
   
   const refreshMembers = useCallback(async () => {

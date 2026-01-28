@@ -27,15 +27,14 @@ const EventPrintView = () => {
   }
   
   // 비상연락처 (실제 데이터 사용)
-  // @ts-ignore
   const emergencyContact = event?.emergencyContactName && event?.emergencyContactPhone 
     ? {
         name: event.emergencyContactName,
-        phone: event.emergencyContactPhone
+        phoneNumber: event.emergencyContactPhone
       }
     : {
         name: '비상연락처 미지정',
-        phone: '-'
+        phoneNumber: '-'
       };
   
   // 운영진 정보 가져오기
@@ -46,12 +45,12 @@ const EventPrintView = () => {
     chairman: chairmanMembers.map(m => ({
       name: m.name,
       position: m.occupation.split(' ')[0] || '회장단',
-      phone: m.phone,
+      phoneNumber: m.phoneNumber,
     })),
     committee: committeeMembers.map(m => ({
       name: m.name,
       position: m.occupation.split(' ')[0] || '운영위원',
-      phone: m.phone,
+      phoneNumber: m.phoneNumber,
     })),
   };
   
@@ -142,7 +141,7 @@ const EventPrintView = () => {
               <div className="emergency-contact-inline">
                 <span className="emergency-label">당일 비상연락처</span>
                 <span className="emergency-name-inline">{emergencyContact.name}</span>
-                <span className="emergency-phone-inline">{emergencyContact.phone}</span>
+                <span className="emergency-phone-inline">{emergencyContact.phoneNumber}</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

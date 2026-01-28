@@ -8,7 +8,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '홍길동',
       company: '○○그룹',
       position: '회장',
-      phone: '010-1234-5678',
+      phoneNumber: '010-1234-5678',
       status: 'confirmed',
     },
     {
@@ -16,7 +16,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '김산행',
       company: '○○그룹',
       position: '부회장',
-      phone: '010-2345-6789',
+      phoneNumber: '010-2345-6789',
       status: 'confirmed',
     },
     {
@@ -24,7 +24,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '이등산',
       company: '△△건설',
       position: '대표이사',
-      phone: '010-3456-7890',
+      phoneNumber: '010-3456-7890',
       status: 'confirmed',
     },
     {
@@ -32,7 +32,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '박트레킹',
       company: '□□금융',
       position: '부사장',
-      phone: '010-4567-8901',
+      phoneNumber: '010-4567-8901',
       status: 'confirmed',
     },
     {
@@ -40,7 +40,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '최하이킹',
       company: '◇◇제약',
       position: '전무이사',
-      phone: '010-5678-9012',
+      phoneNumber: '010-5678-9012',
       status: 'confirmed',
     },
     {
@@ -48,7 +48,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '정봉우리',
       company: '☆☆병원',
       position: '원장',
-      phone: '010-6789-0123',
+      phoneNumber: '010-6789-0123',
       status: 'confirmed',
     },
     {
@@ -56,7 +56,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '홍정상',
       company: '※※법률사무소',
       position: '대표변호사',
-      phone: '010-7890-1234',
+      phoneNumber: '010-7890-1234',
       status: 'confirmed',
     },
     {
@@ -64,7 +64,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '강백운',
       company: '◎◎IT',
       position: '대표',
-      phone: '010-8901-2345',
+      phoneNumber: '010-8901-2345',
       status: 'confirmed',
     },
     {
@@ -72,7 +72,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '윤설악',
       company: '▽▽건축',
       position: '사장',
-      phone: '010-9012-3456',
+      phoneNumber: '010-9012-3456',
       status: 'confirmed',
     },
     {
@@ -80,7 +80,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '임지리',
       company: '★★무역',
       position: '부사장',
-      phone: '010-0123-4567',
+      phoneNumber: '010-0123-4567',
       status: 'confirmed',
     },
     {
@@ -88,7 +88,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '조한라',
       company: '◆◆투자',
       position: '이사',
-      phone: '010-1111-2222',
+      phoneNumber: '010-1111-2222',
       status: 'confirmed',
     },
     {
@@ -96,7 +96,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '문북한',
       company: '◈◈컨설팅',
       position: '전무',
-      phone: '010-2222-3333',
+      phoneNumber: '010-2222-3333',
       status: 'confirmed',
     },
     {
@@ -104,7 +104,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '신계룡',
       company: '▲▲물류',
       position: '대표',
-      phone: '010-3333-4444',
+      phoneNumber: '010-3333-4444',
       status: 'confirmed',
     },
     {
@@ -112,7 +112,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '장태백',
       company: '▼▼제조',
       position: '사장',
-      phone: '010-4444-5555',
+      phoneNumber: '010-4444-5555',
       status: 'confirmed',
     },
     {
@@ -120,7 +120,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '권덕유',
       company: '◐◐통신',
       position: '이사',
-      phone: '010-5555-6666',
+      phoneNumber: '010-5555-6666',
       status: 'confirmed',
     },
     {
@@ -128,7 +128,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '서오대',
       company: '◑◑교육',
       position: '교수',
-      phone: '010-6666-7777',
+      phoneNumber: '010-6666-7777',
       status: 'pending',
     },
     {
@@ -136,7 +136,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '오속리',
       company: '◒◒인프라',
       position: '대표',
-      phone: '010-7777-8888',
+      phoneNumber: '010-7777-8888',
       status: 'pending',
     },
     {
@@ -144,7 +144,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '배치악',
       company: '◓◓미디어',
       position: '본부장',
-      phone: '010-8888-9999',
+      phoneNumber: '010-8888-9999',
       status: 'pending',
     },
   ],
@@ -154,7 +154,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '김대청봉',
       company: '△△에너지',
       position: '대표',
-      phone: '010-1111-1111',
+      phoneNumber: '010-1111-1111',
       status: 'confirmed',
     },
     {
@@ -162,7 +162,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '이설악',
       company: '□□건설',
       position: '부사장',
-      phone: '010-2222-2222',
+      phoneNumber: '010-2222-2222',
       status: 'confirmed',
     },
     {
@@ -170,7 +170,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '박공룡',
       company: '◇◇금융',
       position: '상무',
-      phone: '010-3333-3333',
+      phoneNumber: '010-3333-3333',
       status: 'confirmed',
     },
     {
@@ -178,7 +178,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '최울산',
       company: '☆☆제조',
       position: '이사',
-      phone: '010-4444-4444',
+      phoneNumber: '010-4444-4444',
       status: 'confirmed',
     },
     {
@@ -186,7 +186,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '정소청',
       company: '※※유통',
       position: '전무',
-      phone: '010-5555-5555',
+      phoneNumber: '010-5555-5555',
       status: 'confirmed',
     },
     {
@@ -194,7 +194,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '홍대승',
       company: '◎◎IT',
       position: 'CTO',
-      phone: '010-6666-6666',
+      phoneNumber: '010-6666-6666',
       status: 'confirmed',
     },
     {
@@ -202,7 +202,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '강희운',
       company: '▽▽물류',
       position: '본부장',
-      phone: '010-7777-7777',
+      phoneNumber: '010-7777-7777',
       status: 'confirmed',
     },
     {
@@ -210,7 +210,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '윤비선',
       company: '★★무역',
       position: '상무',
-      phone: '010-8888-8888',
+      phoneNumber: '010-8888-8888',
       status: 'confirmed',
     },
     {
@@ -218,7 +218,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '임천불',
       company: '◆◆투자',
       position: '이사',
-      phone: '010-9999-9999',
+      phoneNumber: '010-9999-9999',
       status: 'confirmed',
     },
     {
@@ -226,7 +226,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '조중청',
       company: '◈◈컨설팅',
       position: '대표',
-      phone: '010-1010-1010',
+      phoneNumber: '010-1010-1010',
       status: 'confirmed',
     },
     {
@@ -234,7 +234,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '문대피',
       company: '▲▲건축',
       position: '부사장',
-      phone: '010-2020-2020',
+      phoneNumber: '010-2020-2020',
       status: 'confirmed',
     },
     {
@@ -242,7 +242,7 @@ export const mockParticipants: Record<string, Participant[]> = {
       name: '신등산',
       company: '▼▼교육',
       position: '교장',
-      phone: '010-3030-3030',
+      phoneNumber: '010-3030-3030',
       status: 'confirmed',
     },
   ],

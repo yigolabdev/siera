@@ -7,24 +7,12 @@ import { useGuestApplications } from '../../contexts/GuestApplicationContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
-import { UserRole, PendingUser } from '../../types';
+import { UserRole, PendingUser, Member } from '../../types';
 import { formatDate } from '../../utils/format';
-
-interface Member {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  occupation: string;
-  company: string;
-  joinDate: string;
-  role: UserRole;
-  isActive: boolean; // 회원 활성화 상태
-}
 
 const MemberManagement = () => {
   const navigate = useNavigate();
-  const { members: contextMembers } = useMembers();
+  const { members } = useMembers(); // 직접 사용 (변환 불필요)
   const { 
     pendingUsers, 
     approvePendingUser, 
@@ -50,19 +38,6 @@ const MemberManagement = () => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordAction, setPasswordAction] = useState<(() => void) | null>(null);
-
-  // Firebase members를 로컬 인터페이스로 변환
-  const members: Member[] = contextMembers.map(m => ({
-    id: Number(m.id),
-    name: m.name,
-    email: m.email,
-    phone: m.phone,
-    occupation: m.occupation,
-    company: m.company,
-    joinDate: m.joinDate,
-    role: m.position as UserRole, // position을 role로 매핑
-    isActive: true, // 기본값, 추후 Firebase에서 관리
-  }));
 
   const [guestFilter, setGuestFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [selectedGuestApplication, setSelectedGuestApplication] = useState<any | null>(null);
@@ -166,23 +141,23 @@ const MemberManagement = () => {
   };
 
   // 회원 활성화/비활성화 토글
-  const handleToggleMemberStatus = (memberId: number) => {
-    // TODO: Firebase에 isActive 필드 추가 후 구현
+  const handleToggleMemberStatus = (memberId: string) => {
+    // TODO: Firebase에 isApproved 필드 업데이트 구현
     alert('회원 활성화/비활성화 기능은 추후 구현 예정입니다.');
   };
 
   const filteredMembers = members.filter(member => {
-    const matchesSearch =
+    const matchesSearch = 
       member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.phone.includes(searchTerm) ||
-      member.occupation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.company.toLowerCase().includes(searchTerm.toLowerCase());
+      (member.phoneNumber || '').includes(searchTerm) ||
+      (member.occupation || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (member.company || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || member.role === roleFilter;
     const matchesStatus = 
       statusFilter === 'all' ||
-      (statusFilter === 'active' && member.isActive) ||
-      (statusFilter === 'inactive' && !member.isActive);
+      (statusFilter === 'active' && member.isApproved) ||
+      (statusFilter === 'inactive' && !member.isApproved);
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -193,8 +168,8 @@ const MemberManagement = () => {
 
   const memberStats = {
     total: members.length,
-    active: members.filter(m => m.isActive).length,
-    inactive: members.filter(m => !m.isActive).length,
+    active: members.filter(m => m.isApproved).length,
+    inactive: members.filter(m => !m.isApproved).length,
     chairman: members.filter(m => m.role === 'chairman').length,
     committee: members.filter(m => m.role === 'committee').length,
     member: members.filter(m => m.role === 'member').length,
@@ -449,45 +424,45 @@ const MemberManagement = () => {
                 <Card 
                   key={member.id} 
                   className={`hover:shadow-xl transition-all relative ${
-                    member.isActive 
+                    member.isApproved 
                       ? 'hover:border-primary-600' 
                       : 'bg-slate-50 border-slate-300 opacity-75'
                   }`}
                 >
                   {/* 비활성화 상태 표시 */}
-                  {!member.isActive && (
+                  {!member.isApproved && (
                     <div className="absolute top-2 right-2">
-                      <Badge variant="default">비활성</Badge>
+                      <Badge variant="default">미승인</Badge>
                     </div>
                   )}
                   
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className={`text-xl font-bold ${member.isActive ? 'text-slate-900' : 'text-slate-500'}`}>
+                    <h3 className={`text-xl font-bold ${member.isApproved ? 'text-slate-900' : 'text-slate-500'}`}>
                       {member.name}
                     </h3>
                     {getRoleBadge(member.role)}
                   </div>
                   
                   <div className="space-y-2 text-sm mb-4">
-                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Mail className="w-4 h-4" />
                       <span>{member.email}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Phone className="w-4 h-4" />
-                      <span>{member.phone}</span>
+                      <span>{member.phoneNumber || '-'}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Briefcase className="w-4 h-4" />
-                      <span>{member.occupation}</span>
+                      <span>{member.occupation || member.position || '-'}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Building2 className="w-4 h-4" />
-                      <span>{member.company}</span>
+                      <span>{member.company || '-'}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Calendar className="w-4 h-4" />
-                      <span>입회: {member.joinDate}</span>
+                      <span>입회: {member.joinDate || '-'}</span>
                     </div>
                   </div>
 
@@ -495,13 +470,13 @@ const MemberManagement = () => {
                   <button
                     onClick={() => handleToggleMemberStatus(member.id)}
                     className={`w-full py-2 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                      member.isActive
+                      member.isApproved
                         ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
                         : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300'
                     }`}
                   >
                     <Power className="w-4 h-4" />
-                    {member.isActive ? '비활성화' : '활성화'}
+                    {member.isApproved ? '비활성화' : '활성화'}
                   </button>
                 </Card>
               ))

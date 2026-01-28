@@ -158,7 +158,7 @@ const EventManagement = () => {
       company: p.company,
       position: p.position,
       occupation: p.occupation || `${p.company} ${p.position}`,
-      phone: p.phone,
+      phone: p.phoneNumber,
     }));
   };
 
@@ -686,7 +686,7 @@ const EventManagement = () => {
           members: t.members.map(m => ({
             id: m.id,
             name: m.name,
-            phone: m.phone || '',
+            phone: m.phoneNumber || '',
             company: m.company || '',
             position: m.position || m.occupation || '', // position 필드 우선
             occupation: m.position || m.occupation || '', // 호환성
@@ -739,7 +739,7 @@ const EventManagement = () => {
           members: t.members.map(m => ({
             id: m.id,
             name: m.name,
-            phone: m.phone || '',
+            phone: m.phoneNumber || '',
             company: m.company || '',
             position: m.position || m.occupation || '', // position 필드 우선
             occupation: m.position || m.occupation || '', // 호환성
@@ -1294,7 +1294,7 @@ const EventManagement = () => {
                         ...formData,
                         emergencyContactId: e.target.value,
                         emergencyContactName: selectedExecutive?.name || '',
-                        emergencyContactPhone: selectedExecutive?.phone || '',
+                        emergencyContactPhone: selectedExecutive?.phoneNumber || '',
                       });
                     }}
                     className="input-field bg-white"
@@ -1302,7 +1302,7 @@ const EventManagement = () => {
                     <option value="">운영진 중 선택하세요</option>
                     {executives.map((exec) => (
                       <option key={exec.id} value={exec.id}>
-                        {exec.name} - {exec.occupation} ({exec.phone})
+                        {exec.name} - {exec.occupation} ({exec.phoneNumber})
                       </option>
                     ))}
                   </select>

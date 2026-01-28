@@ -9,7 +9,7 @@ interface Member {
   id: number;
   name: string;
   email: string;
-  phone: string;
+  phoneNumber: string;
   occupation: string;
   company: string;
 }
@@ -23,7 +23,7 @@ const ExecutiveManagement = () => {
     id: Number(m.id),
     name: m.name,
     email: m.email,
-    phone: m.phone,
+    phoneNumber: m.phoneNumber,
     occupation: m.occupation,
     company: m.company,
   }));
@@ -35,7 +35,7 @@ const ExecutiveManagement = () => {
     memberId: undefined,
     name: '',
     position: '',
-    phone: '',
+    phoneNumber: '',
     email: '',
     category: 'chairman',
     startTerm: '',
@@ -154,7 +154,7 @@ const ExecutiveManagement = () => {
           memberId: undefined,
           name: '',
           position: '',
-          phone: '',
+          phoneNumber: '',
           email: '',
           category: 'chairman',
           startTerm: '',
@@ -203,7 +203,7 @@ const ExecutiveManagement = () => {
       ...newExecutive,
       memberId: String(member.id),
       name: member.name,
-      phone: member.phone,
+      phoneNumber: member.phoneNumber,
       email: member.email,
     });
     setSearchQuery(member.name);
@@ -217,7 +217,7 @@ const ExecutiveManagement = () => {
         ...editForm,
         memberId: String(member.id),
         name: member.name,
-        phone: member.phone,
+        phoneNumber: member.phoneNumber,
         email: member.email,
       });
       setEditSearchQuery(member.name);
@@ -234,7 +234,7 @@ const ExecutiveManagement = () => {
         ...newExecutive,
         memberId: undefined,
         name: '',
-        phone: '',
+        phoneNumber: '',
         email: '',
       });
     } else {
@@ -394,7 +394,7 @@ const ExecutiveManagement = () => {
             <div className="space-y-2 text-sm text-slate-600">
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-slate-400" />
-                <span>{data.phone}</span>
+                <span>{data.phoneNumber}</span>
               </div>
               {data.email && (
                 <div className="flex items-center gap-2">
@@ -531,7 +531,7 @@ const ExecutiveManagement = () => {
                             <p className="text-sm text-slate-600">
                               {member.occupation} {member.company}
                             </p>
-                            <p className="text-xs text-slate-500 mt-1">{member.phone}</p>
+                            <p className="text-xs text-slate-500 mt-1">{member.phoneNumber}</p>
                           </button>
                         ))
                       ) : (
@@ -593,7 +593,7 @@ const ExecutiveManagement = () => {
                   <p className="text-sm font-medium text-blue-900 mb-1">선택된 회원 정보</p>
                   <div className="text-xs text-blue-700 space-y-1">
                     <p>이름: {newExecutive.name}</p>
-                    <p>연락처: {newExecutive.phone}</p>
+                    <p>연락처: {newExecutive.phoneNumber}</p>
                     {newExecutive.email && <p>이메일: {newExecutive.email}</p>}
                   </div>
                 </div>
@@ -615,7 +615,7 @@ const ExecutiveManagement = () => {
                     memberId: undefined,
                     name: '',
                     position: '',
-                    phone: '',
+                    phoneNumber: '',
                     email: '',
                     category: 'chairman',
                     startTerm: '',

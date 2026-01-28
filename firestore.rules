@@ -201,8 +201,10 @@ service cloud.firestore {
       // 읽기, 수정, 삭제: 관리자만
       allow read, update, delete: if isAdmin();
       
-      // 생성: 회원가입 시 자동 생성
-      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // 생성: 회원가입 시 본인 UID로만 가능
+      // Firebase Auth 완료 직후이므로 request.auth.uid는 존재함
+      // Custom Claims는 아직 없을 수 있으므로 isAuthenticated() 제거
+      allow create: if request.auth != null && request.auth.uid == userId;
     }
     
     // ========================================

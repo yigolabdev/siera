@@ -110,7 +110,12 @@ const Register = () => {
 
     setIsSubmitting(true);
     try {
-      const success = await register({
+      console.log('📝 회원가입 폼 제출:', {
+        name: formData.name,
+        email: formData.email,
+      });
+
+      const result = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -124,7 +129,8 @@ const Register = () => {
         applicationMessage: formData.applicationMessage,
       });
 
-      if (success) {
+      if (result.success) {
+        console.log('✅ 회원가입 성공');
         alert(
           '입회 신청이 완료되었습니다!\n\n' +
           '정기산행에 2회 게스트로 참여하신 후,\n' +
@@ -132,10 +138,13 @@ const Register = () => {
           '승인 완료 시 이메일로 안내드립니다.'
         );
         navigate('/');
+      } else {
+        console.error('❌ 회원가입 실패:', result.message);
+        alert(result.message || '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
-    } catch (error) {
-      console.error('회원가입 오류:', error);
-      alert('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
+      console.error('❌ 회원가입 오류:', error);
+      alert(`회원가입 중 오류가 발생했습니다.\n\n${error.message || '다시 시도해주세요.'}`);
     } finally {
       setIsSubmitting(false);
     }

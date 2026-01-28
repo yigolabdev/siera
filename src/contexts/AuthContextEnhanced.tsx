@@ -176,15 +176,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
       setIsLoading(true);
 
+      console.log('🚀 회원가입 시작:', {
+        email: userData.email,
+        name: userData.name,
+      });
+
       // Firebase Auth 회원가입
       const result = await signUp(userData.email, userData.password, userData.name);
 
       if (!result.success || !result.user) {
+        console.error('❌ Firebase Auth 회원가입 실패:', result.error);
         return {
           success: false,
           message: result.error || '회원가입에 실패했습니다.',
         };
       }
+
+      console.log('✅ Firebase Auth 회원가입 성공:', result.user.uid);
 
       // pendingUsers 컬렉션에 승인 대기 사용자 추가
       const pendingUserData = {
@@ -203,16 +211,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         status: 'pending' as const,
       };
 
+      console.log('📤 pendingUsers 컬렉션 저장 시도:', {
+        uid: result.user.uid,
+        data: pendingUserData,
+      });
+
       const pendingResult = await setDocument('pendingUsers', result.user.uid, pendingUserData);
 
       if (!pendingResult.success) {
-        console.error('pendingUsers 저장 실패:', pendingResult.error);
+        console.error('❌ pendingUsers 저장 실패:', pendingResult.error);
         return {
           success: false,
-          message: '회원가입 정보 저장에 실패했습니다.',
+          message: `회원가입 정보 저장에 실패했습니다.\n오류: ${pendingResult.error}`,
         };
       }
 
+      console.log('✅ pendingUsers 저장 성공');
       console.log('✅ 회원가입 신청 완료:', {
         uid: result.user.uid,
         email: userData.email,
@@ -225,6 +239,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
     } catch (err: any) {
       const errorMessage = err.message || '회원가입 중 오류가 발생했습니다.';
+      console.error('❌ 회원가입 에러:', err);
       setError(errorMessage);
       logError(err, ErrorLevel.ERROR, ErrorCategory.AUTH, { email: userData.email });
       return {

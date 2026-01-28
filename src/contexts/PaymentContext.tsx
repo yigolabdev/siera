@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Payment } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface PaymentContextType {
   payments: Payment[];
@@ -53,8 +54,12 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase 초기 데이터 로드
   useEffect(() => {
-    loadPayments();
-  }, [loadPayments]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadPayments();
+    };
+    initializeData();
+  }, []); // loadPayments를 dependency에서 제거하여 무한 루프 방지
 
   const addPayment = useCallback(async (paymentData: Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {

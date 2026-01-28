@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useMemo, use
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Notice } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface NoticeContextType {
   notices: Notice[];
@@ -50,8 +51,12 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase에서 공지사항 로드
   useEffect(() => {
-    loadNotices();
-  }, [loadNotices]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadNotices();
+    };
+    initializeData();
+  }, []); // loadNotices를 dependency에서 제거하여 무한 루프 방지
 
   const addNotice = useCallback(async (noticeData: Omit<Notice, 'id' | 'date' | 'createdAt' | 'updatedAt'>) => {
     try {

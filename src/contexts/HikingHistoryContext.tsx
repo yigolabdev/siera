@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { HikingHistoryItem, HikingComment } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface HikingHistoryContextType {
   history: HikingHistoryItem[];
@@ -83,9 +84,13 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
 
   // Firebase에서 산행 이력 및 후기 로드
   useEffect(() => {
-    loadHistory();
-    loadComments();
-  }, [loadHistory, loadComments]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadHistory();
+      await loadComments();
+    };
+    initializeData();
+  }, []); // loadHistory, loadComments를 dependency에서 제거하여 무한 루프 방지
 
   // 연도별 산행 이력 조회
   const getHistoryByYear = useCallback((year: string) => {

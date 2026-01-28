@@ -4,6 +4,7 @@ import { uploadFile, deleteFile, getFileURL } from '../lib/firebase/storage';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { useAuth } from './AuthContextEnhanced';
 import { Photo } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface GalleryContextType {
   photos: Photo[];
@@ -49,8 +50,12 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase에서 사진 데이터 로드
   useEffect(() => {
-    loadPhotos();
-  }, [loadPhotos]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadPhotos();
+    };
+    initializeData();
+  }, []); // loadPhotos를 dependency에서 제거하여 무한 루프 방지
 
   // 사진 업로드
   const uploadPhotos = useCallback(async (

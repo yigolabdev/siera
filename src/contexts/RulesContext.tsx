@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode, useMemo, useCallback, u
 import { getDocuments, setDocument, updateDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { RulesData, RulesAmendment } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface RulesContextType {
   rulesData: RulesData;
@@ -199,8 +200,12 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase에서 회칙 데이터 로드
   useEffect(() => {
-    loadRules();
-  }, [loadRules]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadRules();
+    };
+    initializeData();
+  }, []); // loadRules를 dependency에서 제거하여 무한 루프 방지
 
   const updateRules = useCallback(async (content: string, version: string, effectiveDate: string) => {
     try {

@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument, deleteDocument } from '../li
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { useAuth } from './AuthContextEnhanced';
 import { Post, Comment } from '../types';  // ✅ types/index.ts에서 import
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface PostContextType {
   posts: Post[];
@@ -73,15 +74,20 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // user가 undefined인 경우 (초기 로딩 중) 대기
-    if (user === undefined) {
-      return;
-    }
-    
-    // user가 null이거나 user 객체가 있는 경우 데이터 로드
-    loadPosts();
-    loadComments();
-  }, [user, loadPosts, loadComments]); // ✅ 의존성 배열 수정
+    const initializeData = async () => {
+      await waitForFirebase();
+      
+      // user가 undefined인 경우 (초기 로딩 중) 대기
+      if (user === undefined) {
+        return;
+      }
+      
+      // user가 null이거나 user 객체가 있는 경우 데이터 로드
+      await loadPosts();
+      await loadComments();
+    };
+    initializeData();
+  }, [user]); // loadPosts, loadComments를 dependency에서 제거하여 무한 루프 방지
 
   // 게시글 추가
   const addPost = useCallback(async (

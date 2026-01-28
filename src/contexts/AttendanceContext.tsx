@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { AttendanceRecord, AttendanceStats } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface AttendanceContextType {
   attendances: AttendanceRecord[];
@@ -53,8 +54,12 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase 초기 데이터 로드
   useEffect(() => {
-    loadAttendances();
-  }, [loadAttendances]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadAttendances();
+    };
+    initializeData();
+  }, []); // loadAttendances를 dependency에서 제거하여 무한 루프 방지
 
   const addAttendance = useCallback(async (attendanceData: Omit<AttendanceRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {

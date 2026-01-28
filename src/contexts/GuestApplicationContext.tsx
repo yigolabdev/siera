@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { GuestApplication } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface GuestApplicationContextType {
   guestApplications: GuestApplication[];
@@ -53,8 +54,12 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
 
   // Firebase에서 게스트 신청 데이터 로드
   useEffect(() => {
-    loadApplications();
-  }, [loadApplications]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadApplications();
+    };
+    initializeData();
+  }, []); // loadApplications를 dependency에서 제거하여 무한 루프 방지
 
   // 게스트 신청 추가
   const addGuestApplication = async (

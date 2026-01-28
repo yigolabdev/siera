@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Participation } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface ParticipationContextType {
   participations: Participation[];
@@ -55,8 +56,12 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
 
   // Firebase 초기 데이터 로드
   useEffect(() => {
-    loadParticipations();
-  }, [loadParticipations]);
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadParticipations();
+    };
+    initializeData();
+  }, []); // loadParticipations를 dependency에서 제거하여 무한 루프 방지
 
   const addParticipation = useCallback(async (participationData: Omit<Participation, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {

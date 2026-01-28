@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { PendingUser } from '../types';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface PendingUserContextType {
   pendingUsers: PendingUser[];
@@ -22,7 +23,11 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase에서 가입 대기 사용자 데이터 로드
   useEffect(() => {
-    loadPendingUsers();
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadPendingUsers();
+    };
+    initializeData();
   }, []);
 
   const loadPendingUsers = async () => {

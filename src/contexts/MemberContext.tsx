@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Member } from '../types';
+import { waitForFirebase } from '../lib/firebase/config';
 
 interface MemberContextType {
   members: Member[];
@@ -26,7 +27,11 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
   
   // Firebase 초기 데이터 로드
   useEffect(() => {
-    loadInitialData();
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadInitialData();
+    };
+    initializeData();
   }, []);
   
   const loadInitialData = async () => {

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import type { Executive } from '../types';  // ✅ Use type import
+import { waitForFirebase } from '../lib/firebase/config';
 
 export type { Executive };  // ✅ Re-export for compatibility
 
@@ -25,7 +26,11 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase에서 운영진 데이터 로드
   useEffect(() => {
-    loadExecutives();
+    const initializeData = async () => {
+      await waitForFirebase();
+      await loadExecutives();
+    };
+    initializeData();
   }, []);
 
   const loadExecutives = async () => {

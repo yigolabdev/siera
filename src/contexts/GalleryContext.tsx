@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { uploadFile, deleteFile, getFileURL } from '../lib/firebase/storage';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
+import { useAuth } from './AuthContextEnhanced';
 
 export interface Photo {
   id: string;
@@ -33,6 +34,7 @@ interface GalleryContextType {
 const GalleryContext = createContext<GalleryContextType | undefined>(undefined);
 
 export const GalleryProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,16 +71,34 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
     eventTitle: string,
     captions: string[]
   ) => {
+    if (!user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
     try {
+      console.log('📤 사진 업로드 시작:', {
+        fileCount: files.length,
+        eventId,
+        eventTitle,
+        userId: user.id,
+        userName: user.name
+      });
+
       const uploadPromises = files.map(async (file, index) => {
+        console.log(`📤 업로드 중 [${index + 1}/${files.length}]:`, file.name);
+
         // Storage에 파일 업로드
         const timestamp = Date.now();
         const fileName = `${eventId}_${timestamp}_${index}.${file.name.split('.').pop()}`;
         const storagePath = `gallery/${eventId}/${fileName}`;
         
+        console.log('📁 Storage 경로:', storagePath);
+        
         const uploadResult = await uploadFile(storagePath, file);
+        console.log('✅ Storage 업로드 결과:', uploadResult);
+        
         if (!uploadResult.success || !uploadResult.url) {
-          throw new Error('파일 업로드 실패');
+          throw new Error(`파일 업로드 실패: ${uploadResult.error || '알 수 없는 오류'}`);
         }
 
         // Firestore에 메타데이터 저장
@@ -90,8 +110,8 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
           eventTitle,
           eventYear: now.substring(0, 4),
           eventMonth: now.substring(5, 7),
-          uploadedBy: 'current-user-id', // TODO: 실제 user ID로 교체
-          uploadedByName: 'Current User', // TODO: 실제 user name으로 교체
+          uploadedBy: user.id,
+          uploadedByName: user.name,
           uploadedAt: now,
           imageUrl: uploadResult.url,
           caption: captions[index] || '',
@@ -99,7 +119,11 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
           likedBy: [],
         };
 
+        console.log('💾 Firestore 저장 중:', photoId);
+        
         const result = await setDocument('photos', photoId, photoData);
+        console.log('✅ Firestore 저장 결과:', result);
+        
         if (result.success) {
           return photoData;
         }
@@ -110,10 +134,11 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
       setPhotos(prev => [...prev, ...uploadedPhotos]);
       console.log(`✅ ${uploadedPhotos.length}개 사진 업로드 완료`);
     } catch (err: any) {
+      console.error('❌ 사진 업로드 실패:', err);
       logError(err, ErrorLevel.ERROR, ErrorCategory.STORAGE);
       throw err;
     }
-  }, []);
+  }, [user]);
 
   // 사진 삭제
   const deletePhoto = useCallback(async (photoId: string) => {

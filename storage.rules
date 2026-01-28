@@ -62,12 +62,11 @@ service firebase.storage {
     // gallery/{eventId}/{fileName}
     // ========================================
     match /gallery/{eventId}/{fileName} {
-      // 읽기: 인증되고 승인된 회원만
-      allow read: if isAuthenticated() && isApproved();
+      // 읽기: 인증된 회원이면 가능
+      allow read: if isAuthenticated();
       
-      // 업로드: 승인된 회원, 이미지 파일, 10MB 이하
-      allow write: if isAuthenticated() && 
-                     isApproved() &&
+      // 업로드: 인증된 회원, 이미지 파일, 10MB 이하
+      allow write, create: if isAuthenticated() && 
                      isImage() && 
                      isValidSize();
       

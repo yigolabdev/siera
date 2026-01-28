@@ -260,15 +260,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    * 사용자 정보 업데이트
    */
   const updateUser = useCallback(async (userData: Partial<User>): Promise<void> => {
-    if (!user) return;
+    if (!user) {
+      console.error('❌ updateUser 실패: user가 없습니다.');
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    console.log('📝 사용자 정보 업데이트 시작:', {
+      userId: user.id,
+      updateData: userData,
+    });
 
     try {
-      await updateDocument('members', user.id, userData);
+      const result = await updateDocument('members', user.id, userData);
+      
+      if (!result.success) {
+        console.error('❌ Firestore 업데이트 실패:', result.error);
+        throw new Error(result.error || '업데이트에 실패했습니다.');
+      }
+      
+      console.log('✅ Firestore 업데이트 성공');
       
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
       userStorage.set(updatedUser);
+      
+      console.log('✅ 로컬 상태 업데이트 완료');
     } catch (err: any) {
+      console.error('❌ updateUser 에러:', err);
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { userId: user.id });
       throw err;
     }

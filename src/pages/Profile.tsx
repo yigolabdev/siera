@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
+import { useMembers } from '../contexts/MemberContext';
 import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit, Calendar, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { uploadFile, deleteFile } from '../lib/firebase/storage';
@@ -8,6 +9,7 @@ import Badge from '../components/ui/Badge';
 
 const Profile = () => {
   const { user, updateProfileImage, updateUser } = useAuth();
+  const { refreshMembers } = useMembers();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -120,6 +122,10 @@ const Profile = () => {
       return;
     }
     
+    console.log('💾 프로필 저장 시작');
+    console.log('현재 user:', user);
+    console.log('저장할 formData:', formData);
+    
     setIsSaving(true);
     try {
       // 1. 프로필 이미지 업로드 (선택된 파일이 있는 경우)
@@ -146,7 +152,7 @@ const Profile = () => {
       }
       
       // 2. 프로필 정보 업데이트
-      await updateUser({
+      const updateData = {
         name: formData.name,
         email: formData.email,
         phoneNumber: formData.phone,
@@ -156,7 +162,18 @@ const Profile = () => {
         position: formData.position,
         bio: formData.bio,
         profileImage: imageUrl || undefined,
-      });
+      };
+      
+      console.log('📤 Firestore 업데이트 요청:', updateData);
+      
+      await updateUser(updateData);
+      
+      console.log('✅ 프로필 업데이트 완료');
+      
+      // MemberContext 데이터 새로고침 (Admin/MemberManagement 페이지 동기화)
+      console.log('🔄 MemberContext 새로고침 시작...');
+      await refreshMembers();
+      console.log('✅ MemberContext 새로고침 완료');
       
       setSelectedFile(null);
       alert('프로필이 성공적으로 업데이트되었습니다.');

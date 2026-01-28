@@ -65,7 +65,7 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
     } catch (err: any) {
       console.error('❌ Firebase 게스트 신청 데이터 로드 실패:', err.message);
       setError(err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.FIREBASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.loadGuestApplications',
       });
     } finally {
@@ -86,22 +86,24 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
 
       console.log('📤 게스트 신청 추가:', newApplication);
 
-      const result = await setDocument('guestApplications', newApplication);
+      // ID 생성
+      const id = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const applicationWithId: GuestApplication = {
+        ...newApplication,
+        id,
+      };
 
-      if (result.success && result.id) {
-        const applicationWithId: GuestApplication = {
-          ...newApplication,
-          id: result.id,
-        };
-        
+      const result = await setDocument('guestApplications', id, applicationWithId);
+
+      if (result.success) {
         setGuestApplications(prev => [applicationWithId, ...prev]);
-        console.log('✅ 게스트 신청 추가 완료:', result.id);
+        console.log('✅ 게스트 신청 추가 완료:', id);
       } else {
         throw new Error(result.error || '게스트 신청 추가 실패');
       }
     } catch (err: any) {
       console.error('❌ 게스트 신청 추가 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.FIREBASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.addGuestApplication',
       });
       throw err;
@@ -133,7 +135,7 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
       }
     } catch (err: any) {
       console.error('❌ 게스트 신청 승인 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.FIREBASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.approveGuestApplication',
         applicationId,
       });
@@ -172,7 +174,7 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
       }
     } catch (err: any) {
       console.error('❌ 게스트 신청 거절 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.FIREBASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.rejectGuestApplication',
         applicationId,
       });

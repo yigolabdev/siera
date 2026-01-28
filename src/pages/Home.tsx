@@ -6,19 +6,25 @@ import { useDevMode } from '../contexts/DevModeContext';
 import { useEvents } from '../contexts/EventContext';
 import { useMembers } from '../contexts/MemberContext';
 import { usePoems } from '../contexts/PoemContext';
+import { useParticipations } from '../contexts/ParticipationContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
 
 const Home = () => {
   const { user } = useAuth();
-  const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode(); // specialApplicationStatus 추가
-  const { events, currentEvent, specialEvent, getParticipantsByEventId } = useEvents(); // specialEvent 추가
+  const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
+  const { events, currentEvent, specialEvent, getParticipantsByEventId } = useEvents();
   const { members } = useMembers();
   const { currentPoem } = usePoems();
+  const { getUserParticipationForEvent, cancelParticipation, registerForEvent } = useParticipations();
   
-  // 참석 여부 상태 (실제로는 백엔드에서 가져와야 함)
-  const [myParticipationStatus, setMyParticipationStatus] = useState<'attending' | 'not-attending' | 'pending' | null>('attending');
+  // 참석 여부 상태 (Firebase에서 가져오기)
+  const myParticipationStatus = useMemo(() => {
+    if (!user || !currentEvent) return null;
+    const participation = getUserParticipationForEvent(user.id.toString(), currentEvent.id);
+    return participation?.status || null;
+  }, [user, currentEvent, getUserParticipationForEvent]);
   
   // 날씨 데이터 (추후 실제 API 연동)
   const weatherData = {
@@ -618,10 +624,17 @@ const Home = () => {
                     {/* 참석 취소 버튼 */}
                     {(myParticipationStatus === 'attending' || myParticipationStatus === 'pending') && (
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           if (confirm('참석 신청을 취소하시겠습니까?')) {
-                            setMyParticipationStatus('not-attending');
-                            alert('참석 신청이 취소되었습니다.');
+                            try {
+                              const participation = user && currentEvent ? getUserParticipationForEvent(user.id.toString(), currentEvent.id) : null;
+                              if (participation) {
+                                await cancelParticipation(participation.id, '사용자 취소');
+                                alert('참석 신청이 취소되었습니다.');
+                              }
+                            } catch (error) {
+                              alert('참석 취소 중 오류가 발생했습니다.');
+                            }
                           }
                         }}
                         className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"

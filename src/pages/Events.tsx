@@ -11,7 +11,7 @@ import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate }
 const Events = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
-  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId } = useEvents();
+  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId } = useEvents();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
   const [searchParams] = useSearchParams();
@@ -80,78 +80,10 @@ const Events = () => {
   // 참석자 목록 (실제 신청자)
   const participants = event ? getParticipantsByEventId(event.id) : [];
   
-  // 조 편성
-  const teams = [
-    {
-      id: '1',
-      name: '1조',
-      leaderId: '1',
-      leaderName: '김산행',
-      leaderOccupation: '○○그룹 회장',
-      members: [
-        { id: 'm1', name: '홍정상', occupation: '대표변호사', company: '※※법률사무소' },
-        { id: 'm2', name: '강백운', occupation: '대표', company: '◎◎IT' },
-        { id: 'm3', name: '윤설악', occupation: '사장', company: '▽▽건축' },
-        { id: 'm4', name: '문북한', occupation: '전무', company: '◈◈컨설팅' },
-        { id: 'm5', name: '신계룡', occupation: '대표', company: '▲▲물류' },
-      ],
-    },
-    {
-      id: '2',
-      name: '2조',
-      leaderId: '2',
-      leaderName: '이등산',
-      leaderOccupation: '△△건설 대표이사',
-      members: [
-        { id: 'm6', name: '임지리', occupation: '부사장', company: '★★무역' },
-        { id: 'm7', name: '조한라', occupation: '이사', company: '◆◆투자' },
-        { id: 'm8', name: '장태백', occupation: '사장', company: '▼▼제조' },
-        { id: 'm9', name: '권덕유', occupation: '이사', company: '◐◐통신' },
-        { id: 'm10', name: '서오대', occupation: '교수', company: '◑◑교육' },
-      ],
-    },
-    {
-      id: '3',
-      name: '3조',
-      leaderId: '3',
-      leaderName: '박트레킹',
-      leaderOccupation: '□□금융 부사장',
-      members: [
-        { id: 'm11', name: '오속리', occupation: '대표', company: '◒◒인프라' },
-        { id: 'm12', name: '배치악', occupation: '본부장', company: '◓◓미디어' },
-        { id: 'm13', name: '류월출', occupation: '연구소장', company: '◔◔바이오' },
-        { id: 'm14', name: '전청계', occupation: '전무', company: '◕◕에너지' },
-        { id: 'm15', name: '황무등', occupation: '대표', company: '◖◖자산운용' },
-      ],
-    },
-    {
-      id: '4',
-      name: '4조',
-      leaderId: '4',
-      leaderName: '최하이킹',
-      leaderOccupation: '◇◇제약 전무이사',
-      members: [
-        { id: 'm16', name: '안관악', occupation: '부장', company: '◗◗마케팅' },
-        { id: 'm17', name: '남도봉', occupation: '이사', company: '◘◘유통' },
-        { id: 'm18', name: '송악산', occupation: '대표', company: '◙◙테크' },
-        { id: 'm19', name: '진용문', occupation: '상무', company: '◚◚디자인' },
-      ],
-    },
-    {
-      id: '5',
-      name: '5조',
-      leaderId: '5',
-      leaderName: '정봉우리',
-      leaderOccupation: '☆☆병원 원장',
-      members: [
-        { id: 'm20', name: '차금강', occupation: '센터장', company: '◛◛연구소' },
-        { id: 'm21', name: '표영봉', occupation: '실장', company: '◜◜개발' },
-        { id: 'm22', name: '마니산', occupation: '팀장', company: '◝◝기획' },
-        { id: 'm23', name: '노고단', occupation: '부장', company: '◞◞전략' },
-      ],
-    },
-  ];
+  // 조 편성 (Firebase에서 로드)
+  const teams = event ? getTeamsByEventId(event.id) : [];
   
+  // 이전 산행 기록 (HikingHistory Context로 이동 권장)
   // 지난 산행 기록
   const pastEvents = [
     {

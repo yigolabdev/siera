@@ -45,7 +45,7 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('❌ Firebase 가입 대기자 데이터 로드 실패:', err.message);
       setError(err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.FIREBASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'PendingUserContext.loadPendingUsers',
       });
     } finally {
@@ -83,7 +83,7 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.error('❌ 가입 승인 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.FIREBASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'PendingUserContext.approvePendingUser',
         userId,
       });
@@ -119,7 +119,7 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.error('❌ 가입 거절 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.FIREBASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'PendingUserContext.rejectPendingUser',
         userId,
       });

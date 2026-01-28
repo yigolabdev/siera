@@ -13,6 +13,9 @@ import { PostProvider } from './contexts/PostContext';
 import { ExecutiveProvider } from './contexts/ExecutiveContext';
 import { PendingUserProvider } from './contexts/PendingUserContext';
 import { GuestApplicationProvider } from './contexts/GuestApplicationContext';
+import { PaymentProvider } from './contexts/PaymentContext';
+import { AttendanceProvider } from './contexts/AttendanceContext';
+import { ParticipationProvider } from './contexts/ParticipationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout/Layout';
@@ -60,16 +63,19 @@ function App() {
             <ExecutiveProvider>
               <PendingUserProvider>
                 <GuestApplicationProvider>
-                  <GalleryProvider>
-                    <HikingHistoryProvider>
-                      <PostProvider>
-                        <PoemProvider>
-                          <RulesProvider>
-                            <NoticeProvider>
-                              <Router>
-                                <ScrollToTop />
-                                <Suspense fallback={<PageLoader />}>
-                                  <Routes>
+                  <PaymentProvider>
+                    <AttendanceProvider>
+                      <ParticipationProvider>
+                        <GalleryProvider>
+                          <HikingHistoryProvider>
+                            <PostProvider>
+                              <PoemProvider>
+                                <RulesProvider>
+                                  <NoticeProvider>
+                                    <Router>
+                                      <ScrollToTop />
+                                      <Suspense fallback={<PageLoader />}>
+                                        <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<AboutSierra />} />
@@ -122,21 +128,24 @@ function App() {
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-                </Suspense>
-              </Router>
-                    </NoticeProvider>
-                  </RulesProvider>
-                </PoemProvider>
-              </PostProvider>
-            </HikingHistoryProvider>
-          </GalleryProvider>
+                                      </Suspense>
+                                    </Router>
+                                  </NoticeProvider>
+                                </RulesProvider>
+                              </PoemProvider>
+                            </PostProvider>
+                          </HikingHistoryProvider>
+                        </GalleryProvider>
+                      </ParticipationProvider>
+                    </AttendanceProvider>
+                  </PaymentProvider>
                 </GuestApplicationProvider>
               </PendingUserProvider>
-        </ExecutiveProvider>
-      </MemberProvider>
-    </EventProvider>
-  </AuthProvider>
-</DevModeProvider>
+            </ExecutiveProvider>
+          </MemberProvider>
+        </EventProvider>
+      </AuthProvider>
+    </DevModeProvider>
   );
 }
 

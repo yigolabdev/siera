@@ -136,29 +136,40 @@ const ContentManagement = () => {
     setShowNoticeModal(true);
   };
 
-  const handleSaveNotice = () => {
+  const handleSaveNotice = async () => {
     if (!noticeForm.title.trim() || !noticeForm.content.trim()) {
       alert('제목과 내용을 입력해주세요.');
       return;
     }
     
-    if (editingNotice) {
-      updateNotice(editingNotice.id, noticeForm);
-      alert('공지사항이 수정되었습니다.');
-    } else {
-      addNotice(noticeForm);
-      alert('공지사항이 등록되었습니다.');
+    try {
+      if (editingNotice) {
+        await updateNotice(editingNotice.id, noticeForm);
+        alert('공지사항이 수정되었습니다.');
+      } else {
+        await addNotice(noticeForm);
+        alert('공지사항이 등록되었습니다.');
+      }
+      
+      setShowNoticeModal(false);
+      setEditingNotice(null);
+      setNoticeForm({ title: '', content: '', isPinned: false });
+    } catch (error) {
+      console.error('공지사항 저장 실패:', error);
+      alert('공지사항 저장에 실패했습니다.');
     }
-    
-    setShowNoticeModal(false);
-    setEditingNotice(null);
-    setNoticeForm({ title: '', content: '', isPinned: false });
   };
 
-  const handleDeleteNotice = (noticeId: number) => {
+  const handleDeleteNotice = async (noticeId: string) => {
     if (!confirm('이 공지사항을 삭제하시겠습니까?')) return;
-    deleteNotice(noticeId);
-    alert('공지사항이 삭제되었습니다.');
+    
+    try {
+      await deleteNotice(noticeId);
+      alert('공지사항이 삭제되었습니다.');
+    } catch (error) {
+      console.error('공지사항 삭제 실패:', error);
+      alert('공지사항 삭제에 실패했습니다.');
+    }
   };
 
   const pinnedNotices = notices.filter(n => n.isPinned);

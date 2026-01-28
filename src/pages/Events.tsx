@@ -590,14 +590,10 @@ const Events = () => {
                     </div>
                     
                     <div>
-                      <p className="text-sm font-bold text-slate-700 mb-3">상세 일정</p>
-                      <div className="space-y-2">
-                        {course.schedule.map((item, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-sm">
-                            <span className="font-bold text-primary-600 min-w-[60px]">{item.time}</span>
-                            <span className="text-slate-700">{item.location}</span>
-                          </div>
-                        ))}
+                      <p className="text-sm font-bold text-slate-700 mb-2">코스 정보</p>
+                      <div className="text-sm text-slate-600 space-y-1">
+                        <p>• 난이도: {course.difficulty}</p>
+                        <p>• 소요 시간: {course.duration}</p>
                       </div>
                     </div>
                   </Card>

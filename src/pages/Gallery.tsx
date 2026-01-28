@@ -206,7 +206,7 @@ const Gallery = () => {
           <p className="text-slate-600 mb-6">
             첫 번째 산행 사진을 업로드해보세요!
           </p>
-          {user?.isApproved && (
+          {user && (
             <button
               onClick={() => setShowUploadModal(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -229,7 +229,7 @@ const Gallery = () => {
           <p className="text-slate-600">시애라클럽의 추억을 함께 공유하세요.</p>
         </div>
         
-        {user?.isApproved && (
+        {user && (
           <button
             onClick={() => setShowUploadModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

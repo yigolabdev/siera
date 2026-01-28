@@ -95,6 +95,11 @@ const Board = () => {
   const handleAddComment = async () => {
     if (!newComment.trim() || !selectedPost || !user) return;
     
+    console.log('📝 댓글 추가 시도:', {
+      postId: selectedPost.id,
+      content: newComment,
+    });
+    
     try {
       await addComment({
         postId: selectedPost.id,
@@ -105,11 +110,12 @@ const Board = () => {
         parentId: replyToComment || undefined,
       });
       
+      console.log('✅ 댓글 추가 성공');
       setNewComment('');
       setReplyToComment(null);
-    } catch (error) {
-      console.error('댓글 작성 실패:', error);
-      alert('댓글 작성에 실패했습니다.');
+    } catch (error: any) {
+      console.error('❌ 댓글 작성 실패:', error);
+      alert(`댓글 작성에 실패했습니다.\n\n${error.message || '다시 시도해주세요.'}`);
     }
   };
   

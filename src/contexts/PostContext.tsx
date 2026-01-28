@@ -228,8 +228,15 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
     commentData: Omit<Comment, 'id' | 'likes' | 'likedBy' | 'createdAt' | 'updatedAt'>
   ) => {
     if (!user) {
+      console.error('❌ 댓글 작성 실패: 로그인이 필요합니다.');
       throw new Error('로그인이 필요합니다.');
     }
+
+    console.log('💬 댓글 작성 시작:', {
+      postId: commentData.postId,
+      author: commentData.author,
+      authorId: commentData.authorId,
+    });
 
     try {
       const commentId = `comment_${Date.now()}`;
@@ -244,24 +251,37 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
         updatedAt: now,
       };
 
+      console.log('📤 Firestore에 댓글 저장 시도:', {
+        commentId,
+        data: newComment,
+      });
+
       const result = await setDocument('comments', commentId, newComment);
-      if (result.success) {
-        setComments(prev => [...prev, newComment]);
-        
-        // 게시글의 댓글 수 업데이트
-        const post = posts.find(p => p.id === commentData.postId);
-        if (post) {
-          await updatePost(commentData.postId, {
-            comments: post.comments + 1,
-          });
-        }
-        
-        console.log('✅ 댓글 추가 완료:', commentId);
-      } else {
-        throw new Error(result.error || '댓글 추가 실패');
+      
+      if (!result.success) {
+        console.error('❌ Firestore 댓글 저장 실패:', result.error);
+        throw new Error(result.error || '댓글 저장에 실패했습니다.');
       }
+      
+      console.log('✅ Firestore 댓글 저장 성공');
+      
+      setComments(prev => [...prev, newComment]);
+      
+      // 게시글의 댓글 수 업데이트
+      const post = posts.find(p => p.id === commentData.postId);
+      if (post) {
+        await updatePost(commentData.postId, {
+          comments: post.comments + 1,
+        });
+      }
+      
+      console.log('✅ 댓글 추가 완료:', commentId);
     } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      console.error('❌ 댓글 작성 에러:', err);
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { 
+        postId: commentData.postId,
+        userId: user.id 
+      });
       throw err;
     }
   }, [user, posts, updatePost]);

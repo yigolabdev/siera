@@ -123,11 +123,12 @@ service cloud.firestore {
     // 댓글 (comments) 컬렉션
     // ========================================
     match /comments/{commentId} {
-      // 읽기: 모든 인증된 사용자
+      // 읽기: 모든 인증된 사용자 (게시판 댓글은 커뮤니티 기능)
       allow read: if isAuthenticated();
       
       // 생성: 인증된 사용자 (본인 정보로)
-      allow create: if isAuthenticated() && 
+      // isAuthenticated() 제거 - 로그인한 사용자라면 댓글 작성 가능
+      allow create: if request.auth != null && 
                       request.auth.uid == request.resource.data.authorId;
       
       // 수정: 본인 또는 관리자

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit, Calendar, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -11,20 +11,37 @@ const Profile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phoneNumber || '',
-    gender: user?.gender || '',
-    birthYear: user?.birthYear || '',
-    company: user?.company || '',
-    position: user?.position || '',
-    bio: user?.bio || '',
+    name: '',
+    email: '',
+    phone: '',
+    gender: '',
+    birthYear: '',
+    company: '',
+    position: '',
+    bio: '',
   });
+  
+  // user 정보가 로드되면 formData와 profileImage 업데이트
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phoneNumber || '',
+        gender: user.gender || '',
+        birthYear: user.birthYear || '',
+        company: user.company || '',
+        position: user.position || '',
+        bio: user.bio || '',
+      });
+      setProfileImage(user.profileImage || null);
+    }
+  }, [user]);
   
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -131,6 +148,7 @@ const Profile = () => {
       // 2. 프로필 정보 업데이트
       await updateUser({
         name: formData.name,
+        email: formData.email,
         phoneNumber: formData.phone,
         gender: formData.gender,
         birthYear: formData.birthYear,
@@ -139,11 +157,6 @@ const Profile = () => {
         bio: formData.bio,
         profileImage: imageUrl || undefined,
       });
-      
-      // 3. 프로필 이미지 URL 저장
-      if (imageUrl && imageUrl !== user.profileImage) {
-        await updateProfileImage(imageUrl);
-      }
       
       setSelectedFile(null);
       alert('프로필이 성공적으로 업데이트되었습니다.');
@@ -352,7 +365,7 @@ const Profile = () => {
               </label>
               <input
                 type="text"
-                value={user?.joinDate || '2024-01-01'}
+                value={user?.joinDate || '-'}
                 className="input-field bg-slate-100 cursor-not-allowed"
                 disabled
                 readOnly

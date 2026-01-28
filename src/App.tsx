@@ -11,6 +11,8 @@ import { GalleryProvider } from './contexts/GalleryContext';
 import { HikingHistoryProvider } from './contexts/HikingHistoryContext';
 import { PostProvider } from './contexts/PostContext';
 import { ExecutiveProvider } from './contexts/ExecutiveContext';
+import { PendingUserProvider } from './contexts/PendingUserContext';
+import { GuestApplicationProvider } from './contexts/GuestApplicationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout/Layout';
@@ -56,16 +58,18 @@ function App() {
         <EventProvider>
           <MemberProvider>
             <ExecutiveProvider>
-              <GalleryProvider>
-                <HikingHistoryProvider>
-                  <PostProvider>
-                    <PoemProvider>
-                      <RulesProvider>
-                        <NoticeProvider>
-                          <Router>
-                            <ScrollToTop />
-                            <Suspense fallback={<PageLoader />}>
-                              <Routes>
+              <PendingUserProvider>
+                <GuestApplicationProvider>
+                  <GalleryProvider>
+                    <HikingHistoryProvider>
+                      <PostProvider>
+                        <PoemProvider>
+                          <RulesProvider>
+                            <NoticeProvider>
+                              <Router>
+                                <ScrollToTop />
+                                <Suspense fallback={<PageLoader />}>
+                                  <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<AboutSierra />} />
@@ -126,6 +130,8 @@ function App() {
               </PostProvider>
             </HikingHistoryProvider>
           </GalleryProvider>
+                </GuestApplicationProvider>
+              </PendingUserProvider>
         </ExecutiveProvider>
       </MemberProvider>
     </EventProvider>

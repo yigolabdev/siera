@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Users, Shield, UserCog, Search, UserCheck, UserPlus, Check, X, Eye, Calendar, Briefcase, Building2, Phone, Mail, Mountain, MessageSquare, AlertCircle, UserX, Power } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMembers } from '../../contexts/MemberContext';
+import { usePendingUsers } from '../../contexts/PendingUserContext';
+import { useGuestApplications } from '../../contexts/GuestApplicationContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import { UserRole, PendingUser } from '../../types';
-import { mockPendingUsers } from '../../data/mockPendingUsers';
 import { formatDate } from '../../utils/format';
 
 interface Member {
@@ -21,23 +22,22 @@ interface Member {
   isActive: boolean; // 회원 활성화 상태
 }
 
-interface GuestApplication {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  eventId: string;
-  eventTitle: string;
-  eventDate: string;
-  appliedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
-  reason?: string; // 참여 이유
-  referredBy?: string; // 추천인
-}
-
 const MemberManagement = () => {
   const navigate = useNavigate();
   const { members: contextMembers } = useMembers();
+  const { 
+    pendingUsers, 
+    approvePendingUser, 
+    rejectPendingUser, 
+    isLoading: isPendingLoading 
+  } = usePendingUsers();
+  const { 
+    guestApplications, 
+    approveGuestApplication, 
+    rejectGuestApplication,
+    isLoading: isGuestLoading 
+  } = useGuestApplications();
+  
   const [activeTab, setActiveTab] = useState<'members' | 'approval' | 'guestApplications'>('members');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
@@ -64,52 +64,8 @@ const MemberManagement = () => {
     isActive: true, // 기본값, 추후 Firebase에서 관리
   }));
 
-  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>(mockPendingUsers);
-
-  // 게스트 신청 목록
-  const [guestApplications, setGuestApplications] = useState<GuestApplication[]>([
-    {
-      id: '1',
-      name: '홍길동',
-      email: 'hong@example.com',
-      phone: '010-1111-2222',
-      eventId: '1',
-      eventTitle: '북한산 백운대 등반',
-      eventDate: '2026-02-15',
-      appliedAt: '2026-01-20 10:30',
-      status: 'pending',
-      reason: '등산을 시작한지 1년이 되었고, 시애라 클럽의 체계적인 산행에 참여하고 싶습니다.',
-      referredBy: '김대한',
-    },
-    {
-      id: '2',
-      name: '이영희',
-      email: 'lee.yh@example.com',
-      phone: '010-3333-4444',
-      eventId: '1',
-      eventTitle: '북한산 백운대 등반',
-      eventDate: '2026-02-15',
-      appliedAt: '2026-01-21 14:20',
-      status: 'pending',
-      reason: '건강한 취미생활을 위해 등산에 관심이 생겼습니다.',
-    },
-    {
-      id: '3',
-      name: '박철수',
-      email: 'park.cs@example.com',
-      phone: '010-5555-6666',
-      eventId: '1',
-      eventTitle: '북한산 백운대 등반',
-      eventDate: '2026-02-15',
-      appliedAt: '2026-01-19 09:15',
-      status: 'approved',
-      reason: '산행 경험이 많으며, 새로운 동호회 활동에 참여하고 싶습니다.',
-      referredBy: '이민국',
-    },
-  ]);
-
   const [guestFilter, setGuestFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
-  const [selectedGuestApplication, setSelectedGuestApplication] = useState<GuestApplication | null>(null);
+  const [selectedGuestApplication, setSelectedGuestApplication] = useState<any | null>(null);
   const [isGuestDetailModalOpen, setIsGuestDetailModalOpen] = useState(false);
 
   // 비밀번호 검증 요청 함수
@@ -143,29 +99,27 @@ const MemberManagement = () => {
     setPasswordAction(null);
   };
 
-  const handleApprove = (userId: string) => {
-    setPendingUsers(prev =>
-      prev.map(user =>
-        user.id === userId
-          ? { ...user, status: 'approved' as const }
-          : user
-      )
-    );
-    alert('회원가입이 승인되었습니다.');
-    setIsDetailModalOpen(false);
+  const handleApprove = async (userId: string) => {
+    try {
+      await approvePendingUser(userId);
+      alert('회원가입이 승인되었습니다.');
+      setIsDetailModalOpen(false);
+    } catch (error) {
+      console.error('승인 실패:', error);
+      alert('승인에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
-  const handleReject = (userId: string) => {
+  const handleReject = async (userId: string) => {
     const reason = prompt('거절 사유를 입력해주세요 (선택):');
-    setPendingUsers(prev =>
-      prev.map(user =>
-        user.id === userId
-          ? { ...user, status: 'rejected' as const }
-          : user
-      )
-    );
-    alert('회원가입이 거절되었습니다.');
-    setIsDetailModalOpen(false);
+    try {
+      await rejectPendingUser(userId, reason || undefined);
+      alert('회원가입이 거절되었습니다.');
+      setIsDetailModalOpen(false);
+    } catch (error) {
+      console.error('거절 실패:', error);
+      alert('거절 처리에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleViewDetail = (user: PendingUser) => {
@@ -174,32 +128,30 @@ const MemberManagement = () => {
   };
 
   // 게스트 신청 처리 함수
-  const handleApproveGuest = (applicationId: string) => {
-    setGuestApplications(prev =>
-      prev.map(app =>
-        app.id === applicationId
-          ? { ...app, status: 'approved' as const }
-          : app
-      )
-    );
-    alert('게스트 신청이 승인되었습니다.');
-    setIsGuestDetailModalOpen(false);
+  const handleApproveGuest = async (applicationId: string) => {
+    try {
+      await approveGuestApplication(applicationId);
+      alert('게스트 신청이 승인되었습니다.');
+      setIsGuestDetailModalOpen(false);
+    } catch (error) {
+      console.error('게스트 승인 실패:', error);
+      alert('승인에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
-  const handleRejectGuest = (applicationId: string) => {
+  const handleRejectGuest = async (applicationId: string) => {
     const reason = prompt('거절 사유를 입력해주세요 (선택):');
-    setGuestApplications(prev =>
-      prev.map(app =>
-        app.id === applicationId
-          ? { ...app, status: 'rejected' as const }
-          : app
-      )
-    );
-    alert('게스트 신청이 거절되었습니다.');
-    setIsGuestDetailModalOpen(false);
+    try {
+      await rejectGuestApplication(applicationId, reason || undefined);
+      alert('게스트 신청이 거절되었습니다.');
+      setIsGuestDetailModalOpen(false);
+    } catch (error) {
+      console.error('게스트 거절 실패:', error);
+      alert('거절 처리에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
-  const handleViewGuestDetail = (application: GuestApplication) => {
+  const handleViewGuestDetail = (application: any) => {
     setSelectedGuestApplication(application);
     setIsGuestDetailModalOpen(true);
   };
@@ -217,22 +169,6 @@ const MemberManagement = () => {
   const handleToggleMemberStatus = (memberId: number) => {
     // TODO: Firebase에 isActive 필드 추가 후 구현
     alert('회원 활성화/비활성화 기능은 추후 구현 예정입니다.');
-    /*
-    const member = members.find(m => m.id === memberId);
-    if (!member) return;
-
-    const action = member.isActive ? '비활성화' : '활성화';
-    const confirmMessage = member.isActive
-      ? `${member.name} 회원을 비활성화하시겠습니까?\n비활성화된 회원은 로그인 및 산행 신청이 불가능합니다.`
-      : `${member.name} 회원을 활성화하시겠습니까?`;
-
-    requestPasswordVerification(() => {
-      if (confirm(confirmMessage)) {
-        // Firebase 업데이트 로직
-        alert(`${member.name} 회원이 ${action}되었습니다.`);
-      }
-    });
-    */
   };
 
   const filteredMembers = members.filter(member => {
@@ -662,7 +598,12 @@ const MemberManagement = () => {
 
           {/* Pending User List */}
           <div className="space-y-4">
-            {filteredPendingUsers.length > 0 ? (
+            {isPendingLoading ? (
+              <Card className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                <p className="text-slate-600">로딩 중...</p>
+              </Card>
+            ) : filteredPendingUsers.length > 0 ? (
               filteredPendingUsers.map(user => (
                 <Card key={user.id} className="hover:shadow-lg transition-all">
                   <div className="flex items-center justify-between">
@@ -809,7 +750,12 @@ const MemberManagement = () => {
 
           {/* Guest Application List */}
           <div className="space-y-4">
-            {filteredGuestApplications.length > 0 ? (
+            {isGuestLoading ? (
+              <Card className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                <p className="text-slate-600">로딩 중...</p>
+              </Card>
+            ) : filteredGuestApplications.length > 0 ? (
               filteredGuestApplications.map(application => (
                 <Card key={application.id} className="hover:shadow-lg transition-all">
                   <div className="flex items-center justify-between">

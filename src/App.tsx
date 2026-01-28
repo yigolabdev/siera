@@ -7,6 +7,8 @@ import { MemberProvider } from './contexts/MemberContext';
 import { PoemProvider } from './contexts/PoemContext';
 import { RulesProvider } from './contexts/RulesContext';
 import { NoticeProvider } from './contexts/NoticeContext';
+import { GalleryProvider } from './contexts/GalleryContext';
+import { HikingHistoryProvider } from './contexts/HikingHistoryContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout/Layout';
@@ -51,13 +53,15 @@ function App() {
       <AuthProvider>
         <EventProvider>
           <MemberProvider>
-            <PoemProvider>
-              <RulesProvider>
-                <NoticeProvider>
-                  <Router>
-                    <ScrollToTop />
-                    <Suspense fallback={<PageLoader />}>
-                      <Routes>
+            <GalleryProvider>
+              <HikingHistoryProvider>
+                <PoemProvider>
+                  <RulesProvider>
+                    <NoticeProvider>
+                      <Router>
+                        <ScrollToTop />
+                        <Suspense fallback={<PageLoader />}>
+                          <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<AboutSierra />} />
@@ -112,9 +116,11 @@ function App() {
           </Routes>
                 </Suspense>
               </Router>
-                </NoticeProvider>
-              </RulesProvider>
-            </PoemProvider>
+                    </NoticeProvider>
+                  </RulesProvider>
+                </PoemProvider>
+              </HikingHistoryProvider>
+            </GalleryProvider>
           </MemberProvider>
         </EventProvider>
       </AuthProvider>

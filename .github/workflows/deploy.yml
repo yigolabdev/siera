@@ -1,10 +1,7 @@
 name: Deploy to Firebase Hosting
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch: # 수동 배포 허용
+  workflow_dispatch: # 수동 배포만 허용 (GitHub Actions 탭에서 실행)
 
 jobs:
   build-and-deploy:

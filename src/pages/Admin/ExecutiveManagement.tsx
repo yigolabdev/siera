@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Users, Phone, Mail, Edit2, Save, X, Plus, Trash2, Calendar, AlertCircle, Check, Shield, Search } from 'lucide-react';
+import { useMembers } from '../../contexts/MemberContext';
+import { useExecutives, Executive } from '../../contexts/ExecutiveContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 
@@ -12,53 +14,24 @@ interface Member {
   company: string;
 }
 
-interface Executive {
-  id: number;
-  memberId?: number;
-  name: string;
-  position: string;
-  phone: string;
-  email?: string;
-  category: 'chairman' | 'committee';
-  startTerm?: string; // YYYY-MM
-  endTerm?: string;   // YYYY-MM
-  bio?: string;       // 자기소개
-}
-
 const ExecutiveManagement = () => {
-  // Mock 회원 데이터
-  const [members] = useState<Member[]>([
-    { id: 1, name: '정호철', email: 'jung@example.com', phone: '010-5399-4363', occupation: '○○그룹', company: '회장' },
-    { id: 2, name: '이응정', email: 'lee@example.com', phone: '010-8876-0605', occupation: '△△건설', company: '대표이사' },
-    { id: 3, name: '신영인', email: 'shin@example.com', phone: '010-6305-3027', occupation: '□□금융', company: '부사장' },
-    { id: 4, name: '최원호', email: 'choi@example.com', phone: '010-6546-3387', occupation: '◇◇제약', company: '전무이사' },
-    { id: 5, name: '유희찬', email: 'yoo@example.com', phone: '010-9064-7797', occupation: '☆☆병원', company: '원장' },
-    { id: 6, name: '김용훈', email: 'kim@example.com', phone: '010-7510-8500', occupation: '※※법률', company: '대표변호사' },
-    { id: 7, name: '이현희', email: 'lee2@example.com', phone: '010-8277-7602', occupation: '◎◎IT', company: '대표' },
-    { id: 8, name: '심경택', email: 'sim@example.com', phone: '010-5505-9815', occupation: '▽▽건축', company: '사장' },
-    { id: 9, name: '권택준', email: 'kwon@example.com', phone: '010-7411-7859', occupation: '♧♧통신', company: '부장' },
-    { id: 10, name: '한재우', email: 'han@example.com', phone: '010-6769-0275', occupation: '♤♤무역', company: '이사' },
-  ]);
+  const { members: contextMembers } = useMembers();
+  const { executives: contextExecutives, addExecutive, updateExecutive, deleteExecutive, isLoading } = useExecutives();
+  
+  // Firebase members를 로컬 인터페이스로 변환
+  const members: Member[] = contextMembers.map(m => ({
+    id: Number(m.id),
+    name: m.name,
+    email: m.email,
+    phone: m.phone,
+    occupation: m.occupation,
+    company: m.company,
+  }));
 
-  const [executives, setExecutives] = useState<Executive[]>([
-    // 회장단
-    { id: 1, memberId: 1, name: '정호철', position: '회장', phone: '010-5399-4363', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '○○그룹 회장으로 재직 중이며, 시애라 창립 멤버입니다.' },
-    { id: 2, memberId: 2, name: '이응정', position: '운영위원장', phone: '010-8876-0605', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '△△건설 대표이사로 건설 업계 30년 경력의 베테랑입니다.' },
-    { id: 4, memberId: 4, name: '최원호', position: '등산대장', phone: '010-6546-3387', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '◇◇제약 전무이사로 바이오 산업을 선도하고 있습니다.' },
-    { id: 3, memberId: 3, name: '신영인', position: '운영감사', phone: '010-6305-3027', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '□□금융 부사장으로 금융 전문가입니다.' },
-    { id: 5, memberId: 5, name: '유희찬', position: '재무감사', phone: '010-9064-7797', category: 'chairman', startTerm: '2024-01', endTerm: '2026-12', bio: '☆☆병원 원장으로 의료계에서 활동하고 있습니다.' },
-    // 운영위원
-    { id: 6, memberId: 6, name: '김용훈', position: '부위원장', phone: '010-7510-8500', category: 'committee', startTerm: '2024-01', endTerm: '2026-12', bio: '※※법률사무소 대표변호사로 기업법무 전문가입니다.' },
-    { id: 7, memberId: 7, name: '이현희', position: '재무', phone: '010-8277-7602', category: 'committee', startTerm: '2024-01', endTerm: '2026-12', bio: '◎◎IT 대표로 IT 산업을 이끌고 있습니다.' },
-    { id: 8, memberId: 8, name: '심경택', position: '기획', phone: '010-5505-9815', category: 'committee', startTerm: '2024-01', endTerm: '2026-12', bio: '▽▽건축 사장으로 건축 분야의 리더입니다.' },
-    { id: 9, memberId: 9, name: '권택준', position: '홍보/청년', phone: '010-7411-7859', category: 'committee', startTerm: '2024-01', endTerm: '2026-12', bio: '♧♧통신 부장으로 통신 분야 전문가입니다.' },
-    { id: 10, memberId: 10, name: '한재우', position: '홍보/청년', phone: '010-6769-0275', category: 'committee', startTerm: '2024-01', endTerm: '2026-12', bio: '♤♤무역 이사로 글로벌 비즈니스를 담당하고 있습니다.' },
-  ]);
-
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Executive | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [newExecutive, setNewExecutive] = useState<Omit<Executive, 'id'>>({
+  const [newExecutive, setNewExecutive] = useState<Omit<Executive, 'id' | 'createdAt' | 'updatedAt'>>({
     memberId: undefined,
     name: '',
     position: '',
@@ -81,8 +54,8 @@ const ExecutiveManagement = () => {
   const [editSearchQuery, setEditSearchQuery] = useState('');
   const [showEditSearchResults, setShowEditSearchResults] = useState(false);
 
-  const chairmanBoard = executives.filter(e => e.category === 'chairman');
-  const committee = executives.filter(e => e.category === 'committee');
+  const chairmanBoard = contextExecutives.filter(e => e.category === 'chairman');
+  const committee = contextExecutives.filter(e => e.category === 'committee');
 
   // 임기 활성화 여부 확인
   const isTermActive = (startTerm?: string, endTerm?: string) => {
@@ -139,28 +112,31 @@ const ExecutiveManagement = () => {
   };
 
   // 수정 저장
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editForm) {
       if (!editForm.startTerm || !editForm.endTerm) {
         alert('임기를 모두 입력해주세요.');
         return;
       }
       
-      requestPasswordVerification(() => {
-        setExecutives(prev =>
-          prev.map(exec => (exec.id === editForm.id ? editForm : exec))
-        );
-        setEditingId(null);
-        setEditForm(null);
-        setEditSearchQuery(''); // 검색창 초기화
-        setShowEditSearchResults(false);
-        alert('운영진 정보가 수정되었습니다.');
+      requestPasswordVerification(async () => {
+        try {
+          await updateExecutive(editForm.id, editForm);
+          setEditingId(null);
+          setEditForm(null);
+          setEditSearchQuery('');
+          setShowEditSearchResults(false);
+          alert('운영진 정보가 수정되었습니다.');
+        } catch (error) {
+          console.error('운영진 수정 실패:', error);
+          alert('운영진 수정에 실패했습니다.');
+        }
       });
     }
   };
 
   // 새 운영진 추가
-  const handleAddNew = () => {
+  const handleAddNew = async () => {
     if (!newExecutive.position || !newExecutive.startTerm || !newExecutive.endTerm) {
       alert('필수 항목을 모두 입력해주세요.');
       return;
@@ -171,41 +147,42 @@ const ExecutiveManagement = () => {
       return;
     }
 
-    requestPasswordVerification(() => {
-      const member = members.find(m => m.id === newExecutive.memberId);
-      if (!member) return;
-
-      const newId = Math.max(...executives.map(e => e.id), 0) + 1;
-      setExecutives(prev => [...prev, { 
-        ...newExecutive, 
-        id: newId,
-        name: member.name,
-        phone: member.phone,
-        email: member.email,
-      }]);
-      setNewExecutive({
-        memberId: undefined,
-        name: '',
-        position: '',
-        phone: '',
-        email: '',
-        category: 'chairman',
-        startTerm: '',
-        endTerm: '',
-      });
-      setSearchQuery(''); // 검색창 초기화
-      setShowSearchResults(false);
-      setIsAdding(false);
-      alert('운영진이 추가되었습니다.');
+    requestPasswordVerification(async () => {
+      try {
+        await addExecutive(newExecutive);
+        setNewExecutive({
+          memberId: undefined,
+          name: '',
+          position: '',
+          phone: '',
+          email: '',
+          category: 'chairman',
+          startTerm: '',
+          endTerm: '',
+          bio: '',
+        });
+        setSearchQuery('');
+        setShowSearchResults(false);
+        setIsAdding(false);
+        alert('운영진이 추가되었습니다.');
+      } catch (error) {
+        console.error('운영진 추가 실패:', error);
+        alert('운영진 추가에 실패했습니다.');
+      }
     });
   };
 
   // 삭제
-  const handleDelete = (id: number) => {
-    requestPasswordVerification(() => {
+  const handleDelete = async (id: string) => {
+    requestPasswordVerification(async () => {
       if (confirm('정말 삭제하시겠습니까?')) {
-        setExecutives(prev => prev.filter(exec => exec.id !== id));
-        alert('운영진이 삭제되었습니다.');
+        try {
+          await deleteExecutive(id);
+          alert('운영진이 삭제되었습니다.');
+        } catch (error) {
+          console.error('운영진 삭제 실패:', error);
+          alert('운영진 삭제에 실패했습니다.');
+        }
       }
     });
   };
@@ -224,7 +201,7 @@ const ExecutiveManagement = () => {
   const handleMemberSelectNew = (member: Member) => {
     setNewExecutive({
       ...newExecutive,
-      memberId: member.id,
+      memberId: String(member.id),
       name: member.name,
       phone: member.phone,
       email: member.email,
@@ -238,7 +215,7 @@ const ExecutiveManagement = () => {
     if (editForm) {
       setEditForm({
         ...editForm,
-        memberId: member.id,
+        memberId: String(member.id),
         name: member.name,
         phone: member.phone,
         email: member.email,
@@ -473,7 +450,7 @@ const ExecutiveManagement = () => {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-900">운영진</h2>
-              <p className="text-sm text-slate-600">{executives.length}명</p>
+              <p className="text-sm text-slate-600">{contextExecutives.length}명</p>
             </div>
           </div>
           <button
@@ -488,7 +465,19 @@ const ExecutiveManagement = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {executives.map(exec => renderExecutiveCard(exec))}
+          {isLoading ? (
+            <div className="col-span-full text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-slate-600 mt-4">운영진 정보를 불러오는 중...</p>
+            </div>
+          ) : contextExecutives.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-xl text-slate-500">등록된 운영진이 없습니다.</p>
+            </div>
+          ) : (
+            contextExecutives.map(exec => renderExecutiveCard(exec))
+          )}
         </div>
       </Card>
 

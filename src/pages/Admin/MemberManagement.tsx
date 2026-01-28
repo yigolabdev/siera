@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Users, Shield, UserCog, Search, UserCheck, UserPlus, Check, X, Eye, Calendar, Briefcase, Building2, Phone, Mail, Mountain, MessageSquare, AlertCircle, UserX, Power } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useMembers } from '../../contexts/MemberContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
@@ -36,6 +37,7 @@ interface GuestApplication {
 
 const MemberManagement = () => {
   const navigate = useNavigate();
+  const { members: contextMembers } = useMembers();
   const [activeTab, setActiveTab] = useState<'members' | 'approval' | 'guestApplications'>('members');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
@@ -49,63 +51,18 @@ const MemberManagement = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordAction, setPasswordAction] = useState<(() => void) | null>(null);
 
-  const [members, setMembers] = useState<Member[]>([
-    {
-      id: 1,
-      name: '김대한',
-      email: 'kim@example.com',
-      phone: '010-1234-5678',
-      occupation: '○○그룹 회장',
-      company: '○○그룹',
-      joinDate: '2020-01-15',
-      role: 'chairman',
-      isActive: true,
-    },
-    {
-      id: 2,
-      name: '이민국',
-      email: 'lee@example.com',
-      phone: '010-2345-6789',
-      occupation: '△△건설 대표이사',
-      company: '△△건설',
-      joinDate: '2020-03-20',
-      role: 'committee',
-      isActive: true,
-    },
-    {
-      id: 3,
-      name: '박세계',
-      email: 'park@example.com',
-      phone: '010-3456-7890',
-      occupation: '□□금융 부사장',
-      company: '□□금융',
-      joinDate: '2020-06-10',
-      role: 'committee',
-      isActive: true,
-    },
-    {
-      id: 4,
-      name: '최우주',
-      email: 'choi@example.com',
-      phone: '010-4567-8901',
-      occupation: '◇◇제약 전무이사',
-      company: '◇◇제약',
-      joinDate: '2021-01-05',
-      role: 'member',
-      isActive: true,
-    },
-    {
-      id: 5,
-      name: '정지구',
-      email: 'jung@example.com',
-      phone: '010-5678-9012',
-      occupation: '☆☆병원 원장',
-      company: '☆☆병원',
-      joinDate: '2021-03-15',
-      role: 'member',
-      isActive: false, // 비활성화 예시
-    },
-  ]);
+  // Firebase members를 로컬 인터페이스로 변환
+  const members: Member[] = contextMembers.map(m => ({
+    id: Number(m.id),
+    name: m.name,
+    email: m.email,
+    phone: m.phone,
+    occupation: m.occupation,
+    company: m.company,
+    joinDate: m.joinDate,
+    role: m.position as UserRole, // position을 role로 매핑
+    isActive: true, // 기본값, 추후 Firebase에서 관리
+  }));
 
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>(mockPendingUsers);
 
@@ -258,6 +215,9 @@ const MemberManagement = () => {
 
   // 회원 활성화/비활성화 토글
   const handleToggleMemberStatus = (memberId: number) => {
+    // TODO: Firebase에 isActive 필드 추가 후 구현
+    alert('회원 활성화/비활성화 기능은 추후 구현 예정입니다.');
+    /*
     const member = members.find(m => m.id === memberId);
     if (!member) return;
 
@@ -268,14 +228,11 @@ const MemberManagement = () => {
 
     requestPasswordVerification(() => {
       if (confirm(confirmMessage)) {
-        setMembers(prev =>
-          prev.map(m =>
-            m.id === memberId ? { ...m, isActive: !m.isActive } : m
-          )
-        );
+        // Firebase 업데이트 로직
         alert(`${member.name} 회원이 ${action}되었습니다.`);
       }
     });
+    */
   };
 
   const filteredMembers = members.filter(member => {

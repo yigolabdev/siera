@@ -12,7 +12,7 @@ type TabType = 'events' | 'teams';
 
 const EventManagement = () => {
   const navigate = useNavigate();
-  const { setTeamsForEvent, getParticipantsByEventId } = useEvents();
+  const { events: contextEvents, addEvent, updateEvent, deleteEvent, setTeamsForEvent, getParticipantsByEventId } = useEvents();
   const { members, getMembersByPosition } = useMembers();
   const [activeTab, setActiveTab] = useState<TabType>('events');
 
@@ -37,38 +37,13 @@ const EventManagement = () => {
     ...getMembersByPosition('committee')
   ];
 
-  // Event Management State
-  const [events, setEvents] = useState<HikingEvent[]>([
-    {
-      id: '1',
-      title: '북한산 백운대 등반',
-      date: '2026-01-15',
-      location: '북한산 국립공원',
-      difficulty: '중',
-      description: '백운대 정상을 목표로 하는 정기 산행입니다.',
-      maxParticipants: 25,
-      cost: '60,000원',
-      schedule: [
-        { time: '07:15', location: '종합운동장역 2번출구', type: 'departure' },
-        { time: '07:35', location: '합정역', type: 'stop' },
-        { time: '18:00', location: '합정역', type: 'return' },
-        { time: '18:30', location: '종합운동장역', type: 'arrival' },
-      ],
-      paymentInfo: {
-        bankName: '국민은행',
-        accountNumber: '123-456-789012',
-        accountHolder: '시애라클럽',
-        managerName: '김재무',
-        managerPhone: '010-1234-5678',
-        cost: '60,000원',
-      },
-      isPublished: true,
-      isSpecial: false,
-      status: 'open', // 신청 접수중
-      applicationDeadline: '2026-01-10',
-      createdAt: '2026-01-01',
-    },
-  ]);
+  // Event Management State - Firebase에서 로드
+  const [events, setEvents] = useState<HikingEvent[]>([]);
+
+  // Load events from context
+  useEffect(() => {
+    setEvents(contextEvents);
+  }, [contextEvents]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editingEvent, setEditingEvent] = useState<HikingEvent | null>(null);

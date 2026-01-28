@@ -713,7 +713,7 @@ const ContentManagement = () => {
                   </label>
                   <input
                     type="date"
-                    value={amendmentForm.version}
+                    value={amendmentForm.version.replace(/\./g, '-')}
                     onChange={(e) => {
                       const date = e.target.value; // YYYY-MM-DD
                       const formatted = date.replace(/-/g, '.'); // YYYY.MM.DD
@@ -722,7 +722,7 @@ const ContentManagement = () => {
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    * 날짜 선택 시 자동으로 YYYY.MM.DD 형식으로 변환됩니다
+                    현재: {amendmentForm.version || '선택하지 않음'}
                   </p>
                 </div>
                 
@@ -732,10 +732,11 @@ const ContentManagement = () => {
                   </label>
                   <input
                     type="date"
-                    value={amendmentForm.date ? amendmentForm.date.replace(/년|월|일| /g, '').replace(/\./g, '-').padStart(10, '0') : ''}
+                    value={amendmentForm.date.replace(/년|월|일| /g, '').replace(/\./g, '-')}
                     onChange={(e) => {
-                      const date = new Date(e.target.value);
-                      const formatted = `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, '0')}월 ${String(date.getDate()).padStart(2, '0')}일`;
+                      const dateStr = e.target.value; // YYYY-MM-DD
+                      const [year, month, day] = dateStr.split('-');
+                      const formatted = `${year}년 ${month}월 ${day}일`;
                       setAmendmentForm({ ...amendmentForm, date: formatted });
                     }}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useMembers } from '../contexts/MemberContext';
+import { useExecutives } from '../contexts/ExecutiveContext';
 import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit, Calendar, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { uploadFile, deleteFile } from '../lib/firebase/storage';
@@ -10,6 +11,7 @@ import Badge from '../components/ui/Badge';
 const Profile = () => {
   const { user, updateProfileImage, updateUser } = useAuth();
   const { refreshMembers } = useMembers();
+  const { executives } = useExecutives();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -25,8 +27,13 @@ const Profile = () => {
     birthYear: '',
     company: '',
     position: '',
+    referredBy: '',
+    hikingLevel: '',
     bio: '',
   });
+  
+  // 현재 사용자의 운영진 정보 찾기
+  const userExecutive = executives.find(exec => exec.memberId === user?.id);
   
   // user 정보가 로드되면 formData와 profileImage 업데이트
   useEffect(() => {
@@ -39,6 +46,8 @@ const Profile = () => {
         birthYear: user.birthYear || '',
         company: user.company || '',
         position: user.position || '',
+        referredBy: user.referredBy || '',
+        hikingLevel: user.hikingLevel || '',
         bio: user.bio || '',
       });
       setProfileImage(user.profileImage || null);
@@ -56,6 +65,29 @@ const Profile = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   
+  // 전화번호 포맷팅 함수
+  const formatPhoneNumber = (value: string) => {
+    // 숫자만 추출
+    const numbers = value.replace(/[^\d]/g, '');
+    
+    // 길이에 따라 포맷팅
+    if (numbers.length <= 3) {
+      return numbers;
+    } else if (numbers.length <= 7) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    } else if (numbers.length <= 10) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+    } else {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+    }
+  };
+
+  // 전화번호 입력 핸들러
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setFormData({ ...formData, phone: formatted });
+  };
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -152,7 +184,7 @@ const Profile = () => {
       }
       
       // 2. 프로필 정보 업데이트
-      const updateData = {
+      const updateData: Record<string, any> = {
         name: formData.name,
         email: formData.email,
         phoneNumber: formData.phone,
@@ -160,9 +192,15 @@ const Profile = () => {
         birthYear: formData.birthYear,
         company: formData.company,
         position: formData.position,
+        referredBy: formData.referredBy,
+        hikingLevel: formData.hikingLevel,
         bio: formData.bio,
-        profileImage: imageUrl || undefined,
       };
+      
+      // profileImage가 있을 때만 포함 (undefined 제거)
+      if (imageUrl) {
+        updateData.profileImage = imageUrl;
+      }
       
       console.log('📤 Firestore 업데이트 요청:', updateData);
       
@@ -336,9 +374,10 @@ const Profile = () => {
               <input
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={handlePhoneChange}
                 className="input-field"
                 placeholder="010-1234-5678"
+                maxLength={13}
               />
             </div>
             
@@ -353,8 +392,8 @@ const Profile = () => {
                 className="input-field"
               >
                 <option value="">선택하세요</option>
-                <option value="남성">남성</option>
-                <option value="여성">여성</option>
+                <option value="male">남성</option>
+                <option value="female">여성</option>
               </select>
             </div>
           </div>
@@ -402,28 +441,93 @@ const Profile = () => {
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 className="input-field"
-                placeholder="○○그룹"
+                placeholder="Yigo Lab"
               />
             </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            
             <div>
               <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-primary-600" />
-                직책
+                직책 (직장)
               </label>
               <input
                 type="text"
                 value={formData.position}
                 onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                 className="input-field"
-                placeholder="회장"
+                placeholder="예: 대표이사, 전무, 부장 등"
               />
+            </div>
+          </div>
+          
+          {/* 시애라 클럽 운영진 정보 (있는 경우에만 표시) */}
+          {userExecutive && (
+            <div className="pt-4">
+              <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-5 h-5 text-emerald-600" />
+                  <h4 className="font-bold text-emerald-900">시애라 클럽 운영진</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-emerald-700 font-semibold">직책:</span>
+                    <span className="ml-2 text-emerald-900">{userExecutive.position}</span>
+                  </div>
+                  <div>
+                    <span className="text-emerald-700 font-semibold">구분:</span>
+                    <span className="ml-2 text-emerald-900">
+                      {userExecutive.category === 'chairman' ? '회장단' : '운영위원'}
+                    </span>
+                  </div>
+                  {userExecutive.startTerm && userExecutive.endTerm && (
+                    <div className="col-span-2">
+                      <span className="text-emerald-700 font-semibold">임기:</span>
+                      <span className="ml-2 text-emerald-900">
+                        {userExecutive.startTerm} ~ {userExecutive.endTerm}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-emerald-600 mt-2">
+                  운영진 정보는 운영진 관리 페이지에서 수정할 수 있습니다
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* 산행 정보 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4">
+            <div>
+              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+                <User className="w-4 h-4 text-primary-600" />
+                추천인
+              </label>
+              <input
+                type="text"
+                value={formData.referredBy}
+                onChange={(e) => setFormData({ ...formData, referredBy: e.target.value })}
+                className="input-field"
+                placeholder="시애라 회원 이름 (선택)"
+              />
+              <p className="text-xs text-slate-500 mt-1">가입 시 추천인을 입력하셨다면 표시됩니다</p>
             </div>
             
             <div>
-              {/* Empty space for layout balance */}
+              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+                <User className="w-4 h-4 text-primary-600" />
+                산행능력
+              </label>
+              <select
+                value={formData.hikingLevel}
+                onChange={(e) => setFormData({ ...formData, hikingLevel: e.target.value })}
+                className="input-field"
+              >
+                <option value="">선택하세요</option>
+                <option value="beginner">초급 - 둘레길, 낮은 산 (2~3시간)</option>
+                <option value="intermediate">중급 - 일반 산행 (4~5시간)</option>
+                <option value="advanced">상급 - 장시간 산행 (6시간 이상)</option>
+              </select>
+              <p className="text-xs text-slate-500 mt-1">본인의 체력 수준에 맞는 산행능력을 선택해주세요</p>
             </div>
           </div>
           

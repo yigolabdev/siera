@@ -1,37 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-export interface HikingHistoryItem {
-  id: string;
-  year: string;
-  month: string;
-  date: string;
-  mountain: string;
-  location: string;
-  participants: number;
-  distance: string;
-  duration: string;
-  difficulty: '하' | '중하' | '중' | '중상' | '상';
-  weather: string;
-  temperature: string;
-  imageUrl: string;
-  isSpecial: boolean;
-  summary?: string;
-  photoCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface HikingComment {
-  id: string;
-  hikeId: string;
-  authorId: string;
-  authorName: string;
-  content: string;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { HikingHistoryItem, HikingComment } from '../types';
 
 interface HikingHistoryContextType {
   history: HikingHistoryItem[];
@@ -55,18 +25,12 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Firebase에서 산행 이력 및 후기 로드
-  useEffect(() => {
-    loadHistory();
-    loadComments();
-  }, []);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const result = await getDocuments<HikingHistoryItem>('hiking_history');
+      const result = await getDocuments<HikingHistoryItem>('hikingHistory');  // ✅ camelCase로 변경
       if (result.success && result.data) {
         // 날짜 기준 내림차순 정렬
         const sortedHistory = result.data.sort((a, b) =>
@@ -77,17 +41,19 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
       } else {
         console.log('ℹ️ Firebase에서 로드된 산행 이력이 없습니다.');
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 산행 이력 로드 실패:', err.message);
-      setError(err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 산행 이력 로드 실패:', message);
+      setError(message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     try {
-      const result = await getDocuments<HikingComment>('hiking_comments');
+      const result = await getDocuments<HikingComment>('hikingComments');
       if (result.success && result.data) {
         // hikeId별로 그룹화
         const commentsByHike: Record<string, HikingComment[]> = {};
@@ -108,10 +74,18 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
         setComments(commentsByHike);
         console.log('✅ Firebase에서 산행 후기 로드:', result.data.length);
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 산행 후기 로드 실패:', err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 산행 후기 로드 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     }
-  };
+  }, []);
+
+  // Firebase에서 산행 이력 및 후기 로드
+  useEffect(() => {
+    loadHistory();
+    loadComments();
+  }, [loadHistory, loadComments]);
 
   // 연도별 산행 이력 조회
   const getHistoryByYear = useCallback((year: string) => {
@@ -141,9 +115,10 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
         authorName,
         content,
         createdAt: now,
+        updatedAt: now,
       };
 
-      const result = await setDocument('hiking_comments', commentId, commentData);
+      const result = await setDocument('hikingComments', commentId, commentData);  // ✅ camelCase로 변경
       if (result.success) {
         setComments(prev => ({
           ...prev,
@@ -153,9 +128,10 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
       } else {
         throw new Error(result.error || '후기 추가 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { hikeId });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { hikeId });
+      throw error;
     }
   }, []);
 
@@ -163,7 +139,7 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
   const updateComment = useCallback(async (commentId: string, content: string) => {
     try {
       const now = new Date().toISOString();
-      const result = await updateDocument('hiking_comments', commentId, {
+      const result = await updateDocument('hikingComments', commentId, {  // ✅ camelCase로 변경
         content,
         updatedAt: now,
       });
@@ -184,16 +160,17 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
       } else {
         throw new Error(result.error || '후기 수정 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { commentId });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { commentId });
+      throw error;
     }
   }, []);
 
   // 후기 삭제
   const deleteComment = useCallback(async (hikeId: string, commentId: string) => {
     try {
-      const result = await deleteDocument('hiking_comments', commentId);
+      const result = await deleteDocument('hikingComments', commentId);  // ✅ camelCase로 변경
       if (result.success) {
         setComments(prev => ({
           ...prev,
@@ -203,9 +180,10 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
       } else {
         throw new Error(result.error || '후기 삭제 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { hikeId, commentId });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { hikeId, commentId });
+      throw error;
     }
   }, []);
 
@@ -218,7 +196,7 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
   const refreshHistory = useCallback(async () => {
     await loadHistory();
     await loadComments();
-  }, []);
+  }, [loadHistory, loadComments]);
 
   const value = {
     history,

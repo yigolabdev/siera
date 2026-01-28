@@ -1,21 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
+import type { Executive } from '../types';  // ✅ Use type import
 
-export interface Executive {
-  id: string;
-  memberId?: string;
-  name: string;
-  position: string;
-  phoneNumber: string;
-  email?: string;
-  category: 'chairman' | 'committee';
-  startTerm?: string; // YYYY-MM
-  endTerm?: string;   // YYYY-MM
-  bio?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { Executive };  // ✅ Re-export for compatibility
 
 interface ExecutiveContextType {
   executives: Executive[];

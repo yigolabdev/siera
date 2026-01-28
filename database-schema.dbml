@@ -1,0 +1,547 @@
+// Sierra Hiking Club - Firebase Firestore Database Schema
+// Generated for dbdiagram.io
+// Last Updated: 2026-01-29
+
+Project SierraHikingClub {
+  database_type: 'Firebase Firestore'
+  Note: '''
+    # 시애라 클럽 데이터베이스 아키텍처
+    Firebase Firestore 기반 산악회 관리 시스템
+    
+    ## 주요 기능
+    - 회원 관리 (가입, 승인, 활성화/비활성화)
+    - 산행 이벤트 관리 (생성, 신청, 조편성)
+    - 게스트 신청 관리
+    - 결제 및 출석 관리
+    - 사진 갤러리 및 게시판
+    - 산행 기록 및 통계
+  '''
+}
+
+// ==================== USER MANAGEMENT ====================
+
+Table users {
+  id varchar [pk, note: 'Firebase Auth UID']
+  name varchar [not null]
+  email varchar [not null, unique]
+  phoneNumber varchar
+  gender varchar
+  birthYear varchar
+  
+  // 직장 정보
+  company varchar
+  position varchar [note: '직장 직책']
+  
+  // 시스템 권한
+  role varchar [not null, default: 'member', note: 'admin | chairman | committee | member | guest']
+  
+  joinDate varchar
+  isApproved boolean [default: false]
+  isActive boolean [default: true, note: '회원 활성화 상태']
+  profileImage varchar [note: 'Firebase Storage URL']
+  bio text
+  attendanceRate decimal [note: '참여율 (%)']
+  
+  // 추가 필드
+  createdAt timestamp
+  updatedAt timestamp
+  isAuthenticated boolean [default: true]
+  referredBy varchar [note: '추천인']
+  hikingLevel varchar [note: '산행 능력']
+  
+  indexes {
+    email [unique]
+    role
+    isApproved
+    isActive
+  }
+  
+  Note: '회원 및 사용자 정보 (Firebase Auth 연동)'
+}
+
+Table pendingUsers {
+  id varchar [pk]
+  name varchar [not null]
+  email varchar [not null]
+  phoneNumber varchar [not null]
+  gender varchar [not null]
+  birthYear varchar [not null]
+  company varchar [not null]
+  position varchar [not null]
+  
+  referredBy varchar
+  hikingLevel varchar [not null]
+  applicationMessage text
+  
+  appliedAt timestamp [not null]
+  status varchar [default: 'pending', note: 'pending | approved | rejected']
+  approvedAt timestamp
+  rejectedAt timestamp
+  
+  indexes {
+    email
+    status
+    appliedAt
+  }
+  
+  Note: '가입 승인 대기 회원'
+}
+
+Table executives {
+  id varchar [pk]
+  memberId varchar [ref: > users.id, note: '회원 테이블 참조']
+  name varchar [not null]
+  position varchar [not null, note: '시애라 직책 (회장, 총무 등)']
+  phoneNumber varchar [not null]
+  email varchar
+  
+  category varchar [not null, note: 'chairman | committee']
+  company varchar
+  
+  startTerm varchar [note: '임기 시작 (YYYY-MM)']
+  endTerm varchar [note: '임기 종료 (YYYY-MM)']
+  bio text
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    memberId
+    category
+  }
+  
+  Note: '운영진 정보 (회장단, 운영위원회)'
+}
+
+// ==================== EVENT MANAGEMENT ====================
+
+Table events {
+  id varchar [pk]
+  title varchar [not null]
+  date date [not null]
+  location varchar [not null]
+  mountain varchar
+  altitude varchar
+  difficulty varchar [not null, note: '하 | 중하 | 중 | 중상 | 상']
+  description text [not null]
+  
+  maxParticipants int [default: 0]
+  cost varchar
+  imageUrl varchar [note: 'Firebase Storage URL']
+  
+  // 비상연락처
+  emergencyContactId varchar [ref: > executives.id]
+  emergencyContactName varchar
+  emergencyContactPhone varchar
+  
+  // 상태 관리
+  isSpecial boolean [default: false]
+  isPublished boolean [default: false]
+  isDraft boolean [default: false]
+  status varchar [default: 'draft', note: 'draft | open | closed | ongoing | completed']
+  applicationDeadline date
+  
+  createdAt timestamp
+  
+  indexes {
+    date
+    status
+    isPublished
+    isDraft
+  }
+  
+  Note: '산행 이벤트 정보'
+}
+
+Table courses {
+  id varchar [pk]
+  eventId varchar [ref: > events.id, note: '산행 이벤트 참조']
+  name varchar [not null]
+  description text [not null]
+  distance varchar
+  duration varchar [note: '소요시간']
+  difficulty varchar [note: '하 | 중하 | 중 | 중상 | 상']
+  
+  Note: '산행 코스 정보 (이벤트 내 서브 컬렉션)'
+}
+
+Table scheduleItems {
+  id varchar [pk]
+  courseId varchar [ref: > courses.id, note: '코스 참조']
+  time varchar [not null]
+  location varchar [not null]
+  type varchar [not null, note: 'departure | stop | lunch | networking | return | arrival']
+  
+  Note: '코스 상세 일정 (코스 내 서브 컬렉션)'
+}
+
+Table teams {
+  id varchar [pk]
+  eventId varchar [ref: > events.id, not null]
+  eventTitle varchar
+  number int
+  name varchar [not null]
+  
+  leaderId varchar [ref: > users.id, not null]
+  leaderName varchar [not null]
+  leaderCompany varchar
+  leaderPosition varchar
+  leaderPhone varchar
+  
+  indexes {
+    eventId
+    leaderId
+  }
+  
+  Note: '조편성 정보'
+}
+
+Table teamMembers {
+  id varchar [pk]
+  teamId varchar [ref: > teams.id, not null]
+  userId varchar [ref: > users.id]
+  name varchar [not null]
+  company varchar
+  position varchar
+  phoneNumber varchar
+  isGuest boolean [default: false]
+  
+  indexes {
+    teamId
+    userId
+  }
+  
+  Note: '조 구성원 정보 (팀 내 서브 컬렉션)'
+}
+
+// ==================== PARTICIPATION ====================
+
+Table participations {
+  id varchar [pk]
+  eventId varchar [ref: > events.id, not null]
+  userId varchar [ref: > users.id, not null]
+  userName varchar [not null]
+  userEmail varchar [not null]
+  
+  isGuest boolean [default: false]
+  status varchar [default: 'pending', note: 'attending | not-attending | pending | confirmed | cancelled']
+  
+  registeredAt timestamp [not null]
+  cancelledAt timestamp
+  cancellationReason text
+  
+  teamId varchar [ref: > teams.id]
+  teamName varchar
+  
+  paymentStatus varchar [default: 'pending', note: 'pending | completed | confirmed | cancelled']
+  specialRequirements text
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    eventId
+    userId
+    status
+    (eventId, userId) [unique]
+  }
+  
+  Note: '산행 참가 신청 기록'
+}
+
+Table guestApplications {
+  id varchar [pk]
+  name varchar [not null]
+  email varchar [not null]
+  phoneNumber varchar [not null]
+  company varchar
+  position varchar
+  
+  eventId varchar [ref: > events.id, not null]
+  eventTitle varchar [not null]
+  eventDate date [not null]
+  
+  appliedAt timestamp [not null]
+  status varchar [default: 'pending', note: 'pending | approved | rejected']
+  reason text
+  referredBy varchar
+  
+  approvedAt timestamp
+  rejectedAt timestamp
+  rejectionReason text
+  
+  indexes {
+    eventId
+    status
+    appliedAt
+  }
+  
+  Note: '게스트 신청 정보'
+}
+
+// ==================== PAYMENT & ATTENDANCE ====================
+
+Table payments {
+  id varchar [pk]
+  eventId varchar [ref: > events.id, not null]
+  userId varchar [ref: > users.id, not null]
+  userName varchar [not null]
+  
+  isGuest boolean [default: false]
+  company varchar
+  position varchar
+  phoneNumber varchar
+  email varchar
+  
+  applicationDate date
+  paymentStatus varchar [default: 'pending', note: 'pending | completed | confirmed | failed | cancelled']
+  paymentDate date
+  amount decimal [not null]
+  paymentMethod varchar
+  transactionId varchar
+  memo text
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    eventId
+    userId
+    paymentStatus
+  }
+  
+  Note: '결제 정보'
+}
+
+Table attendances {
+  id varchar [pk]
+  eventId varchar [ref: > events.id, not null]
+  userId varchar [ref: > users.id, not null]
+  userName varchar [not null]
+  
+  attendanceStatus varchar [default: 'pending', note: 'present | absent | late | excused']
+  checkInTime timestamp
+  checkOutTime timestamp
+  notes text
+  
+  recordedBy varchar [ref: > users.id, note: '기록한 관리자 ID']
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    eventId
+    userId
+    attendanceStatus
+    (eventId, userId) [unique]
+  }
+  
+  Note: '출석 기록'
+}
+
+// ==================== CONTENT ====================
+
+Table photos {
+  id varchar [pk]
+  eventId varchar [ref: > events.id, not null]
+  eventTitle varchar [not null]
+  eventYear varchar [not null]
+  eventMonth varchar [not null]
+  
+  uploadedBy varchar [ref: > users.id, not null]
+  uploadedByName varchar [not null]
+  uploadedAt timestamp [not null]
+  
+  imageUrl varchar [not null, note: 'Firebase Storage URL']
+  caption text
+  
+  likes int [default: 0]
+  likedBy json [note: '좋아요 누른 사용자 ID 배열']
+  
+  indexes {
+    eventId
+    eventYear
+    eventMonth
+    uploadedBy
+  }
+  
+  Note: '사진 갤러리'
+}
+
+Table posts {
+  id varchar [pk]
+  category varchar [not null, note: 'general | info | question | poem']
+  title varchar [not null]
+  
+  author varchar [not null]
+  authorId varchar [ref: > users.id, not null]
+  
+  content text [not null]
+  date varchar
+  
+  views int [default: 0]
+  comments int [default: 0]
+  likes int [default: 0]
+  likedBy json [note: '좋아요 누른 사용자 ID 배열']
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    category
+    authorId
+    createdAt
+  }
+  
+  Note: '게시판 글'
+}
+
+Table comments {
+  id varchar [pk]
+  postId varchar [ref: > posts.id, not null]
+  
+  author varchar [not null]
+  authorId varchar [ref: > users.id, not null]
+  
+  content text [not null]
+  date varchar
+  
+  likes int [default: 0]
+  likedBy json [note: '좋아요 누른 사용자 ID 배열']
+  
+  parentId varchar [ref: > comments.id, note: '대댓글용']
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    postId
+    authorId
+    parentId
+  }
+  
+  Note: '게시글 댓글'
+}
+
+Table notices {
+  id varchar [pk]
+  title varchar [not null]
+  content text [not null]
+  date varchar
+  isPinned boolean [default: false]
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    isPinned
+    createdAt
+  }
+  
+  Note: '공지사항'
+}
+
+// ==================== HIKING HISTORY ====================
+
+Table hikingHistory {
+  id varchar [pk]
+  year varchar [not null]
+  month varchar [not null]
+  date date [not null]
+  mountain varchar [not null]
+  location varchar [not null]
+  
+  participants int [default: 0]
+  distance varchar
+  duration varchar
+  difficulty varchar [note: '하 | 중하 | 중 | 중상 | 상']
+  
+  weather varchar
+  temperature varchar
+  imageUrl varchar [note: 'Firebase Storage URL']
+  isSpecial boolean [default: false]
+  summary text
+  photoCount int [default: 0]
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    year
+    month
+    date
+  }
+  
+  Note: '산행 기록 (과거 산행 아카이브)'
+}
+
+Table hikingComments {
+  id varchar [pk]
+  hikeId varchar [ref: > hikingHistory.id, not null]
+  
+  authorId varchar [ref: > users.id, not null]
+  authorName varchar [not null]
+  
+  content text [not null]
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    hikeId
+    authorId
+  }
+  
+  Note: '산행 기록 댓글'
+}
+
+// ==================== MISC ====================
+
+Table poems {
+  id varchar [pk]
+  title varchar [not null]
+  author varchar [not null]
+  authorId varchar [ref: > users.id]
+  content text [not null]
+  month varchar [not null, note: 'YYYY-MM 형식']
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  indexes {
+    month
+    authorId
+  }
+  
+  Note: '월별 시'
+}
+
+Table rules {
+  id varchar [pk]
+  content text [not null]
+  version varchar [not null]
+  effectiveDate date [not null]
+  amendments json [note: '개정 이력 배열']
+  
+  createdAt timestamp
+  updatedAt timestamp
+  
+  Note: '클럽 규칙 및 회칙'
+}
+
+// ==================== RELATIONSHIPS SUMMARY ====================
+
+/*
+  핵심 관계:
+  
+  1. users → executives (1:N) - 회원이 운영진이 될 수 있음
+  2. users → participations (1:N) - 회원이 여러 산행에 참가
+  3. events → participations (1:N) - 이벤트에 여러 참가자
+  4. events → teams (1:N) - 이벤트에 여러 조 편성
+  5. teams → teamMembers (1:N) - 조에 여러 멤버
+  6. events → photos (1:N) - 이벤트에 여러 사진
+  7. events → payments (1:N) - 이벤트에 여러 결제 기록
+  8. events → attendances (1:N) - 이벤트에 여러 출석 기록
+  9. posts → comments (1:N) - 게시글에 여러 댓글
+  10. hikingHistory → hikingComments (1:N) - 산행 기록에 여러 댓글
+*/

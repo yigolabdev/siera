@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, MapPin, Users, Save, X, CreditCard, Phone, UserPlus, CheckCircle, Shield, AlertCircle, Lock, Mountain, Printer, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, MapPin, Users, Save, X, CreditCard, Phone, UserPlus, CheckCircle, Shield, AlertCircle, Lock, Mountain, Printer, Clock, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
@@ -187,12 +187,11 @@ const EventManagement = () => {
 
   // ==================== 자동 아카이빙 (산행 다음날 자동 완료) ====================
   useEffect(() => {
-    const checkAndArchiveEvents = () => {
+    const checkAndArchiveEvents = async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      let updated = false;
-      const updatedEvents = events.map(event => {
+      for (const event of events) {
         // 산행이 진행중(ongoing)이고, 산행 날짜가 지났으면 자동 완료
         if (event.status === 'ongoing') {
           const eventDate = new Date(event.date);
@@ -203,16 +202,14 @@ const EventManagement = () => {
           dayAfterEvent.setDate(dayAfterEvent.getDate() + 1);
           
           if (today >= dayAfterEvent) {
-            updated = true;
-            console.log(`[자동 아카이빙] ${event.title} 산행이 완료 처리되었습니다.`);
-            return { ...event, status: 'completed' as const };
+            try {
+              console.log(`[자동 아카이빙] ${event.title} 산행을 완료 처리합니다.`);
+              await updateEvent(event.id, { status: 'completed' });
+            } catch (error) {
+              console.error(`[자동 아카이빙 실패] ${event.title}:`, error);
+            }
           }
         }
-        return event;
-      });
-      
-      if (updated) {
-        setEvents(updatedEvents);
       }
     };
     
@@ -223,7 +220,7 @@ const EventManagement = () => {
     const interval = setInterval(checkAndArchiveEvents, 60000); // 1분마다 체크
     
     return () => clearInterval(interval);
-  }, [events]);
+  }, [events, updateEvent]);
 
   // Event Management Handlers
   const handleEdit = (event: HikingEvent) => {
@@ -232,13 +229,51 @@ const EventManagement = () => {
     setIsEditing(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('이 산행을 삭제하시겠습니까?')) {
-      setEvents(events.filter(e => e.id !== id));
+      try {
+        // Firebase 삭제 (Context가 자동으로 state 업데이트)
+        await deleteEvent(id);
+        alert('산행이 삭제되었습니다.');
+      } catch (error: any) {
+        console.error('산행 삭제 실패:', error);
+        alert(`산행 삭제에 실패했습니다: ${error.message}`);
+      }
     }
   };
 
-  const handleSave = () => {
+  // 임시 저장 함수 (유효성 검사 없이 저장)
+  const handleSaveDraft = async () => {
+    const eventToSave = {
+      ...formData,
+      id: editingEvent ? editingEvent.id : `event-${Date.now()}`,
+      isDraft: true, // 임시 저장 플래그
+      isPublished: false, // 임시 저장은 비공개
+      status: 'draft' as const,
+      currentParticipants: editingEvent?.currentParticipants || 0,
+      createdAt: editingEvent?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      if (editingEvent) {
+        await updateEvent(editingEvent.id, eventToSave);
+        alert('산행 정보가 임시 저장되었습니다.');
+      } else {
+        await addEvent(eventToSave as HikingEvent);
+        alert('산행 정보가 임시 저장되었습니다.');
+      }
+      
+      setIsEditing(false);
+      setEditingEvent(null);
+      resetForm();
+    } catch (error) {
+      console.error('임시 저장 실패:', error);
+      alert('임시 저장에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleSave = async () => {
     // 코스 필수 검증
     if (!formData.courses || formData.courses.length === 0) {
       alert('산행 코스를 최소 1개 이상 등록해주세요.');
@@ -247,13 +282,11 @@ const EventManagement = () => {
 
     // 코스 정보 완성도 검증
     const incompleteCourse = formData.courses.find(course => 
-      !course.name || !course.distance || !course.description || 
-      !course.schedule || course.schedule.length === 0 ||
-      course.schedule.some(s => !s.time || !s.location)
+      !course.name || !course.distance || !course.description || !course.duration
     );
 
     if (incompleteCourse) {
-      alert('코스 정보를 모두 입력해주세요. (코스명, 거리, 코스 설명, 상세 일정)');
+      alert('코스 정보를 모두 입력해주세요. (코스명, 거리, 코스 설명, 소요시간)');
       return;
     }
 
@@ -268,28 +301,42 @@ const EventManagement = () => {
 
     const eventToSave = {
       ...formData,
+      id: editingEvent ? editingEvent.id : `event-${Date.now()}`,
+      isDraft: false, // 정식 저장
       isPublished: hasPaymentInfo ? true : false, // 입금 정보 완료 시 자동 공개
+      currentParticipants: editingEvent?.currentParticipants || 0,
+      createdAt: editingEvent?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    if (editingEvent) {
-      setEvents(events.map(e => e.id === editingEvent.id ? eventToSave : e));
-      
-      if (hasPaymentInfo && !editingEvent.isPublished) {
-        alert('입금 정보가 완료되어 산행이 공개되었습니다!');
-      }
-    } else {
-      setEvents([...events, { ...eventToSave, id: Date.now().toString() }]);
-      
-      if (hasPaymentInfo) {
-        alert('입금 정보가 완료되어 산행이 공개되었습니다!');
+    try {
+      if (editingEvent) {
+        // Firebase 업데이트 (Context가 자동으로 state 업데이트)
+        await updateEvent(editingEvent.id, eventToSave);
+        
+        if (hasPaymentInfo && !editingEvent.isPublished) {
+          alert('입금 정보가 완료되어 산행이 공개되었습니다!');
+        } else {
+          alert('산행이 수정되었습니다.');
+        }
       } else {
-        alert('산행이 저장되었습니다. 입금 정보를 입력하면 자동으로 공개됩니다.');
+        // Firebase 추가 (Context가 자동으로 state 업데이트)
+        await addEvent(eventToSave as HikingEvent);
+        
+        if (hasPaymentInfo) {
+          alert('입금 정보가 완료되어 산행이 공개되었습니다!');
+        } else {
+          alert('산행이 저장되었습니다. 입금 정보를 입력하면 자동으로 공개됩니다.');
+        }
       }
+      
+      setIsEditing(false);
+      setEditingEvent(null);
+      resetForm();
+    } catch (error: any) {
+      console.error('산행 저장 실패:', error);
+      alert(`산행 저장에 실패했습니다: ${error.message}`);
     }
-    
-    setIsEditing(false);
-    setEditingEvent(null);
-    resetForm();
   };
 
   const handleCancel = () => {
@@ -322,7 +369,7 @@ const EventManagement = () => {
           name: 'A조',
           description: '',
           distance: '',
-          schedule: [{ time: '', location: '', type: 'departure' }],
+          duration: '',
         }
       ],
       paymentInfo: {
@@ -343,7 +390,7 @@ const EventManagement = () => {
   // ==================== 상태 전환 함수들 ====================
   
   // 1단계 → 2단계: 산행 공개 (신청 접수 시작)
-  const handleOpenApplication = (eventId: string) => {
+  const handleOpenApplication = async (eventId: string) => {
     const event = events.find(e => e.id === eventId);
     if (!event) return;
     
@@ -358,48 +405,52 @@ const EventManagement = () => {
     }
     
     if (confirm('산행을 공개하고 신청 접수를 시작하시겠습니까?')) {
-      setEvents(events.map(e => 
-        e.id === eventId 
-          ? { ...e, status: 'open', isPublished: true }
-          : e
-      ));
-      alert('산행이 공개되었습니다. 회원들이 신청할 수 있습니다.');
+      try {
+        await updateEvent(eventId, { status: 'open', isPublished: true });
+        alert('산행이 공개되었습니다. 회원들이 신청할 수 있습니다.');
+      } catch (error: any) {
+        console.error('산행 공개 실패:', error);
+        alert(`산행 공개에 실패했습니다: ${error.message}`);
+      }
     }
   };
 
   // 4단계: 신청 마감
-  const handleCloseApplication = (eventId: string) => {
+  const handleCloseApplication = async (eventId: string) => {
     if (confirm('산행 신청을 마감하시겠습니까?\n마감 후에는 추가 신청을 받을 수 없습니다.')) {
-      setEvents(events.map(e => 
-        e.id === eventId 
-          ? { ...e, status: 'closed' }
-          : e
-      ));
-      alert('산행 신청이 마감되었습니다.\n이제 조 편성을 진행해주세요.');
+      try {
+        await updateEvent(eventId, { status: 'closed' });
+        alert('산행 신청이 마감되었습니다.\n이제 조 편성을 진행해주세요.');
+      } catch (error: any) {
+        console.error('신청 마감 실패:', error);
+        alert(`신청 마감에 실패했습니다: ${error.message}`);
+      }
     }
   };
 
   // 6단계: 산행 진행중으로 변경 (당일)
-  const handleStartHiking = (eventId: string) => {
+  const handleStartHiking = async (eventId: string) => {
     if (confirm('산행을 시작하시겠습니까?')) {
-      setEvents(events.map(e => 
-        e.id === eventId 
-          ? { ...e, status: 'ongoing' }
-          : e
-      ));
-      alert('산행이 시작되었습니다. 안전한 산행 되세요!');
+      try {
+        await updateEvent(eventId, { status: 'ongoing' });
+        alert('산행이 시작되었습니다. 안전한 산행 되세요!');
+      } catch (error: any) {
+        console.error('산행 시작 실패:', error);
+        alert(`산행 시작에 실패했습니다: ${error.message}`);
+      }
     }
   };
 
   // 7단계: 산행 완료 (다음날 자동 또는 수동)
-  const handleCompleteHiking = (eventId: string) => {
+  const handleCompleteHiking = async (eventId: string) => {
     if (confirm('산행을 완료 처리하시겠습니까?\n완료된 산행은 이전 산행 목록으로 이동됩니다.')) {
-      setEvents(events.map(e => 
-        e.id === eventId 
-          ? { ...e, status: 'completed' }
-          : e
-      ));
-      alert('산행이 완료되었습니다. 수고하셨습니다!');
+      try {
+        await updateEvent(eventId, { status: 'completed' });
+        alert('산행이 완료되었습니다. 수고하셨습니다!');
+      } catch (error: any) {
+        console.error('산행 완료 실패:', error);
+        alert(`산행 완료 처리에 실패했습니다: ${error.message}`);
+      }
     }
   };
 
@@ -430,29 +481,46 @@ const EventManagement = () => {
       
       case 'open':
         return (
-          <button
-            onClick={() => handleCloseApplication(event.id)}
-            className="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors flex items-center gap-2"
-          >
-            <Lock className="w-4 h-4" />
-            신청 마감
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleCloseApplication(event.id)}
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors flex items-center gap-2"
+            >
+              <Lock className="w-4 h-4" />
+              신청 마감
+            </button>
+            <button
+              onClick={() => handleCompleteHiking(event.id)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center gap-2"
+              title="과거 산행으로 이동"
+            >
+              <CheckCircle className="w-4 h-4" />
+              완료 처리
+            </button>
+          </div>
         );
       
       case 'closed':
-        if (isEventDay) {
-          return (
-            <button
-              onClick={() => handleStartHiking(event.id)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <Mountain className="w-4 h-4" />
-              산행 시작
-            </button>
-          );
-        }
         return (
-          <Badge variant="info">조 편성 완료</Badge>
+          <div className="flex gap-2">
+            {isEventDay && (
+              <button
+                onClick={() => handleStartHiking(event.id)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Mountain className="w-4 h-4" />
+                산행 시작
+              </button>
+            )}
+            <button
+              onClick={() => handleCompleteHiking(event.id)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center gap-2"
+              title="과거 산행으로 이동"
+            >
+              <CheckCircle className="w-4 h-4" />
+              완료 처리
+            </button>
+          </div>
         );
       
       case 'ongoing':
@@ -534,7 +602,7 @@ const EventManagement = () => {
       name: nextCourseName,
       description: '',
       distance: '',
-      schedule: [{ time: '', location: '', type: 'departure' }],
+      duration: '',
     };
     setFormData({
       ...formData,
@@ -554,49 +622,6 @@ const EventManagement = () => {
       ...formData,
       courses: formData.courses?.map(c =>
         c.id === courseId ? { ...c, [field]: value } : c
-      ) || [],
-    });
-  };
-
-  const addCourseScheduleItem = (courseId: string) => {
-    setFormData({
-      ...formData,
-      courses: formData.courses?.map(c =>
-        c.id === courseId
-          ? { ...c, schedule: [...c.schedule, { time: '', location: '', type: 'stop' }] }
-          : c
-      ) || [],
-    });
-  };
-
-  const removeCourseScheduleItem = (courseId: string, scheduleIndex: number) => {
-    setFormData({
-      ...formData,
-      courses: formData.courses?.map(c =>
-        c.id === courseId
-          ? { ...c, schedule: c.schedule.filter((_, i) => i !== scheduleIndex) }
-          : c
-      ) || [],
-    });
-  };
-
-  const updateCourseSchedule = (
-    courseId: string,
-    scheduleIndex: number,
-    field: keyof ScheduleItem,
-    value: string
-  ) => {
-    setFormData({
-      ...formData,
-      courses: formData.courses?.map(c =>
-        c.id === courseId
-          ? {
-              ...c,
-              schedule: c.schedule.map((item, i) =>
-                i === scheduleIndex ? { ...item, [field]: value } : item
-              ),
-            }
-          : c
       ) || [],
     });
   };
@@ -1501,7 +1526,19 @@ const EventManagement = () => {
                                 </span>
                               </div>
                             </div>
-                            <div className="md:col-span-2">
+                            <div>
+                              <label className="block text-sm text-slate-700 font-medium mb-1">
+                                소요시간 <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={course.duration || ''}
+                                onChange={(e) => updateCourse(course.id, 'duration', e.target.value)}
+                                className="input-field"
+                                placeholder="예: 4시간 30분"
+                              />
+                            </div>
+                            <div className="md:col-span-4">
                               <label className="block text-sm text-slate-700 font-medium mb-1">
                                 코스 설명 <span className="text-red-500">*</span>
                               </label>
@@ -1512,66 +1549,6 @@ const EventManagement = () => {
                                 className="input-field"
                                 placeholder="한국APT - 약수터 - 성당칼림길 - 능선길 - 정상(737.2m)..."
                               />
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <div className="flex items-center justify-between mb-3">
-                              <label className="block text-sm text-slate-900 font-bold">
-                                상세 일정 <span className="text-red-500">*</span>
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => addCourseScheduleItem(course.id)}
-                                className="px-3 py-1 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors flex items-center space-x-1"
-                              >
-                                <Plus className="h-3 w-3" />
-                                <span>일정 추가</span>
-                              </button>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              {course.schedule.map((scheduleItem, scheduleIdx) => (
-                                <div key={scheduleIdx} className="grid grid-cols-12 gap-2 items-end bg-white p-3 rounded-lg border border-slate-200">
-                                  <div className="col-span-2">
-                                    <label className="block text-xs text-slate-600 mb-1">시간</label>
-                                    <select
-                                      value={scheduleItem.time}
-                                      onChange={(e) =>
-                                        updateCourseSchedule(course.id, scheduleIdx, 'time', e.target.value)
-                                      }
-                                      className="input-field text-sm font-bold text-primary-700"
-                                    >
-                                      <option value="">선택</option>
-                                      {timeOptions.map(time => (
-                                        <option key={time} value={time}>{time}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div className="col-span-9">
-                                    <label className="block text-xs text-slate-600 mb-1">장소</label>
-                                    <input
-                                      type="text"
-                                      value={scheduleItem.location}
-                                      onChange={(e) =>
-                                        updateCourseSchedule(course.id, scheduleIdx, 'location', e.target.value)
-                                      }
-                                      className="input-field text-sm"
-                                      placeholder="한국APT 출발"
-                                    />
-                                  </div>
-                                  <div className="col-span-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => removeCourseScheduleItem(course.id, scheduleIdx)}
-                                      className="w-full px-2 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                      disabled={course.schedule.length === 1}
-                                    >
-                                      <Trash2 className="h-4 w-4 mx-auto" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
                             </div>
                           </div>
                         </div>
@@ -1766,6 +1743,13 @@ const EventManagement = () => {
                     <span>취소</span>
                   </button>
                   <button
+                    onClick={handleSaveDraft}
+                    className="flex-1 px-6 py-3 bg-amber-100 text-amber-700 border-2 border-amber-300 rounded-lg font-medium text-lg hover:bg-amber-200 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <FileText className="h-5 w-5" />
+                    <span>임시 저장</span>
+                  </button>
+                  <button
                     onClick={handleSave}
                     className="flex-1 btn-primary flex items-center justify-center space-x-2"
                   >
@@ -1810,6 +1794,12 @@ const EventManagement = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-2xl font-bold text-slate-900">{event.title}</h3>
+                            {event.isDraft && (
+                              <Badge variant="warning">
+                                <FileText className="w-3 h-3 inline mr-1" />
+                                임시 저장
+                              </Badge>
+                            )}
                             {event.isSpecial && (
                               <Badge variant="primary">
                                 <Mountain className="w-3 h-3 inline mr-1" />

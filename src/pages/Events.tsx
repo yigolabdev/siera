@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useDevMode } from '../contexts/DevModeContext';
 import { useEvents } from '../contexts/EventContext';
+import { useParticipations } from '../contexts/ParticipationContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
@@ -11,7 +12,8 @@ import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate }
 const Events = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
-  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId } = useEvents();
+  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId, refreshParticipants } = useEvents();
+  const { registerForEvent, getUserParticipationForEvent, cancelParticipation } = useParticipations();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
   const [searchParams] = useSearchParams();
@@ -73,13 +75,26 @@ const Events = () => {
       currentParticipants: isDevMode && currentApplicationStatus === 'full' 
         ? selectedEvent.maxParticipants 
         : selectedEvent.currentParticipants,
-      isRegistered: false, // TODO: 실제 사용자 신청 여부 확인
     };
   }, [selectedEvent, isDevMode, currentApplicationStatus]);
   
   // 참석자 목록 (실제 신청자)
   const participants = event ? getParticipantsByEventId(event.id) : [];
   
+  // 사용자의 신청 여부 확인
+  const userParticipation = useMemo(() => {
+    if (!user || !event) return null;
+    return getUserParticipationForEvent(user.id.toString(), event.id);
+  }, [user, event, getUserParticipationForEvent]);
+  
+  const isRegistered = !!userParticipation;
+  
+  // 참석률 계산
+  const attendanceRate = useMemo(() => {
+    if (!event || event.maxParticipants === 0) return 0;
+    return Math.round((event.currentParticipants / event.maxParticipants) * 100);
+  }, [event]);
+   
   // 조 편성 (Firebase에서 로드)
   const teams = event ? getTeamsByEventId(event.id) : [];
   
@@ -123,7 +138,6 @@ const Events = () => {
     }
   };
   
-  const [isRegistered, setIsRegistered] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
@@ -141,8 +155,18 @@ const Events = () => {
   
   const applicationClosed = useMemo(() => {
     if (!event) return false;
-    if (!isDevMode) return isApplicationClosed(event.date);
-    return currentApplicationStatus === 'closed';
+    
+    // 1순위: 이벤트 status 확인 (관리자가 설정한 상태)
+    if (event.status === 'open') return false; // 접수중이면 신청 가능
+    if (event.status === 'closed' || event.status === 'ongoing' || event.status === 'completed') return true; // 마감/진행중/완료면 신청 불가
+    
+    // 2순위: 개발 모드 확인
+    if (isDevMode) return currentApplicationStatus === 'closed';
+    
+    // 3순위: 날짜 기반 자동 마감 (draft 상태일 때만)
+    if (event.status === 'draft') return isApplicationClosed(event.date);
+    
+    return false;
   }, [isDevMode, currentApplicationStatus, event]);
   
   // URL 파라미터로 신청 모달 자동 열기
@@ -166,12 +190,36 @@ const Events = () => {
     setShowCourseModal(true);
   };
   
-  const handleCourseSelect = (course: string) => {
-    setSelectedCourse(course);
-    setShowCourseModal(false);
-    setIsRegistered(true);
-    // 바로 입금 정보 모달 표시
-    setShowPaymentModal(true);
+  const handleCourseSelect = async (course: string) => {
+    if (!user || !event) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      setSelectedCourse(course);
+      
+      // Firebase에 참가 등록
+      await registerForEvent(
+        event.id,
+        user.id.toString(),
+        user.name || '',
+        user.email || ''
+      );
+      
+      // 참가자 목록 새로고침
+      await refreshParticipants(event.id);
+      
+      setShowCourseModal(false);
+      
+      // 바로 입금 정보 모달 표시
+      setShowPaymentModal(true);
+      
+      console.log('✅ 산행 신청 완료:', { eventId: event.id, userId: user.id, course });
+    } catch (error: any) {
+      console.error('❌ 산행 신청 실패:', error);
+      alert(error.message || '산행 신청에 실패했습니다. 다시 시도해주세요.');
+    }
   };
   
   const handleCopyToClipboard = (text: string, label: string) => {
@@ -180,15 +228,25 @@ const Events = () => {
     setTimeout(() => setCopiedText(''), 2000);
   };
   
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    if (!userParticipation || !event) return;
+    
     if (!confirm('참석 신청을 취소하시겠습니까?\n\n이미 입금하신 경우 환불 절차가 진행됩니다.')) {
       return;
     }
     
-    // TODO: 실제 취소 로직 (백엔드 API 호출)
-    setIsRegistered(false);
-    setSelectedCourse('');
-    alert('참석 신청이 취소되었습니다.\n\n환불이 필요하신 경우 담당자에게 문의해주세요.\n담당자: ' + (event?.paymentInfo?.managerName || '') + '\n연락처: ' + (event?.paymentInfo?.managerPhone || ''));
+    try {
+      await cancelParticipation(userParticipation.id, '사용자 취소');
+      
+      // 참가자 목록 새로고침
+      await refreshParticipants(event.id);
+      
+      setSelectedCourse('');
+      alert('참석 신청이 취소되었습니다.\n\n환불이 필요하신 경우 담당자에게 문의해주세요.\n담당자: ' + (event?.paymentInfo?.managerName || '') + '\n연락처: ' + (event?.paymentInfo?.managerPhone || ''));
+    } catch (error: any) {
+      console.error('❌ 신청 취소 실패:', error);
+      alert(error.message || '신청 취소에 실패했습니다. 다시 시도해주세요.');
+    }
   };
   
   return (
@@ -339,12 +397,17 @@ const Events = () => {
                 {event.difficulty}
               </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{event.title}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              {event.mountain || event.title}
+            </h2>
+            <p className="text-xl text-white/80 mb-3">{event.title}</p>
             <div className="flex items-center gap-4 text-white/90">
-              <div className="flex items-center gap-2">
-                <Mountain className="w-5 h-5" />
-                <span>{event.altitude}</span>
-              </div>
+              {event.altitude && (
+                <div className="flex items-center gap-2">
+                  <Mountain className="w-5 h-5" />
+                  <span>{event.altitude}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
                 <span>{event.location}</span>
@@ -425,13 +488,13 @@ const Events = () => {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-slate-600">신청률</span>
                     <span className="font-semibold text-primary-600">
-                      {Math.round((event.currentParticipants / event.maxParticipants) * 100)}%
+                      {attendanceRate}%
                     </span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
                     <div 
                       className="h-3 bg-primary-600 rounded-full transition-all duration-500"
-                      style={{ width: `${(event.currentParticipants / event.maxParticipants) * 100}%` }}
+                      style={{ width: `${attendanceRate}%` }}
                     />
                   </div>
                 </div>
@@ -552,11 +615,11 @@ const Events = () => {
             <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
               <div 
                 className="bg-primary-600 h-3 rounded-full transition-all duration-500"
-                style={{ width: `${(event.currentParticipants / event.maxParticipants) * 100}%` }}
+                style={{ width: `${attendanceRate}%` }}
               />
             </div>
             <p className="text-sm text-slate-600 mt-2">
-              {Math.round((event.currentParticipants / event.maxParticipants) * 100)}% 신청 완료
+              {attendanceRate}% 신청 완료
             </p>
           </div>
           

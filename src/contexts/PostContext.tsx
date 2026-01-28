@@ -2,36 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { useAuth } from './AuthContextEnhanced';
-
-export interface Comment {
-  id: string;
-  postId: string;
-  author: string;
-  authorId: string;
-  content: string;
-  date: string;
-  likes: number;
-  likedBy: string[];
-  parentId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Post {
-  id: string;
-  category: 'general' | 'poem';
-  title: string;
-  author: string;
-  authorId: string;
-  date: string;
-  views: number;
-  comments: number;
-  likes: number;
-  likedBy: string[];
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Post, Comment } from '../types';  // ✅ types/index.ts에서 import
 
 interface PostContextType {
   posts: Post[];
@@ -60,18 +31,8 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   // Firebase에서 게시글 데이터 로드 - user가 로드된 후에만 실행
-  useEffect(() => {
-    // user가 undefined인 경우 (초기 로딩 중) 대기
-    if (user === undefined) {
-      return;
-    }
-    
-    // user가 null이거나 user 객체가 있는 경우 데이터 로드
-    loadPosts();
-    loadComments();
-  }, [user]); // user 의존성 추가
-
-  const loadPosts = async () => {
+  // Firebase에서 게시글 및 댓글 로드 (useCallback으로 최적화)
+  const loadPosts = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -87,25 +48,40 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       } else {
         console.log('ℹ️ Firebase에서 로드된 게시글 데이터가 없습니다.');
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 게시글 데이터 로드 실패:', err.message);
-      setError(err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 게시글 데이터 로드 실패:', message);
+      setError(message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     try {
       const result = await getDocuments<Comment>('comments');
       if (result.success && result.data) {
         setComments(result.data);
         console.log('✅ Firebase에서 댓글 데이터 로드:', result.data.length);
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 댓글 데이터 로드 실패:', err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 댓글 데이터 로드 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // user가 undefined인 경우 (초기 로딩 중) 대기
+    if (user === undefined) {
+      return;
+    }
+    
+    // user가 null이거나 user 객체가 있는 경우 데이터 로드
+    loadPosts();
+    loadComments();
+  }, [user, loadPosts, loadComments]); // ✅ 의존성 배열 수정
 
   // 게시글 추가
   const addPost = useCallback(async (
@@ -242,13 +218,20 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       const commentId = `comment_${Date.now()}`;
       const now = new Date().toISOString();
       
+      // undefined 값을 제거하고 새 댓글 객체 생성
       const newComment: Comment = {
-        ...commentData,
         id: commentId,
+        postId: commentData.postId,
+        author: commentData.author,
+        authorId: commentData.authorId,
+        content: commentData.content,
+        date: commentData.date,
         likes: 0,
         likedBy: [],
         createdAt: now,
         updatedAt: now,
+        // parentId가 있을 때만 포함 (undefined 제거)
+        ...(commentData.parentId && { parentId: commentData.parentId }),
       };
 
       console.log('📤 Firestore에 댓글 저장 시도:', {
@@ -384,3 +367,6 @@ export const usePosts = () => {
   }
   return context;
 };
+
+// Export types for backwards compatibility
+export type { Post, Comment } from '../types';

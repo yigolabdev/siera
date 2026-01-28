@@ -1,27 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-export interface Payment {
-  id: string;
-  eventId: string; // 어떤 산행의 결제인지
-  userId: string; // 결제한 사용자 ID
-  userName: string;
-  isGuest: boolean;
-  company: string;
-  occupation: string;
-  phone: string;
-  email: string;
-  applicationDate: string;
-  paymentStatus: 'completed' | 'pending' | 'confirmed' | 'cancelled';
-  paymentDate?: string;
-  amount: number;
-  paymentMethod?: string; // 카드, 계좌이체 등
-  transactionId?: string;
-  memo?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Payment } from '../types';
 
 interface PaymentContextType {
   payments: Payment[];
@@ -46,12 +26,7 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Firebase 초기 데이터 로드
-  useEffect(() => {
-    loadPayments();
-  }, []);
-  
-  const loadPayments = async () => {
+  const loadPayments = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -65,14 +40,21 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
         setPayments([]);
         console.log('ℹ️ Firebase에서 로드된 결제 데이터가 없습니다.');
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 결제 데이터 로드 실패:', err.message);
-      setError(err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 결제 데이터 로드 실패:', message);
+      setError(message);
       setPayments([]);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Firebase 초기 데이터 로드
+  useEffect(() => {
+    loadPayments();
+  }, [loadPayments]);
 
   const addPayment = useCallback(async (paymentData: Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -93,9 +75,10 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '결제 추가 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { payment: paymentData });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { payment: paymentData });
+      throw error;
     }
   }, []);
 
@@ -115,9 +98,10 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '결제 수정 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
+      throw error;
     }
   }, []);
 
@@ -130,9 +114,10 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '결제 삭제 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
+      throw error;
     }
   }, []);
 
@@ -143,9 +128,10 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
         paymentDate: new Date().toISOString(),
       });
       console.log('✅ 결제 확인 완료:', id);
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
+      throw error;
     }
   }, [updatePayment]);
 
@@ -156,15 +142,16 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
         memo: reason || '결제 취소됨',
       });
       console.log('✅ 결제 취소 완료:', id);
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { paymentId: id });
+      throw error;
     }
   }, [updatePayment]);
 
   const refreshPayments = useCallback(async () => {
     await loadPayments();
-  }, []);
+  }, [loadPayments]);
 
   const getPaymentById = useCallback((id: string) => {
     return payments.find(payment => payment.id === id);

@@ -3,21 +3,7 @@ import { getDocuments, setDocument, updateDocument, deleteDocument } from '../li
 import { uploadFile, deleteFile, getFileURL } from '../lib/firebase/storage';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { useAuth } from './AuthContextEnhanced';
-
-export interface Photo {
-  id: string;
-  eventId: string;
-  eventTitle: string;
-  eventYear: string;
-  eventMonth: string;
-  uploadedBy: string;
-  uploadedByName: string;
-  uploadedAt: string;
-  imageUrl: string;
-  caption?: string;
-  likes: number;
-  likedBy: string[];
-}
+import { Photo } from '../types';
 
 interface GalleryContextType {
   photos: Photo[];
@@ -39,12 +25,7 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Firebase에서 사진 데이터 로드
-  useEffect(() => {
-    loadPhotos();
-  }, []);
-
-  const loadPhotos = async () => {
+  const loadPhotos = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -56,13 +37,20 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
       } else {
         console.log('ℹ️ Firebase에서 로드된 사진 데이터가 없습니다.');
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 사진 데이터 로드 실패:', err.message);
-      setError(err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 사진 데이터 로드 실패:', message);
+      setError(message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Firebase에서 사진 데이터 로드
+  useEffect(() => {
+    loadPhotos();
+  }, [loadPhotos]);
 
   // 사진 업로드
   const uploadPhotos = useCallback(async (
@@ -133,10 +121,11 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
       const uploadedPhotos = await Promise.all(uploadPromises);
       setPhotos(prev => [...prev, ...uploadedPhotos]);
       console.log(`✅ ${uploadedPhotos.length}개 사진 업로드 완료`);
-    } catch (err: any) {
-      console.error('❌ 사진 업로드 실패:', err);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.STORAGE);
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 사진 업로드 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.STORAGE);
+      throw error;
     }
   }, [user]);
 
@@ -162,9 +151,10 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '사진 삭제 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.STORAGE, { photoId });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.STORAGE, { photoId });
+      throw error;
     }
   }, [photos]);
 
@@ -191,8 +181,9 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
             : p
         ));
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { photoId });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { photoId });
     }
   }, [photos]);
 
@@ -209,7 +200,7 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
   // 사진 새로고침
   const refreshPhotos = useCallback(async () => {
     await loadPhotos();
-  }, []);
+  }, [loadPhotos]);
 
   const value = {
     photos,

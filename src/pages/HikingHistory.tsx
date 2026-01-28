@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useHikingHistory } from '../contexts/HikingHistoryContext';
+import { useEvents } from '../contexts/EventContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
@@ -10,6 +11,7 @@ import Modal from '../components/ui/Modal';
 const HikingHistory = () => {
   const { user, isAdmin } = useAuth();
   const { history, isLoading, getHistoryByYear, addComment, updateComment, deleteComment, getCommentsByHikeId } = useHikingHistory();
+  const { events, getParticipantsByEventId } = useEvents();
   
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -18,14 +20,54 @@ const HikingHistory = () => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   
+  // 완료된 이벤트를 산행 이력으로 변환
+  const completedEvents = useMemo(() => {
+    return events
+      .filter(event => event.status === 'completed')
+      .map(event => {
+        const eventDate = new Date(event.date);
+        const participants = getParticipantsByEventId(event.id);
+        
+        return {
+          id: event.id,
+          year: eventDate.getFullYear().toString(),
+          month: (eventDate.getMonth() + 1).toString().padStart(2, '0'),
+          date: event.date,
+          mountain: event.mountain || event.location || event.title,
+          location: event.location,
+          difficulty: event.difficulty,
+          distance: event.courses?.[0]?.distance || '',
+          duration: event.courses?.[0]?.duration || '',
+          participants: participants.length || event.currentParticipants || 0,
+          summary: event.description,
+          imageUrl: event.imageUrl,
+          isSpecial: event.isSpecial || false,
+          photoCount: 0, // TODO: 갤러리와 연동
+        };
+      });
+  }, [events, getParticipantsByEventId]);
+  
+  // 기존 산행 이력과 완료된 이벤트 병합
+  const combinedHistory = useMemo(() => {
+    // 중복 제거 (같은 id가 있으면 기존 history 우선)
+    const historyIds = new Set(history.map(h => h.id));
+    const newEvents = completedEvents.filter(e => !historyIds.has(e.id));
+    
+    return [...history, ...newEvents].sort((a, b) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [history, completedEvents]);
+  
   // 연도 목록 생성
   const years = useMemo(() => {
-    const uniqueYears = Array.from(new Set(history.map(h => h.year)));
+    const uniqueYears = Array.from(new Set(combinedHistory.map(h => h.year)));
     return uniqueYears.sort((a, b) => parseInt(b) - parseInt(a));
-  }, [history]);
+  }, [combinedHistory]);
 
   // 선택된 연도의 산행 이력
-  const yearHistory = useMemo(() => getHistoryByYear(selectedYear), [selectedYear, history]);
+  const yearHistory = useMemo(() => {
+    return combinedHistory.filter(h => h.year === selectedYear);
+  }, [selectedYear, combinedHistory]);
   
   // 월별로 그룹화
   const groupedByMonth = useMemo(() => {
@@ -102,6 +144,50 @@ const HikingHistory = () => {
     );
   }
 
+  // 산행 이력이 전혀 없는 경우
+  if (combinedHistory.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 헤더 */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">산행 이력</h1>
+          <p className="text-slate-600">시애라클럽의 산행 기록을 확인하세요.</p>
+        </div>
+
+        {/* Empty State */}
+        <Card className="p-12 text-center">
+          <div className="max-w-md mx-auto">
+            <CalendarX className="w-20 h-20 text-slate-300 mx-auto mb-6" />
+            <h3 className="text-2xl font-bold text-slate-900 mb-3">
+              아직 등록된 산행 이력이 없습니다
+            </h3>
+            <p className="text-slate-600 mb-6">
+              시애라클럽의 첫 번째 산행을 완료하고 기록을 남겨보세요.<br />
+              관리자가 산행을 완료하면 이곳에서 확인할 수 있습니다.
+            </p>
+            {isAdmin && (
+              <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900 font-medium mb-2">
+                  관리자 안내
+                </p>
+                <p className="text-sm text-blue-700">
+                  산행이 완료되면 관리자 페이지에서 산행 이력을 등록할 수 있습니다.
+                </p>
+                <Link
+                  to="/admin/events"
+                  className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  이벤트 관리로 이동
+                </Link>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* 헤더 */}
@@ -111,14 +197,14 @@ const HikingHistory = () => {
       </div>
 
       {/* 통계 */}
-      {history.length > 0 && (
+      {combinedHistory.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <Mountain className="w-8 h-8 text-blue-600" />
               <div>
                 <p className="text-slate-600 text-sm">총 산행</p>
-                <p className="text-2xl font-bold">{history.length}회</p>
+                <p className="text-2xl font-bold">{combinedHistory.length}회</p>
               </div>
             </div>
           </Card>
@@ -129,7 +215,7 @@ const HikingHistory = () => {
               <div>
                 <p className="text-slate-600 text-sm">총 참가자</p>
                 <p className="text-2xl font-bold">
-                  {history.reduce((sum, h) => sum + h.participants, 0)}명
+                  {combinedHistory.reduce((sum, h) => sum + h.participants, 0)}명
                 </p>
               </div>
             </div>
@@ -141,7 +227,7 @@ const HikingHistory = () => {
               <div>
                 <p className="text-slate-600 text-sm">총 사진</p>
                 <p className="text-2xl font-bold">
-                  {history.reduce((sum, h) => sum + h.photoCount, 0)}장
+                  {combinedHistory.reduce((sum, h) => sum + h.photoCount, 0)}장
                 </p>
               </div>
             </div>
@@ -153,7 +239,7 @@ const HikingHistory = () => {
               <div>
                 <p className="text-slate-600 text-sm">평균 참가</p>
                 <p className="text-2xl font-bold">
-                  {Math.round(history.reduce((sum, h) => sum + h.participants, 0) / history.length)}명
+                  {Math.round(combinedHistory.reduce((sum, h) => sum + h.participants, 0) / combinedHistory.length)}명
                 </p>
               </div>
             </div>
@@ -164,32 +250,49 @@ const HikingHistory = () => {
       {/* 연도 선택 */}
       {years.length > 0 && (
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {years.map((year) => (
-            <button
-              key={year}
-              onClick={() => setSelectedYear(year)}
-              className={`px-6 py-2 rounded-lg whitespace-nowrap font-medium transition-colors ${
-                selectedYear === year
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
-              }`}
-            >
-              {year}년 ({getHistoryByYear(year).length}회)
-            </button>
-          ))}
+          {years.map((year) => {
+            const yearCount = combinedHistory.filter(h => h.year === year).length;
+            return (
+              <button
+                key={year}
+                onClick={() => setSelectedYear(year)}
+                className={`px-6 py-2 rounded-lg whitespace-nowrap font-medium transition-colors ${
+                  selectedYear === year
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
+                }`}
+              >
+                {year}년 ({yearCount}회)
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* 산행 이력 */}
       {yearHistory.length === 0 ? (
         <Card className="p-12 text-center">
-          <Mountain className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">
-            {years.length === 0 ? '아직 등록된 산행 이력이 없습니다' : `${selectedYear}년 산행 이력이 없습니다`}
-          </h3>
-          <p className="text-slate-600">
-            {years.length === 0 ? '첫 번째 산행을 등록해보세요.' : '다른 연도를 선택해보세요.'}
-          </p>
+          <div className="max-w-md mx-auto">
+            <Mountain className="w-20 h-20 text-slate-300 mx-auto mb-6" />
+            <h3 className="text-2xl font-bold text-slate-900 mb-3">
+              {selectedYear}년 산행 이력이 없습니다
+            </h3>
+            <p className="text-slate-600 mb-6">
+              {selectedYear}년에는 등록된 산행 기록이 없습니다.<br />
+              다른 연도를 선택해주세요.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {years.filter(y => y !== selectedYear).slice(0, 3).map((year) => (
+                <button
+                  key={year}
+                  onClick={() => setSelectedYear(year)}
+                  className="px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg font-medium transition-colors"
+                >
+                  {year}년 보기
+                </button>
+              ))}
+            </div>
+          </div>
         </Card>
       ) : (
         <div className="space-y-8">
@@ -368,43 +471,45 @@ const HikingHistory = () => {
       )}
 
       {/* 후기 작성 모달 */}
-      <Modal
-        onClose={() => {
-          setShowCommentModal(false);
-          setSelectedHikeId(null);
-          setNewComment('');
-        }}
-        title="산행 후기 작성"
-      >
-        <div className="p-6">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="산행 후기를 작성해주세요..."
-            className="w-full p-4 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={6}
-          />
-          <div className="flex justify-end gap-3 mt-4">
-            <button
-              onClick={() => {
-                setShowCommentModal(false);
-                setSelectedHikeId(null);
-                setNewComment('');
-              }}
-              className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleAddComment}
-              disabled={!newComment.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              작성 완료
-            </button>
+      {showCommentModal && (
+        <Modal
+          onClose={() => {
+            setShowCommentModal(false);
+            setSelectedHikeId(null);
+            setNewComment('');
+          }}
+          title="산행 후기 작성"
+        >
+          <div className="p-6">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="산행 후기를 작성해주세요..."
+              className="w-full p-4 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={6}
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setShowCommentModal(false);
+                  setSelectedHikeId(null);
+                  setNewComment('');
+                }}
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAddComment}
+                disabled={!newComment.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                작성 완료
+              </button>
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -1,27 +1,20 @@
-import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
-
-interface Amendment {
-  version: string;
-  date: string;
-  description: string;
-}
-
-interface RulesData {
-  content: string;
-  version: string;
-  effectiveDate: string;
-  amendments: Amendment[];
-}
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
+import { getDocuments, setDocument, updateDocument } from '../lib/firebase/firestore';
+import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
+import { RulesData, RulesAmendment } from '../types';
 
 interface RulesContextType {
   rulesData: RulesData;
-  updateRules: (content: string, version: string, effectiveDate: string) => void;
-  addAmendment: (amendment: Amendment) => void;
+  isLoading: boolean;
+  error: string | null;
+  updateRules: (content: string, version: string, effectiveDate: string) => Promise<void>;
+  addAmendment: (amendment: RulesAmendment) => Promise<void>;
+  refreshRules: () => Promise<void>;
 }
 
 const RulesContext = createContext<RulesContextType | undefined>(undefined);
 
-// 초기 회칙 내용 (완전판)
+// 초기 회칙 내용 (완전판) - Firebase에 없을 때 사용
 const initialRulesContent = `# 제 1장. 총칙
 
 ## 제 1조 (명칭)
@@ -153,7 +146,10 @@ const initialRulesContent = `# 제 1장. 총칙
 6. 운영위원장은 단체대화방의 멤버 관리 및 메시지 관리 권한을 갖는다.
 7. 본 가이드라인을 현저히 또는 반복하여 어기는 경우에는 운영위원회의 의결을 거쳐 제재한다.`;
 
+const RULES_DOC_ID = 'current_rules';
+
 const initialRulesData: RulesData = {
+  id: RULES_DOC_ID,
   content: initialRulesContent,
   version: '2025.10.30',
   effectiveDate: '2025년 10월 30일',
@@ -163,35 +159,119 @@ const initialRulesData: RulesData = {
       date: '2025년 10월 30일',
       description: '회칙 제정 (대의원회의 통과)'
     }
-  ]
+  ],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 export const RulesProvider = ({ children }: { children: ReactNode }) => {
   const [rulesData, setRulesData] = useState<RulesData>(initialRulesData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const updateRules = useCallback((content: string, version: string, effectiveDate: string) => {
-    setRulesData(prev => ({
-      ...prev,
-      content,
-      version,
-      effectiveDate
-    }));
+  const loadRules = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const result = await getDocuments<RulesData>('rules');
+      if (result.success && result.data && result.data.length > 0) {
+        // 첫 번째 문서를 현재 회칙으로 사용
+        setRulesData(result.data[0]);
+        console.log('✅ Firebase에서 회칙 데이터 로드:', result.data[0].version);
+      } else {
+        console.log('ℹ️ Firebase에 회칙 데이터가 없습니다. 초기 데이터를 생성합니다.');
+        // 초기 데이터를 Firebase에 저장
+        await setDocument('rules', RULES_DOC_ID, initialRulesData);
+        console.log('✅ 초기 회칙 데이터 저장 완료');
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 회칙 데이터 로드 실패:', message);
+      setError(message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'RulesContext.loadRules',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const addAmendment = useCallback((amendment: Amendment) => {
-    setRulesData(prev => ({
-      ...prev,
-      amendments: [...prev.amendments, amendment]
-    }));
-  }, []);
+  // Firebase에서 회칙 데이터 로드
+  useEffect(() => {
+    loadRules();
+  }, [loadRules]);
+
+  const updateRules = useCallback(async (content: string, version: string, effectiveDate: string) => {
+    try {
+      const updatedData = {
+        ...rulesData,
+        content,
+        version,
+        effectiveDate,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = await updateDocument('rules', RULES_DOC_ID, updatedData);
+      
+      if (result.success) {
+        setRulesData(updatedData);
+        console.log('✅ 회칙 업데이트 완료:', version);
+      } else {
+        throw new Error(result.error || '회칙 업데이트 실패');
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 회칙 업데이트 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'RulesContext.updateRules',
+        version,
+      });
+      throw error;
+    }
+  }, [rulesData]);
+
+  const addAmendment = useCallback(async (amendment: RulesAmendment) => {
+    try {
+      const updatedData = {
+        ...rulesData,
+        amendments: [...rulesData.amendments, amendment],
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = await updateDocument('rules', RULES_DOC_ID, updatedData);
+      
+      if (result.success) {
+        setRulesData(updatedData);
+        console.log('✅ 개정 이력 추가 완료:', amendment.version);
+      } else {
+        throw new Error(result.error || '개정 이력 추가 실패');
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 개정 이력 추가 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'RulesContext.addAmendment',
+        version: amendment.version,
+      });
+      throw error;
+    }
+  }, [rulesData]);
+
+  const refreshRules = useCallback(async () => {
+    await loadRules();
+  }, [loadRules]);
 
   const value = useMemo(
     () => ({
       rulesData,
+      isLoading,
+      error,
       updateRules,
       addAmendment,
+      refreshRules,
     }),
-    [rulesData, updateRules, addAmendment]
+    [rulesData, isLoading, error, updateRules, addAmendment, refreshRules]
   );
 
   return (

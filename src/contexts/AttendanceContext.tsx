@@ -1,31 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-export interface AttendanceRecord {
-  id: string;
-  eventId: string; // 어떤 산행의 출석인지
-  userId: string; // 출석한 사용자 ID
-  userName: string;
-  attendanceStatus: 'attended' | 'absent' | 'excused' | 'late';
-  checkInTime?: string;
-  checkOutTime?: string;
-  notes?: string;
-  recordedBy?: string; // 출석을 기록한 관리자 ID
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AttendanceStats {
-  userId: string;
-  userName: string;
-  totalEvents: number; // 참석 가능했던 총 산행 수
-  attended: number; // 실제 참석한 산행 수
-  absent: number;
-  excused: number;
-  late: number;
-  attendanceRate: number; // 출석률 (%)
-}
+import { AttendanceRecord, AttendanceStats } from '../types';
 
 interface AttendanceContextType {
   attendances: AttendanceRecord[];
@@ -50,12 +26,7 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Firebase 초기 데이터 로드
-  useEffect(() => {
-    loadAttendances();
-  }, []);
-  
-  const loadAttendances = async () => {
+  const loadAttendances = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -69,14 +40,21 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
         setAttendances([]);
         console.log('ℹ️ Firebase에서 로드된 출석 데이터가 없습니다.');
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 출석 데이터 로드 실패:', err.message);
-      setError(err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 출석 데이터 로드 실패:', message);
+      setError(message);
       setAttendances([]);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Firebase 초기 데이터 로드
+  useEffect(() => {
+    loadAttendances();
+  }, [loadAttendances]);
 
   const addAttendance = useCallback(async (attendanceData: Omit<AttendanceRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -97,9 +75,10 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '출석 기록 추가 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { attendance: attendanceData });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { attendance: attendanceData });
+      throw error;
     }
   }, []);
 
@@ -119,9 +98,10 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '출석 기록 수정 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { attendanceId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { attendanceId: id });
+      throw error;
     }
   }, []);
 
@@ -134,9 +114,10 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '출석 기록 삭제 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { attendanceId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { attendanceId: id });
+      throw error;
     }
   }, []);
 
@@ -156,7 +137,7 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
         // 기존 기록 업데이트
         await updateAttendance(existingRecord.id, {
           attendanceStatus: status,
-          checkInTime: status === 'attended' || status === 'late' ? new Date().toISOString() : undefined,
+          checkInTime: status === 'present' || status === 'late' ? new Date().toISOString() : undefined,
         });
       } else {
         // 새 기록 추가
@@ -165,19 +146,21 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
           userId,
           userName,
           attendanceStatus: status,
-          checkInTime: status === 'attended' || status === 'late' ? new Date().toISOString() : undefined,
+          checkInTime: status === 'present' || status === 'late' ? new Date().toISOString() : undefined,
+          recordedBy: userId, // 기록한 관리자 ID (현재는 본인)
         });
       }
       console.log('✅ 출석 체크 완료:', { eventId, userId, status });
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, userId });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, userId });
+      throw error;
     }
   }, [attendances, addAttendance, updateAttendance]);
 
   const refreshAttendances = useCallback(async () => {
     await loadAttendances();
-  }, []);
+  }, [loadAttendances]);
 
   const getAttendanceById = useCallback((id: string) => {
     return attendances.find(attendance => attendance.id === id);
@@ -196,7 +179,7 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
     
     if (userAttendances.length === 0) return null;
     
-    const attended = userAttendances.filter(a => a.attendanceStatus === 'attended').length;
+    const attended = userAttendances.filter(a => a.attendanceStatus === 'present').length;
     const absent = userAttendances.filter(a => a.attendanceStatus === 'absent').length;
     const excused = userAttendances.filter(a => a.attendanceStatus === 'excused').length;
     const late = userAttendances.filter(a => a.attendanceStatus === 'late').length;

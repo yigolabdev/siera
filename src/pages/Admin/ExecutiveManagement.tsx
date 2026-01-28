@@ -2,20 +2,25 @@ import { useState } from 'react';
 import { Users, Phone, Mail, Edit2, Save, X, Plus, Trash2, Calendar, AlertCircle, Check, Shield, Search } from 'lucide-react';
 import { useMembers } from '../../contexts/MemberContext';
 import { useExecutives, Executive } from '../../contexts/ExecutiveContext';
+import { useAuth } from '../../contexts/AuthContextEnhanced';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { auth } from '../../lib/firebase/config';
 
 interface Member {
   id: number;
   name: string;
   email: string;
   phoneNumber: string;
-  occupation: string;
-  company: string;
+  occupation?: string;
+  company?: string;
+  position?: string;
 }
 
 const ExecutiveManagement = () => {
-  const { members: contextMembers } = useMembers();
+  const { user } = useAuth();
+  const { members: contextMembers, updateMember } = useMembers();
   const { executives: contextExecutives, addExecutive, updateExecutive, deleteExecutive, isLoading } = useExecutives();
   
   // Firebase members를 로컬 인터페이스로 변환
@@ -24,8 +29,9 @@ const ExecutiveManagement = () => {
     name: m.name,
     email: m.email,
     phoneNumber: m.phoneNumber,
-    occupation: m.occupation,
-    company: m.company,
+    occupation: m.occupation || '',
+    company: m.company || '',
+    position: m.position || '',
   }));
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -38,6 +44,7 @@ const ExecutiveManagement = () => {
     phoneNumber: '',
     email: '',
     category: 'chairman',
+    company: '',
     startTerm: '',
     endTerm: '',
     bio: '',
@@ -73,17 +80,39 @@ const ExecutiveManagement = () => {
   };
 
   // 비밀번호 확인 처리
-  const handlePasswordConfirm = () => {
-    // TODO: 실제 비밀번호 검증 로직으로 대체 필요
-    if (passwordInput === 'admin1234') {
+  const handlePasswordConfirm = async () => {
+    if (!user || !auth.currentUser) {
+      alert('사용자 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      // Firebase Authentication으로 비밀번호 재인증
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        passwordInput
+      );
+      
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      
+      // 재인증 성공
       setIsPasswordModalOpen(false);
       setPasswordInput('');
       if (passwordAction) {
         passwordAction();
       }
       setPasswordAction(null);
-    } else {
-      alert('비밀번호가 올바르지 않습니다.');
+    } catch (error: any) {
+      console.error('비밀번호 확인 실패:', error);
+      
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        alert('비밀번호가 올바르지 않습니다.');
+      } else if (error.code === 'auth/too-many-requests') {
+        alert('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
+      } else {
+        alert('비밀번호 확인에 실패했습니다. 다시 시도해주세요.');
+      }
+      
       setPasswordInput('');
     }
   };
@@ -121,7 +150,10 @@ const ExecutiveManagement = () => {
       
       requestPasswordVerification(async () => {
         try {
+          // executives 컬렉션 업데이트
+          // (members.position은 직장 직책이므로 업데이트하지 않음)
           await updateExecutive(editForm.id, editForm);
+          
           setEditingId(null);
           setEditForm(null);
           setEditSearchQuery('');
@@ -149,7 +181,10 @@ const ExecutiveManagement = () => {
 
     requestPasswordVerification(async () => {
       try {
+        // executives 컬렉션에 추가
+        // (members.position은 직장 직책이므로 업데이트하지 않음)
         await addExecutive(newExecutive);
+        
         setNewExecutive({
           memberId: undefined,
           name: '',
@@ -157,6 +192,7 @@ const ExecutiveManagement = () => {
           phoneNumber: '',
           email: '',
           category: 'chairman',
+          company: '',
           startTerm: '',
           endTerm: '',
           bio: '',
@@ -177,7 +213,10 @@ const ExecutiveManagement = () => {
     requestPasswordVerification(async () => {
       if (confirm('정말 삭제하시겠습니까?')) {
         try {
+          // executives 컬렉션에서 삭제
+          // (members.position은 직장 직책이므로 건드리지 않음)
           await deleteExecutive(id);
+          
           alert('운영진이 삭제되었습니다.');
         } catch (error) {
           console.error('운영진 삭제 실패:', error);
@@ -190,10 +229,12 @@ const ExecutiveManagement = () => {
   // 회원 검색 필터링
   const getFilteredMembers = (query: string) => {
     if (!query.trim()) return [];
+    const lowerQuery = query.toLowerCase();
     return members.filter(member =>
-      member.name.toLowerCase().includes(query.toLowerCase()) ||
-      member.occupation.toLowerCase().includes(query.toLowerCase()) ||
-      member.company.toLowerCase().includes(query.toLowerCase())
+      member.name.toLowerCase().includes(lowerQuery) ||
+      (member.occupation?.toLowerCase().includes(lowerQuery)) ||
+      (member.company?.toLowerCase().includes(lowerQuery)) ||
+      (member.position?.toLowerCase().includes(lowerQuery))
     );
   };
 
@@ -205,6 +246,7 @@ const ExecutiveManagement = () => {
       name: member.name,
       phoneNumber: member.phoneNumber,
       email: member.email,
+      company: member.company || member.occupation,
     });
     setSearchQuery(member.name);
     setShowSearchResults(false);
@@ -219,6 +261,7 @@ const ExecutiveManagement = () => {
         name: member.name,
         phoneNumber: member.phoneNumber,
         email: member.email,
+        company: member.company || member.occupation,
       });
       setEditSearchQuery(member.name);
       setShowEditSearchResults(false);
@@ -236,6 +279,7 @@ const ExecutiveManagement = () => {
         name: '',
         phoneNumber: '',
         email: '',
+        company: '',
       });
     } else {
       setEditSearchQuery('');
@@ -306,6 +350,37 @@ const ExecutiveManagement = () => {
                 회원 DB에서 검색하여 선택하세요.
               </p>
             </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                구분 *
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="edit-category"
+                    value="chairman"
+                    checked={data.category === 'chairman'}
+                    onChange={(e) => setEditForm({ ...data, category: e.target.value as 'chairman' | 'committee' })}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-slate-700">회장단</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="edit-category"
+                    value="committee"
+                    checked={data.category === 'committee'}
+                    onChange={(e) => setEditForm({ ...data, category: e.target.value as 'chairman' | 'committee' })}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-slate-700">운영위원회</span>
+                </label>
+              </div>
+            </div>
+            
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 직책 *
@@ -370,6 +445,11 @@ const ExecutiveManagement = () => {
                     {data.position}
                   </Badge>
                 </div>
+                {data.company && (
+                  <p className="text-sm text-slate-600">
+                    {data.company}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
@@ -392,10 +472,12 @@ const ExecutiveManagement = () => {
               </div>
             )}
             <div className="space-y-2 text-sm text-slate-600">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-slate-400" />
-                <span>{data.phoneNumber}</span>
-              </div>
+              {data.phoneNumber && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-slate-400" />
+                  <span>{data.phoneNumber}</span>
+                </div>
+              )}
               {data.email && (
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-slate-400" />
@@ -491,7 +573,7 @@ const ExecutiveManagement = () => {
             <div className="space-y-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  회원 검색 <Badge variant="danger">필수</Badge>
+                  회원 검색
                 </label>
                 <div className="relative">
                   <div className="relative">
@@ -546,9 +628,40 @@ const ExecutiveManagement = () => {
                   회원 DB에서 검색하여 선택하세요. 선택 시 정보가 자동으로 입력됩니다.
                 </p>
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  직책 <Badge variant="danger">필수</Badge>
+                  구분
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="category"
+                      value="chairman"
+                      checked={newExecutive.category === 'chairman'}
+                      onChange={(e) => setNewExecutive({ ...newExecutive, category: e.target.value as 'chairman' | 'committee' })}
+                      className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">회장단</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="category"
+                      value="committee"
+                      checked={newExecutive.category === 'committee'}
+                      onChange={(e) => setNewExecutive({ ...newExecutive, category: e.target.value as 'chairman' | 'committee' })}
+                      className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">운영위원회</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  직책
                 </label>
                 <input
                   type="text"
@@ -563,7 +676,7 @@ const ExecutiveManagement = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    임기 시작 <Badge variant="danger">필수</Badge>
+                    임기 시작
                   </label>
                   <input
                     type="month"
@@ -576,7 +689,7 @@ const ExecutiveManagement = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    임기 종료 <Badge variant="danger">필수</Badge>
+                    임기 종료
                   </label>
                   <input
                     type="month"
@@ -618,6 +731,7 @@ const ExecutiveManagement = () => {
                     phoneNumber: '',
                     email: '',
                     category: 'chairman',
+                    company: '',
                     startTerm: '',
                     endTerm: '',
                     bio: '',
@@ -657,7 +771,7 @@ const ExecutiveManagement = () => {
               </div>
               
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                비밀번호 <Badge variant="danger">필수</Badge>
+                비밀번호
               </label>
               <input
                 type="password"
@@ -673,7 +787,7 @@ const ExecutiveManagement = () => {
                 autoFocus
               />
               <p className="text-xs text-slate-500 mt-2">
-                데모 비밀번호: <code className="px-2 py-1 bg-slate-100 rounded">admin1234</code>
+                현재 로그인한 계정({user?.email})의 비밀번호를 입력하세요
               </p>
             </div>
 

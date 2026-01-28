@@ -9,7 +9,7 @@ import { X } from 'lucide-react';
 const EventPrintView = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const { getEventById, getTeamsByEventId } = useEvents();
+  const { events, getEventById, getTeamsByEventId, isLoading } = useEvents();
   const { getMembersByPosition } = useMembers();
   const { getPoemByMonth, getCurrentMonthPoem } = usePoems();
   
@@ -54,10 +54,32 @@ const EventPrintView = () => {
     })),
   };
   
+  // 로딩 중
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
+          <p className="text-xl text-slate-600">산행 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+  
   if (!event) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-slate-600">산행 정보를 찾을 수 없습니다.</p>
+        <div className="text-center">
+          <p className="text-xl text-slate-600 mb-4">산행 정보를 찾을 수 없습니다.</p>
+          <p className="text-sm text-slate-500 mb-2">이벤트 ID: {eventId}</p>
+          <p className="text-sm text-slate-500 mb-4">전체 이벤트 수: {events.length}</p>
+          <button
+            onClick={() => navigate('/admin/events')}
+            className="px-6 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+          >
+            산행 관리로 돌아가기
+          </button>
+        </div>
       </div>
     );
   }

@@ -37,10 +37,13 @@ service cloud.firestore {
       // 읽기: 인증되고 승인된 회원만
       allow read: if isAuthenticated() && isApproved();
       
-      // 생성: 회원가입 시 자신의 문서만 (isApproved는 false로 시작)
-      allow create: if isAuthenticated() && 
-                      request.auth.uid == memberId &&
-                      request.resource.data.isApproved == false;
+      // 생성: 
+      // 1. 회원가입 시 자신의 문서만 (isApproved는 false로 시작)
+      // 2. 관리자가 승인 시 members 문서 생성 (isApproved는 true)
+      allow create: if (isAuthenticated() && 
+                        request.auth.uid == memberId &&
+                        request.resource.data.isApproved == false) ||
+                       isAdmin();
       
       // 수정: 본인 또는 관리자
       allow update: if isOwner(memberId) || isAdmin();
@@ -158,9 +161,9 @@ service cloud.firestore {
     }
     
     // ========================================
-    // 갤러리 (gallery) 컬렉션
+    // 갤러리/사진 (photos) 컬렉션 - gallery에서 photos로 변경
     // ========================================
-    match /gallery/{imageId} {
+    match /photos/{photoId} {
       // 읽기: 인증되고 승인된 회원만
       allow read: if isAuthenticated() && isApproved();
       
@@ -206,6 +209,102 @@ service cloud.firestore {
       // Firebase Auth 완료 직후이므로 request.auth.uid는 존재함
       // Custom Claims는 아직 없을 수 있으므로 isAuthenticated() 제거
       allow create: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // ========================================
+    // 산행 이력 (hikingHistory) 컬렉션
+    // ========================================
+    match /hikingHistory/{hikeId} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 생성, 수정, 삭제: 관리자만
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 산행 후기 댓글 (hikingComments) 컬렉션
+    // ========================================
+    match /hikingComments/{commentId} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 생성: 승인된 회원 (본인 정보로)
+      allow create: if isAuthenticated() && 
+                      isApproved() &&
+                      request.auth.uid == request.resource.data.authorId;
+      
+      // 수정: 본인 또는 관리자
+      allow update: if isOwner(resource.data.authorId) || isAdmin();
+      
+      // 삭제: 본인 또는 관리자
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+    
+    // ========================================
+    // 참가 신청 (participations) 컬렉션
+    // ========================================
+    match /participations/{participationId} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 생성: 승인된 회원 (본인의 참가 신청만)
+      allow create: if isAuthenticated() && 
+                      isApproved() &&
+                      request.auth.uid == request.resource.data.userId;
+      
+      // 수정: 본인 또는 관리자
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 삭제: 본인 또는 관리자
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+    
+    // ========================================
+    // 결제 (payments) 컬렉션
+    // ========================================
+    match /payments/{paymentId} {
+      // 읽기: 본인 또는 관리자
+      allow read: if isAuthenticated() && 
+                     (isAdmin() || request.auth.uid == resource.data.userId);
+      
+      // 생성: 인증된 사용자 (본인 또는 비회원 게스트)
+      // isGuest가 true인 경우 userId가 없을 수 있음
+      allow create: if isAuthenticated() && 
+                      (request.resource.data.isGuest == true ||
+                       request.auth.uid == request.resource.data.userId);
+      
+      // 수정: 본인 또는 관리자
+      allow update: if isAdmin() || 
+                       (isAuthenticated() && request.auth.uid == resource.data.userId);
+      
+      // 삭제: 관리자만
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 출석 (attendances) 컬렉션
+    // ========================================
+    match /attendances/{attendanceId} {
+      // 읽기: 인증되고 승인된 회원만
+      allow read: if isAuthenticated() && isApproved();
+      
+      // 생성, 수정, 삭제: 관리자만 (출석 체크는 관리자가 수행)
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 비회원 게스트 신청 (guestApplications) 컬렉션
+    // ========================================
+    match /guestApplications/{applicationId} {
+      // 읽기: 관리자만 (개인정보 보호)
+      allow read: if isAdmin();
+      
+      // 생성: 모든 인증된 사용자 (비회원도 신청 가능)
+      allow create: if isAuthenticated();
+      
+      // 수정, 삭제: 관리자만
+      allow update, delete: if isAdmin();
     }
     
     // ========================================

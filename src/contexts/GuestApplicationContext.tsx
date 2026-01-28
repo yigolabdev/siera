@@ -1,25 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-export interface GuestApplication {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company?: string;
-  position?: string;
-  eventId: string;
-  eventTitle: string;
-  eventDate: string;
-  appliedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
-  reason?: string; // 참여 이유
-  referredBy?: string; // 추천인
-  approvedAt?: string;
-  rejectedAt?: string;
-  rejectionReason?: string;
-}
+import { GuestApplication } from '../types';
 
 interface GuestApplicationContextType {
   guestApplications: GuestApplication[];
@@ -40,12 +22,7 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Firebase에서 게스트 신청 데이터 로드
-  useEffect(() => {
-    loadGuestApplications();
-  }, []);
-
-  const loadGuestApplications = async () => {
+  const loadApplications = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -62,16 +39,22 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
         console.log('ℹ️ Firebase에서 로드된 게스트 신청 데이터가 없습니다.');
         setGuestApplications([]);
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 게스트 신청 데이터 로드 실패:', err.message);
-      setError(err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
-        context: 'GuestApplicationContext.loadGuestApplications',
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 게스트 신청 데이터 로드 실패:', message);
+      setError(message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'GuestApplicationContext.loadApplications',
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Firebase에서 게스트 신청 데이터 로드
+  useEffect(() => {
+    loadApplications();
+  }, [loadApplications]);
 
   // 게스트 신청 추가
   const addGuestApplication = async (
@@ -101,12 +84,13 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
       } else {
         throw new Error(result.error || '게스트 신청 추가 실패');
       }
-    } catch (err: any) {
-      console.error('❌ 게스트 신청 추가 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 게스트 신청 추가 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.addGuestApplication',
       });
-      throw err;
+      throw error;
     }
   };
 
@@ -133,13 +117,14 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
       } else {
         throw new Error(result.error || '게스트 신청 승인 실패');
       }
-    } catch (err: any) {
-      console.error('❌ 게스트 신청 승인 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 게스트 신청 승인 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.approveGuestApplication',
         applicationId,
       });
-      throw err;
+      throw error;
     }
   };
 
@@ -172,19 +157,20 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
       } else {
         throw new Error(result.error || '게스트 신청 거절 실패');
       }
-    } catch (err: any) {
-      console.error('❌ 게스트 신청 거절 실패:', err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 게스트 신청 거절 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.rejectGuestApplication',
         applicationId,
       });
-      throw err;
+      throw error;
     }
   };
 
   // 새로고침
   const refreshGuestApplications = async () => {
-    await loadGuestApplications();
+    await loadApplications();
   };
 
   // 상태별 필터링

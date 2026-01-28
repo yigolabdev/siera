@@ -1,25 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-export interface Participation {
-  id: string;
-  eventId: string; // 어떤 산행인지
-  userId: string; // 참가한 사용자 ID
-  userName: string;
-  userEmail: string;
-  isGuest: boolean;
-  status: 'attending' | 'not-attending' | 'pending' | 'cancelled';
-  registeredAt: string;
-  cancelledAt?: string;
-  cancellationReason?: string;
-  teamId?: string; // 배정된 조 ID
-  teamName?: string; // 배정된 조 이름
-  paymentStatus?: 'completed' | 'pending' | 'confirmed';
-  specialRequirements?: string; // 특별 요청사항
-  createdAt: string;
-  updatedAt: string;
-}
+import { Participation } from '../types';
 
 interface ParticipationContextType {
   participations: Participation[];
@@ -46,12 +28,7 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Firebase 초기 데이터 로드
-  useEffect(() => {
-    loadParticipations();
-  }, []);
-  
-  const loadParticipations = async () => {
+  const loadParticipations = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -65,14 +42,21 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
         setParticipations([]);
         console.log('ℹ️ Firebase에서 로드된 참가 데이터가 없습니다.');
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 참가 데이터 로드 실패:', err.message);
-      setError(err.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 참가 데이터 로드 실패:', message);
+      setError(message);
       setParticipations([]);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Firebase 초기 데이터 로드
+  useEffect(() => {
+    loadParticipations();
+  }, [loadParticipations]);
 
   const addParticipation = useCallback(async (participationData: Omit<Participation, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -93,9 +77,10 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
       } else {
         throw new Error(result.error || '참가 신청 추가 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participation: participationData });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participation: participationData });
+      throw error;
     }
   }, []);
 
@@ -115,9 +100,10 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
       } else {
         throw new Error(result.error || '참가 신청 수정 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
+      throw error;
     }
   }, []);
 
@@ -130,9 +116,10 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
       } else {
         throw new Error(result.error || '참가 신청 삭제 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
+      throw error;
     }
   }, []);
 
@@ -164,9 +151,10 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
       });
       
       console.log('✅ 산행 신청 완료:', { eventId, userId });
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, userId });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, userId });
+      throw error;
     }
   }, [participations, addParticipation]);
 
@@ -178,9 +166,10 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
         cancellationReason: reason,
       });
       console.log('✅ 참가 취소 완료:', id);
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
+      throw error;
     }
   }, [updateParticipation]);
 
@@ -188,9 +177,10 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
     try {
       await updateParticipation(id, { status });
       console.log('✅ 참가 상태 변경 완료:', { id, status });
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
+      throw error;
     }
   }, [updateParticipation]);
 
@@ -201,15 +191,16 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
         teamName,
       });
       console.log('✅ 조 배정 완료:', { id, teamId, teamName });
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
+      throw error;
     }
   }, [updateParticipation]);
 
   const refreshParticipations = useCallback(async () => {
     await loadParticipations();
-  }, []);
+  }, [loadParticipations]);
 
   const getParticipationById = useCallback((id: string) => {
     return participations.find(participation => participation.id === id);

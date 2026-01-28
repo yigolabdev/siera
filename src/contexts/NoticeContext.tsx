@@ -1,16 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-
-export interface Notice {
-  id: string; // Firebase document ID
-  title: string;
-  content: string;
-  date: string;
-  isPinned: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { Notice } from '../types';
 
 interface NoticeContextType {
   notices: Notice[];
@@ -30,12 +21,7 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Firebase에서 공지사항 로드
-  useEffect(() => {
-    loadNotices();
-  }, []);
-
-  const loadNotices = async () => {
+  const loadNotices = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -52,14 +38,20 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
         console.log('ℹ️ Firebase에서 로드된 공지사항이 없습니다.');
         setNotices([]);
       }
-    } catch (err: any) {
-      console.error('❌ Firebase 공지사항 로드 실패:', err.message);
-      setError(err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 공지사항 로드 실패:', message);
+      setError(message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Firebase에서 공지사항 로드
+  useEffect(() => {
+    loadNotices();
+  }, [loadNotices]);
 
   const addNotice = useCallback(async (noticeData: Omit<Notice, 'id' | 'date' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -80,9 +72,10 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '공지사항 추가 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE);
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      throw error;
     }
   }, []);
 
@@ -103,9 +96,10 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '공지사항 수정 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { noticeId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { noticeId: id });
+      throw error;
     }
   }, []);
 
@@ -119,9 +113,10 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '공지사항 삭제 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { noticeId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { noticeId: id });
+      throw error;
     }
   }, []);
 
@@ -145,15 +140,16 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       } else {
         throw new Error(result.error || '공지사항 고정 토글 실패');
       }
-    } catch (err: any) {
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { noticeId: id });
-      throw err;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { noticeId: id });
+      throw error;
     }
   }, [notices]);
 
   const refreshNotices = useCallback(async () => {
     await loadNotices();
-  }, []);
+  }, [loadNotices]);
 
   const value = useMemo(
     () => ({
@@ -183,3 +179,6 @@ export const useNotices = () => {
   }
   return context;
 };
+
+// Export types for backwards compatibility
+export type { Notice } from '../types';

@@ -4,15 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePendingUsers } from '../../contexts/PendingUserContext';
 import { useGuestApplications } from '../../contexts/GuestApplicationContext';
+import { useAuth } from '../../contexts/AuthContextEnhanced';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import { UserRole, PendingUser, Member } from '../../types';
 import { formatDate } from '../../utils/format';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { auth } from '../../lib/firebase/config';
 
 const MemberManagement = () => {
   const navigate = useNavigate();
-  const { members, refreshMembers } = useMembers(); // refreshMembers 추가
+  const { user } = useAuth();
+  const { members, refreshMembers, updateMember } = useMembers(); // updateMember 추가
   const { 
     pendingUsers, 
     approvePendingUser, 
@@ -51,18 +55,39 @@ const MemberManagement = () => {
   };
 
   // 비밀번호 확인 처리
-  const handlePasswordConfirm = () => {
-    // TODO: 실제 비밀번호 검증 로직으로 대체 필요
-    // 현재는 간단한 데모용 비밀번호 사용
-    if (passwordInput === 'admin1234') {
+  const handlePasswordConfirm = async () => {
+    if (!user || !auth.currentUser) {
+      alert('사용자 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      // Firebase Authentication으로 비밀번호 재인증
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        passwordInput
+      );
+      
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      
+      // 재인증 성공
       setIsPasswordModalOpen(false);
       setPasswordInput('');
       if (passwordAction) {
         passwordAction();
       }
       setPasswordAction(null);
-    } else {
-      alert('비밀번호가 올바르지 않습니다.');
+    } catch (error: any) {
+      console.error('비밀번호 확인 실패:', error);
+      
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        alert('비밀번호가 올바르지 않습니다.');
+      } else if (error.code === 'auth/too-many-requests') {
+        alert('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
+      } else {
+        alert('비밀번호 확인에 실패했습니다. 다시 시도해주세요.');
+      }
+      
       setPasswordInput('');
     }
   };
@@ -148,9 +173,29 @@ const MemberManagement = () => {
   };
 
   // 회원 활성화/비활성화 토글
-  const handleToggleMemberStatus = (memberId: string) => {
-    // TODO: Firebase에 isApproved 필드 업데이트 구현
-    alert('회원 활성화/비활성화 기능은 추후 구현 예정입니다.');
+  const handleToggleMemberStatus = async (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+    
+    const newStatus = member.isActive === false ? true : false;
+    const statusText = newStatus ? '활성화' : '비활성화';
+    
+    if (!confirm(`${member.name} 회원을 ${statusText}하시겠습니까?`)) {
+      return;
+    }
+    
+    requestPasswordVerification(async () => {
+      try {
+        await updateMember(memberId, { 
+          isActive: newStatus,
+          updatedAt: new Date().toISOString()
+        });
+        alert(`${member.name} 회원이 ${statusText}되었습니다.`);
+      } catch (error: any) {
+        console.error('회원 상태 변경 실패:', error);
+        alert(`회원 상태 변경에 실패했습니다: ${error.message}`);
+      }
+    });
   };
 
   const filteredMembers = members.filter(member => {
@@ -163,8 +208,8 @@ const MemberManagement = () => {
     const matchesRole = roleFilter === 'all' || member.role === roleFilter;
     const matchesStatus = 
       statusFilter === 'all' ||
-      (statusFilter === 'active' && member.isApproved) ||
-      (statusFilter === 'inactive' && !member.isApproved);
+      (statusFilter === 'active' && (member.isActive !== false)) ||
+      (statusFilter === 'inactive' && (member.isActive === false));
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -175,8 +220,8 @@ const MemberManagement = () => {
 
   const memberStats = {
     total: members.length,
-    active: members.filter(m => m.isApproved).length,
-    inactive: members.filter(m => !m.isApproved).length,
+    active: members.filter(m => m.isActive !== false).length,
+    inactive: members.filter(m => m.isActive === false).length,
     chairman: members.filter(m => m.role === 'chairman').length,
     committee: members.filter(m => m.role === 'committee').length,
     member: members.filter(m => m.role === 'member').length,
@@ -431,43 +476,43 @@ const MemberManagement = () => {
                 <Card 
                   key={member.id} 
                   className={`hover:shadow-xl transition-all relative ${
-                    member.isApproved 
+                    member.isActive !== false
                       ? 'hover:border-primary-600' 
                       : 'bg-slate-50 border-slate-300 opacity-75'
                   }`}
                 >
                   {/* 비활성화 상태 표시 */}
-                  {!member.isApproved && (
+                  {member.isActive === false && (
                     <div className="absolute top-2 right-2">
-                      <Badge variant="default">미승인</Badge>
+                      <Badge variant="default">비활성</Badge>
                     </div>
                   )}
                   
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className={`text-xl font-bold ${member.isApproved ? 'text-slate-900' : 'text-slate-500'}`}>
+                    <h3 className={`text-xl font-bold ${member.isActive !== false ? 'text-slate-900' : 'text-slate-500'}`}>
                       {member.name}
                     </h3>
                     {getRoleBadge(member.role)}
                   </div>
                   
                   <div className="space-y-2 text-sm mb-4">
-                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Mail className="w-4 h-4" />
                       <span>{member.email}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Phone className="w-4 h-4" />
                       <span>{member.phoneNumber || '-'}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Briefcase className="w-4 h-4" />
                       <span>{member.occupation || member.position || '-'}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Building2 className="w-4 h-4" />
                       <span>{member.company || '-'}</span>
                     </div>
-                    <div className={`flex items-center gap-2 ${member.isApproved ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
                       <Calendar className="w-4 h-4" />
                       <span>입회: {member.joinDate || '-'}</span>
                     </div>
@@ -477,13 +522,13 @@ const MemberManagement = () => {
                   <button
                     onClick={() => handleToggleMemberStatus(member.id)}
                     className={`w-full py-2 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                      member.isApproved
+                      member.isActive !== false
                         ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
                         : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300'
                     }`}
                   >
                     <Power className="w-4 h-4" />
-                    {member.isApproved ? '비활성화' : '활성화'}
+                    {member.isActive !== false ? '비활성화' : '활성화'}
                   </button>
                 </Card>
               ))
@@ -916,7 +961,7 @@ const MemberManagement = () => {
             </div>
 
             <div className="space-y-6">
-              {/* Basic Info */}
+              {/* 기본 정보 */}
               <div>
                 <h4 className="text-lg font-bold text-slate-900 mb-3">기본 정보</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -949,7 +994,7 @@ const MemberManagement = () => {
                 </div>
               </div>
 
-              {/* Professional Info */}
+              {/* 직업 정보 */}
               <div>
                 <h4 className="text-lg font-bold text-slate-900 mb-3">직업 정보</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -964,7 +1009,7 @@ const MemberManagement = () => {
                 </div>
               </div>
 
-              {/* Hiking Info */}
+              {/* 산행 정보 */}
               <div>
                 <h4 className="text-lg font-bold text-slate-900 mb-3">산행 정보</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -974,12 +1019,12 @@ const MemberManagement = () => {
                   </div>
                   <div>
                     <p className="text-sm text-slate-600 mb-1">추천인</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.referredBy || '없음'}</p>
+                    <p className="text-slate-900 font-medium">{selectedPendingUser.referredBy || '최효준'}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Application Message */}
+              {/* 신청 메시지 */}
               {selectedPendingUser.applicationMessage && (
                 <div>
                   <h4 className="text-lg font-bold text-slate-900 mb-3">신청 메시지</h4>
@@ -1002,7 +1047,7 @@ const MemberManagement = () => {
                     onClick={() => handleApprove(selectedPendingUser.id)}
                     className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all"
                   >
-                    승인
+                    승인완료
                   </button>
                 </div>
               )}
@@ -1044,7 +1089,7 @@ const MemberManagement = () => {
               autoFocus
             />
             <p className="text-xs text-slate-500 mt-2">
-              데모 비밀번호: <code className="px-2 py-1 bg-slate-100 rounded">admin1234</code>
+              현재 로그인한 계정({user?.email})의 비밀번호를 입력하세요
             </p>
           </div>
 

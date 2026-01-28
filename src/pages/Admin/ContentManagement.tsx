@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar, FileText, ScrollText, History, Bell, Pin, Edit2 } from 'lucide-react';
-import { usePoems, MonthlyPoem } from '../../contexts/PoemContext';
+import { usePoems, Poem } from '../../contexts/PoemContext';
 import { useRules } from '../../contexts/RulesContext';
 import { useNotices, Notice } from '../../contexts/NoticeContext';
 import Card from '../../components/ui/Card';
@@ -18,8 +18,8 @@ const ContentManagement = () => {
   // 시 관리 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [editingPoem, setEditingPoem] = useState<MonthlyPoem | null>(null);
-  const [previewPoem, setPreviewPoem] = useState<MonthlyPoem | null>(null);
+  const [editingPoem, setEditingPoem] = useState<Poem | null>(null);
+  const [previewPoem, setPreviewPoem] = useState<Poem | null>(null);
   
   const [poemFormData, setPoemFormData] = useState({
     title: '',
@@ -52,7 +52,7 @@ const ContentManagement = () => {
   }, [rulesData.content]);
 
   // 시 관리 함수들
-  const handleOpenPoemModal = (poem?: MonthlyPoem) => {
+  const handleOpenPoemModal = (poem?: Poem) => {
     if (poem) {
       setEditingPoem(poem);
       setPoemFormData({
@@ -109,7 +109,7 @@ const ContentManagement = () => {
     }
   };
 
-  const handlePreview = (poem: MonthlyPoem) => {
+  const handlePreview = (poem: Poem) => {
     setPreviewPoem(poem);
     setIsPreviewModalOpen(true);
   };
@@ -181,25 +181,34 @@ const ContentManagement = () => {
   };
 
   // 개정판 저장
-  const handleSaveAmendment = () => {
+  const handleSaveAmendment = async () => {
     if (!amendmentForm.version || !amendmentForm.date || !amendmentForm.description) {
       alert('모든 필드를 입력해주세요.');
       return;
     }
 
-    // 회칙 업데이트
-    updateRules(localRulesContent, amendmentForm.version, amendmentForm.date);
-    
-    // 개정 이력 추가
-    addAmendment({
-      version: amendmentForm.version,
-      date: amendmentForm.date,
-      description: amendmentForm.description
-    });
+    try {
+      console.log('📝 회칙 개정 시작:', amendmentForm);
+      
+      // 회칙 업데이트
+      await updateRules(localRulesContent, amendmentForm.version, amendmentForm.date);
+      
+      // 개정 이력 추가
+      await addAmendment({
+        version: amendmentForm.version,
+        date: amendmentForm.date,
+        description: amendmentForm.description
+      });
 
-    alert('회칙이 저장되었습니다.');
-    setIsAmendmentModalOpen(false);
-    setAmendmentForm({ version: '', date: '', description: '' });
+      alert('회칙이 저장되었습니다.');
+      setIsAmendmentModalOpen(false);
+      setAmendmentForm({ version: '', date: '', description: '' });
+      
+      console.log('✅ 회칙 개정 완료');
+    } catch (error: any) {
+      console.error('❌ 회칙 저장 실패:', error);
+      alert(`회칙 저장에 실패했습니다.\n\n${error.message || '다시 시도해주세요.'}`);
+    }
   };
 
   return (

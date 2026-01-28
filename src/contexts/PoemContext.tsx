@@ -1,29 +1,20 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-
-export interface MonthlyPoem {
-  id: string;
-  title: string;
-  author: string;
-  content: string;
-  month: string; // YYYY-MM 형식
-  createdAt: string;
-  updatedAt: string;
-}
+import { Poem } from '../types';
 
 interface PoemContextType {
-  poems: MonthlyPoem[];
-  currentPoem: MonthlyPoem | null;
-  addPoem: (poem: Omit<MonthlyPoem, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updatePoem: (id: string, poem: Partial<MonthlyPoem>) => void;
+  poems: Poem[];
+  currentPoem: Poem | null;
+  addPoem: (poem: Omit<Poem, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updatePoem: (id: string, poem: Partial<Poem>) => void;
   deletePoem: (id: string) => void;
-  getPoemByMonth: (month: string) => MonthlyPoem | undefined;
-  getCurrentMonthPoem: () => MonthlyPoem | undefined;
+  getPoemByMonth: (month: string) => Poem | undefined;
+  getCurrentMonthPoem: () => Poem | undefined;
 }
 
 const PoemContext = createContext<PoemContextType | undefined>(undefined);
 
 // 기본 시 데이터
-const defaultPoem: MonthlyPoem = {
+const defaultPoem: Poem = {
   id: '1',
   title: '괜찮아',
   author: '한강',
@@ -72,7 +63,7 @@ const defaultPoem: MonthlyPoem = {
 };
 
 export const PoemProvider = ({ children }: { children: ReactNode }) => {
-  const [poems, setPoems] = useState<MonthlyPoem[]>([defaultPoem]);
+  const [poems, setPoems] = useState<Poem[]>([defaultPoem]);
   
   // 현재 월의 시 가져오기
   const currentPoem = poems.find(p => {
@@ -81,8 +72,8 @@ export const PoemProvider = ({ children }: { children: ReactNode }) => {
     return p.month === currentMonth;
   }) || poems[poems.length - 1]; // 현재 월이 없으면 가장 최근 시
 
-  const addPoem = (poemData: Omit<MonthlyPoem, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newPoem: MonthlyPoem = {
+  const addPoem = (poemData: Omit<Poem, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newPoem: Poem = {
       ...poemData,
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
@@ -91,7 +82,7 @@ export const PoemProvider = ({ children }: { children: ReactNode }) => {
     setPoems(prev => [...prev, newPoem]);
   };
 
-  const updatePoem = (id: string, updatedData: Partial<MonthlyPoem>) => {
+  const updatePoem = (id: string, updatedData: Partial<Poem>) => {
     setPoems(prev => prev.map(poem => 
       poem.id === id 
         ? { ...poem, ...updatedData, updatedAt: new Date().toISOString() }
@@ -135,3 +126,6 @@ export const usePoems = () => {
   }
   return context;
 };
+
+// Export types for backwards compatibility
+export type { Poem } from '../types';

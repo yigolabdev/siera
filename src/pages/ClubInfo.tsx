@@ -8,9 +8,14 @@ import {
   Shield,
   Mountain,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Mail,
+  Phone,
+  Briefcase,
+  Building2
 } from 'lucide-react';
 import { useRules } from '../contexts/RulesContext';
+import { useExecutives } from '../contexts/ExecutiveContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
@@ -19,6 +24,11 @@ type TabType = 'rules' | 'history' | 'organization' | 'membership';
 const ClubInfo = () => {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const { rulesData } = useRules();
+  const { executives, isLoading: executivesLoading } = useExecutives();
+
+  // 회장단과 운영위원회 분리
+  const chairmanGroup = executives.filter(exec => exec.category === 'chairman');
+  const committeeGroup = executives.filter(exec => exec.category === 'committee');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -309,158 +319,112 @@ const ClubInfo = () => {
             <h2 className="text-2xl font-bold text-slate-900 mb-6">시애라 운영진</h2>
             <p className="text-slate-600 mb-8">2026 시애라 운영진을 소개합니다.</p>
 
-            {/* 회장단 */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl font-bold text-slate-900">회장단</h3>
-                <Badge variant="primary">최고 의사 결정 기구</Badge>
+            {executivesLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                <p className="text-slate-600">로딩 중...</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">회장</p>
-                      <p className="font-bold text-slate-900">정호철</p>
-                    </div>
+            ) : (
+              <>
+                {/* 회장단 */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-3 mb-4">
+                    <h3 className="text-xl font-bold text-slate-900">회장단</h3>
+                    <Badge variant="primary">최고 의사 결정 기구</Badge>
                   </div>
-                  <p className="text-sm text-slate-600">전체 회무 총괄</p>
-                  <p className="text-sm text-slate-600">대외 업무 대표</p>
+                  {chairmanGroup.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {chairmanGroup.map((exec) => (
+                        <div key={exec.id} className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              exec.position === '회장' ? 'bg-slate-900' : 'bg-slate-700'
+                            }`}>
+                              <Shield className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-sm text-slate-600">{exec.position}</p>
+                              </div>
+                              <p className="font-bold text-slate-900">{exec.name}</p>
+                              {exec.company && (
+                                <p className="text-sm text-slate-600">{exec.company}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-1 text-sm text-slate-600">
+                            {exec.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-4 h-4 text-slate-400" />
+                                <span>{exec.email}</span>
+                              </div>
+                            )}
+                            {exec.phoneNumber && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-slate-400" />
+                                <span>{exec.phoneNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      등록된 회장단이 없습니다.
+                    </div>
+                  )}
                 </div>
 
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">운영위원장</p>
-                      <p className="font-bold text-slate-900">이응정</p>
-                    </div>
+                {/* 운영위원 */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h3 className="text-xl font-bold text-slate-900">운영위원회</h3>
+                    <Badge variant="primary">실무 운영 조직</Badge>
                   </div>
-                  <p className="text-sm text-slate-600">운영위원회 주재</p>
-                  <p className="text-sm text-slate-600">전체 운영 관리</p>
+                  {committeeGroup.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {committeeGroup.map((exec) => (
+                        <div key={exec.id} className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Users className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-sm text-slate-600">{exec.position}</p>
+                              </div>
+                              <p className="font-bold text-slate-900">{exec.name}</p>
+                              {exec.company && (
+                                <p className="text-sm text-slate-600">{exec.company}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-1 text-sm text-slate-600">
+                            {exec.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-4 h-4 text-slate-400" />
+                                <span>{exec.email}</span>
+                              </div>
+                            )}
+                            {exec.phoneNumber && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-slate-400" />
+                                <span>{exec.phoneNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      등록된 운영위원이 없습니다.
+                    </div>
+                  )}
                 </div>
-
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Mountain className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">등산대장</p>
-                      <p className="font-bold text-slate-900">최원호</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">산행 계획 및 진행</p>
-                  <p className="text-sm text-slate-600">안전 관리</p>
-                </div>
-
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">운영감사</p>
-                      <p className="font-bold text-slate-900">신영인</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">운영 감사</p>
-                  <p className="text-sm text-slate-600">제반 업무 검토</p>
-                </div>
-
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
-                      <TrendingUp className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">재무감사</p>
-                      <p className="font-bold text-slate-900">유희찬</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">재무 감사</p>
-                  <p className="text-sm text-slate-600">회계 검토</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 운영위원 */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl font-bold text-slate-900">운영위원</h3>
-                <Badge variant="primary">실무 운영 조직</Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">부위원장</p>
-                      <p className="font-bold text-slate-900">김용훈</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">위원장 업무 보좌</p>
-                </div>
-
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <TrendingUp className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">재무</p>
-                      <p className="font-bold text-slate-900">이현희</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">회비 관리</p>
-                </div>
-
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">기획</p>
-                      <p className="font-bold text-slate-900">심경택</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">행사 기획</p>
-                </div>
-
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Award className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">홍보/청년</p>
-                      <p className="font-bold text-slate-900">권택준</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">대외 홍보</p>
-                </div>
-
-                <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Award className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">홍보/청년</p>
-                      <p className="font-bold text-slate-900">한재우</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600">청년 회원 관리</p>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </Card>
 
           {/* 조직 운영 방식 */}

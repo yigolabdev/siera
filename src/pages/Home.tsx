@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calendar, Image, Users, TrendingUp, Bell, MapPin, Mountain, CheckCircle, XCircle, Clock, Settings, CalendarX, Cloud, Thermometer, Wind, Droplets, CloudRain, CloudSnow, Sun } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContextEnhanced';
@@ -7,17 +7,20 @@ import { useEvents } from '../contexts/EventContext';
 import { useMembers } from '../contexts/MemberContext';
 import { usePoems } from '../contexts/PoemContext';
 import { useParticipations } from '../contexts/ParticipationContext';
+import { useNotices } from '../contexts/NoticeContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
+import { getCachedWeather, WeatherData } from '../utils/weather';
 
 const Home = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
-  const { events, currentEvent, specialEvent, getParticipantsByEventId } = useEvents();
+  const { events, currentEvent, specialEvent, getParticipantsByEventId, refreshParticipants } = useEvents();
   const { members } = useMembers();
   const { currentPoem } = usePoems();
   const { getUserParticipationForEvent, cancelParticipation, registerForEvent } = useParticipations();
+  const { notices } = useNotices();
   
   // 참석 여부 상태 (Firebase에서 가져오기)
   const myParticipationStatus = useMemo(() => {
@@ -26,16 +29,35 @@ const Home = () => {
     return participation?.status || null;
   }, [user, currentEvent, getUserParticipationForEvent]);
   
-  // 날씨 데이터 (추후 실제 API 연동)
-  const weatherData = {
+  // 날씨 데이터 (기상청 API 연동)
+  const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 8,
     feelsLike: 5,
-    condition: 'cloudy' as const,
+    condition: 'cloudy',
     precipitation: 20,
     windSpeed: 3.5,
     humidity: 65,
-    uvIndex: 'moderate' as 'low' | 'moderate' | 'high' | 'very-high',
-  };
+    uvIndex: 'moderate',
+  });
+  
+  // 날씨 데이터 로드
+  useEffect(() => {
+    const loadWeather = async () => {
+      try {
+        const weather = await getCachedWeather();
+        setWeatherData(weather);
+      } catch (error) {
+        console.error('날씨 데이터 로드 실패:', error);
+      }
+    };
+    
+    loadWeather();
+    
+    // 10분마다 날씨 갱신
+    const interval = setInterval(loadWeather, 10 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   // 회원 통계 계산
   const calculateStats = {
@@ -105,8 +127,18 @@ const Home = () => {
   
   const applicationClosed = useMemo(() => {
     if (!mainEvent) return false;
-    if (!isDevMode) return isApplicationClosed(mainEvent.date);
-    return applicationStatus === 'closed';
+    
+    // 1순위: 이벤트 status 확인 (관리자가 설정한 상태)
+    if (mainEvent.status === 'open') return false; // 접수중이면 신청 가능
+    if (mainEvent.status === 'closed' || mainEvent.status === 'ongoing' || mainEvent.status === 'completed') return true; // 마감/진행중/완료면 신청 불가
+    
+    // 2순위: 개발 모드 확인
+    if (isDevMode) return applicationStatus === 'closed';
+    
+    // 3순위: 날짜 기반 자동 마감 (draft 상태일 때만)
+    if (mainEvent.status === 'draft') return isApplicationClosed(mainEvent.date);
+    
+    return false;
   }, [isDevMode, applicationStatus, mainEvent]);
   
   // 난이도별 배지
@@ -127,8 +159,12 @@ const Home = () => {
     }
   };
   
-  // 공지사항 데이터 (추후 Firebase 연동)
-  const recentNotices = [];
+  // 최근 공지사항 (상위 3개, 고정 공지 우선)
+  const recentNotices = useMemo(() => {
+    const pinned = notices.filter(n => n.isPinned);
+    const regular = notices.filter(n => !n.isPinned);
+    return [...pinned, ...regular].slice(0, 3);
+  }, [notices]);
   
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
@@ -667,34 +703,44 @@ const Home = () => {
             최근 공지사항
           </h2>
           
-          <div className="space-y-2">
-            {recentNotices.map((notice) => (
-              <Link
-                key={notice.id}
-                to="/home/board"
-                className="block p-3 sm:p-4 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-200"
+          {recentNotices.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                {recentNotices.map((notice) => (
+                  <Link
+                    key={notice.id}
+                    to="/home/board"
+                    className="block p-3 sm:p-4 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-200"
+                  >
+                    <div className="flex items-start justify-between gap-2 sm:gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm sm:text-base font-semibold text-slate-900 mb-1 line-clamp-1">
+                          {notice.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-500">{notice.date}</p>
+                      </div>
+                      {notice.isPinned && (
+                        <Badge variant="danger">필독</Badge>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              
+              <Link 
+                to="/home/board" 
+                className="block text-center text-primary-600 hover:text-primary-700 text-sm sm:text-base font-semibold pt-4 sm:pt-6 transition-colors"
               >
-                <div className="flex items-start justify-between gap-2 sm:gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm sm:text-base font-semibold text-slate-900 mb-1 line-clamp-1">
-                      {notice.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-500">{notice.date}</p>
-                  </div>
-                  {notice.isPinned && (
-                    <Badge variant="danger">필독</Badge>
-                  )}
-                </div>
+                전체 보기 →
               </Link>
-            ))}
-          </div>
-          
-          <Link 
-            to="/home/board" 
-            className="block text-center text-primary-600 hover:text-primary-700 text-sm sm:text-base font-semibold pt-4 sm:pt-6 transition-colors"
-          >
-            전체 보기 →
-          </Link>
+            </>
+          ) : (
+            <div className="text-center py-8 sm:py-12">
+              <Bell className="w-12 h-12 sm:w-16 sm:h-16 text-slate-300 mx-auto mb-3 sm:mb-4" />
+              <p className="text-sm sm:text-base text-slate-500 mb-2">아직 등록된 공지사항이 없습니다.</p>
+              <p className="text-xs sm:text-sm text-slate-400">새로운 소식이 곧 업데이트될 예정입니다.</p>
+            </div>
+          )}
         </Card>
       </div>
         </div>

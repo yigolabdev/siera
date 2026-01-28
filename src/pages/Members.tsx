@@ -1,28 +1,50 @@
 import { Users, Search, Mail, Briefcase, Award, X, Shield, TrendingUp, UserCheck, Calendar, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useMembers } from '../contexts/MemberContext';
+import { useExecutives } from '../contexts/ExecutiveContext';
 import Modal from '../components/ui/Modal';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
 const Members = () => {
   const { members, isLoading } = useMembers();
+  const { executives, isLoading: isExecutivesLoading } = useExecutives();
   const [searchTerm, setSearchTerm] = useState('');
   const [showExecutiveModal, setShowExecutiveModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
   
-  // 회원을 운영진과 일반 회원으로 분리
-  const executives = useMemo(() => 
-    members.filter(m => m.position === 'chairman' || m.position === 'committee'),
-    [members]
-  );
+  // 디버깅: 회원 데이터 로드 확인
+  console.log('👥 Members 페이지 - 전체 회원 수:', members.length);
+  console.log('👥 Members 페이지 - 회원 목록:', members);
+  console.log('👥 Members 페이지 - 운영진 수:', executives.length);
+  console.log('👥 Members 페이지 - 운영진 목록:', executives);
   
-  const regularMembers = useMemo(() => 
-    members.filter(m => m.position === 'member'),
-    [members]
-  );
+  // 회원을 운영진과 일반 회원으로 분리
+  // executives 컬렉션의 데이터를 사용하고, members 데이터와 병합
+  const executivesWithMemberData = useMemo(() => {
+    return executives.map(exec => {
+      const memberData = members.find(m => m.id === exec.memberId);
+      return {
+        ...exec,
+        ...memberData,
+        // executive의 position을 우선 사용 (시애라 직책)
+        executivePosition: exec.position,
+        // member의 position은 직장 직책
+        jobPosition: memberData?.position,
+      };
+    });
+  }, [executives, members]);
+  
+  const regularMembers = useMemo(() => {
+    // executives에 포함되지 않은 회원만 일반 회원으로 표시
+    const executiveMemberIds = new Set(executives.map(e => e.memberId));
+    return members.filter(m => !executiveMemberIds.has(m.id));
+  }, [members, executives]);
+  
+  console.log('👥 운영진 (병합 데이터):', executivesWithMemberData.length, executivesWithMemberData);
+  console.log('👥 일반 회원:', regularMembers.length, regularMembers);
 
   // 검색 필터링
   const filteredMembers = useMemo(() => {
@@ -31,7 +53,7 @@ const Members = () => {
     return regularMembers.filter(
       m => m.name.toLowerCase().includes(term) ||
            m.company?.toLowerCase().includes(term) ||
-           m.occupation?.toLowerCase().includes(term)
+           m.position?.toLowerCase().includes(term)
     );
   }, [regularMembers, searchTerm]);
 
@@ -42,23 +64,26 @@ const Members = () => {
     return filteredMembers.slice(start, start + itemsPerPage);
   }, [filteredMembers, currentPage]);
 
-  const getRoleLabel = (position: string) => {
-    switch (position) {
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin': return '관리자';
       case 'chairman': return '회장단';
       case 'committee': return '운영위원';
+      case 'guest': return '게스트';
       default: return '회원';
     }
   };
 
-  const getRoleBadgeVariant = (position: string) => {
-    switch (position) {
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'admin': return 'danger';
       case 'chairman': return 'primary';
       case 'committee': return 'info';
       default: return 'default';
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isExecutivesLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
@@ -94,7 +119,7 @@ const Members = () => {
             <div>
               <p className="text-slate-600 text-sm">회장단</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">
-                {executives.filter(e => e.position === 'chairman').length}명
+                {executivesWithMemberData.filter(e => e.category === 'chairman').length}명
               </p>
             </div>
             <Shield className="w-8 h-8 text-amber-600" />
@@ -106,7 +131,7 @@ const Members = () => {
             <div>
               <p className="text-slate-600 text-sm">운영위원</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">
-                {executives.filter(e => e.position === 'committee').length}명
+                {executivesWithMemberData.filter(e => e.category === 'committee').length}명
               </p>
             </div>
             <Award className="w-8 h-8 text-emerald-600" />
@@ -125,7 +150,7 @@ const Members = () => {
       </div>
 
       {/* 운영진 섹션 */}
-      {executives.length > 0 && (
+      {executivesWithMemberData.length > 0 && (
         <Card className="p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-slate-900">운영진</h2>
@@ -138,7 +163,7 @@ const Members = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {executives.slice(0, 5).map((exec) => (
+            {executivesWithMemberData.slice(0, 5).map((exec) => (
               <div
                 key={exec.id}
                 className="text-center p-4 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
@@ -158,8 +183,8 @@ const Members = () => {
                   )}
                 </div>
                 <h3 className="font-semibold text-slate-900 mb-1">{exec.name}</h3>
-                <Badge variant={getRoleBadgeVariant(exec.position)} size="sm">
-                  {getRoleLabel(exec.position)}
+                <Badge variant={exec.category === 'chairman' ? 'primary' : 'info'} size="sm">
+                  {exec.executivePosition}
                 </Badge>
               </div>
             ))}
@@ -222,8 +247,8 @@ const Members = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-bold text-slate-900 truncate">{member.name}</h3>
-                      <Badge variant={getRoleBadgeVariant(member.position)} size="sm">
-                        {getRoleLabel(member.position)}
+                      <Badge variant={getRoleBadgeVariant(member.role)} size="sm">
+                        {getRoleLabel(member.role)}
                       </Badge>
                     </div>
                     
@@ -234,8 +259,8 @@ const Members = () => {
                       </div>
                     )}
                     
-                    {member.occupation && (
-                      <p className="text-sm text-slate-600 truncate">{member.occupation}</p>
+                    {member.position && (
+                      <p className="text-sm text-slate-600 truncate">{member.position}</p>
                     )}
                     
                     {member.attendanceRate !== undefined && (
@@ -299,7 +324,7 @@ const Members = () => {
         >
           <div className="p-6">
             <div className="flex flex-col items-center mb-6">
-              <div className="w-24 h-24 rounded-full overflow-hidden mb-4 bg-slate-200">
+              <div className="w-40 h-40 rounded-full overflow-hidden mb-4 bg-slate-200 ring-4 ring-slate-100 shadow-lg">
                 {selectedMember.profileImage ? (
                   <img
                     src={selectedMember.profileImage}
@@ -308,17 +333,36 @@ const Members = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400">
-                    <Users className="w-12 h-12" />
+                    <Users className="w-20 h-20" />
                   </div>
                 )}
               </div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">{selectedMember.name}</h2>
-              <Badge variant={getRoleBadgeVariant(selectedMember.position)}>
-                {getRoleLabel(selectedMember.position)}
-              </Badge>
+              {selectedMember.executivePosition ? (
+                <Badge variant={selectedMember.category === 'chairman' ? 'primary' : 'info'}>
+                  {selectedMember.executivePosition}
+                </Badge>
+              ) : (
+                <Badge variant={getRoleBadgeVariant(selectedMember.role)}>
+                  {getRoleLabel(selectedMember.role)}
+                </Badge>
+              )}
             </div>
 
             <div className="space-y-4">
+              {selectedMember.executivePosition && (
+                <div className="flex items-start gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <Shield className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-emerald-700 font-semibold">시애라 클럽 직책</p>
+                    <p className="font-medium text-emerald-900">{selectedMember.executivePosition}</p>
+                    <p className="text-xs text-emerald-600 mt-1">
+                      {selectedMember.category === 'chairman' ? '회장단' : '운영위원회'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {selectedMember.company && (
                 <div className="flex items-start gap-3">
                   <Briefcase className="w-5 h-5 text-slate-400 mt-0.5" />
@@ -329,12 +373,14 @@ const Members = () => {
                 </div>
               )}
 
-              {selectedMember.occupation && (
+              {(selectedMember.jobPosition || selectedMember.position) && (
                 <div className="flex items-start gap-3">
                   <Award className="w-5 h-5 text-slate-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-slate-600">직책</p>
-                    <p className="font-medium text-slate-900">{selectedMember.occupation}</p>
+                    <p className="text-sm text-slate-600">직책 (직장)</p>
+                    <p className="font-medium text-slate-900">
+                      {selectedMember.jobPosition || selectedMember.position}
+                    </p>
                   </div>
                 </div>
               )}
@@ -398,7 +444,7 @@ const Members = () => {
         >
           <div className="p-6">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {executives.map((exec) => (
+              {executivesWithMemberData.map((exec) => (
                 <div
                   key={exec.id}
                   className="text-center p-4 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
@@ -421,11 +467,11 @@ const Members = () => {
                     )}
                   </div>
                   <h3 className="font-semibold text-slate-900 mb-1">{exec.name}</h3>
-                  <Badge variant={getRoleBadgeVariant(exec.position)} size="sm">
-                    {getRoleLabel(exec.position)}
+                  <Badge variant={exec.category === 'chairman' ? 'primary' : 'info'} size="sm">
+                    {exec.executivePosition}
                   </Badge>
-                  {exec.occupation && (
-                    <p className="text-xs text-slate-600 mt-1 truncate">{exec.occupation}</p>
+                  {exec.company && (
+                    <p className="text-xs text-slate-600 mt-1 truncate">{exec.company}</p>
                   )}
                 </div>
               ))}

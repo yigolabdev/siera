@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Heart, Download, X, Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Play, Pause, Folder, Trash2, Mountain } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useGallery } from '../contexts/GalleryContext';
@@ -30,13 +30,21 @@ const Gallery = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedEventForUpload, setSelectedEventForUpload] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // 완료된 산행 목록 (과거 산행)
-  const pastEvents = events
-    .filter(event => new Date(event.date) < new Date())
+  // 컴포넌트 마운트 확인
+  useEffect(() => {
+    console.log('✅ Gallery 컴포넌트 마운트됨');
+  }, []);
+  
+  // showUploadModal 변경 추적
+  useEffect(() => {
+    console.log('🔄 showUploadModal 상태 변경됨:', showUploadModal);
+  }, [showUploadModal]);
+  
+  // 산행 목록 (모든 산행 - 최신순)
+  const availableEvents = events
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 10);
+    .slice(0, 20); // 최근 20개 산행
   
   // 월별 필터 생성
   const months = [
@@ -64,6 +72,17 @@ const Gallery = () => {
     const key = `${photo.eventYear}-${photo.eventMonth}`;
     photoCountByMonth[key] = (photoCountByMonth[key] || 0) + 1;
   });
+
+  // 업로드 버튼 핸들러 (명확한 함수로 분리)
+  const handleOpenUploadModal = () => {
+    console.log('🚀 사진 업로드 버튼 클릭됨! [v2.0]');
+    console.log('👤 현재 사용자:', user?.email || 'null');
+    console.log('📂 현재 showUploadModal 상태:', showUploadModal);
+    
+    setShowUploadModal(true);
+    
+    console.log('✅ setShowUploadModal(true) 호출 완료');
+  };
 
   // 슬라이드쇼
   useEffect(() => {
@@ -94,19 +113,38 @@ const Gallery = () => {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📁 파일 선택 이벤트 발생');
+    console.log('📁 선택된 파일:', e.target.files);
     const files = Array.from(e.target.files || []);
-    processFiles(files);
+    console.log('📁 파일 배열:', files);
+    if (files.length > 0) {
+      console.log(`✅ ${files.length}개의 파일 선택됨`);
+      processFiles(files);
+    } else {
+      console.warn('⚠️ 선택된 파일이 없습니다');
+    }
+    // input value 초기화 (같은 파일을 다시 선택할 수 있도록)
+    e.target.value = '';
   };
 
   const processFiles = (files: File[]) => {
-    const newFiles = files.map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      preview: URL.createObjectURL(file),
-      caption: '',
-    }));
+    console.log('🔄 processFiles 시작, 파일 개수:', files.length);
+    const newFiles = files.map((file, index) => {
+      console.log(`📄 파일 ${index + 1}:`, file.name, file.size, file.type);
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        preview: URL.createObjectURL(file),
+        caption: '',
+      };
+    });
     
-    setUploadFiles(prev => [...prev, ...newFiles]);
+    console.log('✅ processFiles 완료, 추가할 파일:', newFiles.length);
+    setUploadFiles(prev => {
+      const updated = [...prev, ...newFiles];
+      console.log('📋 전체 업로드 파일 목록:', updated.length);
+      return updated;
+    });
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -208,8 +246,9 @@ const Gallery = () => {
           </p>
           {user && (
             <button
-              onClick={() => setShowUploadModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={handleOpenUploadModal}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+              type="button"
             >
               <Upload className="w-5 h-5" />
               사진 업로드
@@ -231,8 +270,9 @@ const Gallery = () => {
         
         {user && (
           <button
-            onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={handleOpenUploadModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+            type="button"
           >
             <Upload className="w-5 h-5" />
             사진 업로드
@@ -319,7 +359,14 @@ const Gallery = () => {
             <div className="p-6 border-b sticky top-0 bg-white">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">사진 업로드</h2>
-                <button onClick={() => setShowUploadModal(false)}>
+                <button 
+                  onClick={() => {
+                    console.log('🔴 모달 닫기 버튼 클릭');
+                    setShowUploadModal(false);
+                  }}
+                  type="button"
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -337,11 +384,15 @@ const Gallery = () => {
                   className="w-full border border-slate-300 rounded-lg px-4 py-2"
                 >
                   <option value="">산행을 선택하세요</option>
-                  {pastEvents.map(event => (
-                    <option key={event.id} value={event.id}>
-                      {event.title} ({event.date})
-                    </option>
-                  ))}
+                  {availableEvents.length === 0 ? (
+                    <option disabled>등록된 산행이 없습니다</option>
+                  ) : (
+                    availableEvents.map(event => (
+                      <option key={event.id} value={event.id}>
+                        {event.title} ({event.date})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -356,22 +407,25 @@ const Gallery = () => {
               >
                 <Upload className="w-12 h-12 mx-auto mb-4 text-slate-400" />
                 <p className="text-slate-600 mb-2">
-                  이곳에 파일을 드래그하거나 클릭하여 선택하세요
+                  이곳에 파일을 드래그하거나 아래 버튼을 클릭하세요
                 </p>
                 <input
-                  ref={fileInputRef}
+                  id="file-upload-input"
                   type="file"
                   multiple
                   accept="image/*"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                <label
+                  htmlFor="file-upload-input"
+                  className="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-medium"
                 >
-                  파일 선택
-                </button>
+                  📁 파일 선택하기
+                </label>
+                <p className="text-xs text-slate-500 mt-3">
+                  JPG, PNG, GIF 형식 지원 (최대 10MB)
+                </p>
               </div>
 
               {/* 업로드할 파일 목록 */}
@@ -409,14 +463,16 @@ const Gallery = () => {
             <div className="p-6 border-t bg-slate-50 flex justify-end gap-3">
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-white"
+                className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-white transition-colors"
+                type="button"
               >
                 취소
               </button>
               <button
                 onClick={handleUpload}
                 disabled={uploadFiles.length === 0 || !selectedEventForUpload || isUploading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                type="button"
               >
                 {isUploading ? (
                   <>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar } from 'lucide-react';
-import { usePoems, MonthlyPoem } from '../../contexts/PoemContext';
+import { usePoems, Poem } from '../../contexts/PoemContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
@@ -9,8 +9,8 @@ const PoemManagement = () => {
   const { poems, currentPoem, addPoem, updatePoem, deletePoem } = usePoems();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [editingPoem, setEditingPoem] = useState<MonthlyPoem | null>(null);
-  const [previewPoem, setPreviewPoem] = useState<MonthlyPoem | null>(null);
+  const [editingPoem, setEditingPoem] = useState<Poem | null>(null);
+  const [previewPoem, setPreviewPoem] = useState<Poem | null>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -19,7 +19,7 @@ const PoemManagement = () => {
     month: '',
   });
 
-  const handleOpenModal = (poem?: MonthlyPoem) => {
+  const handleOpenModal = (poem?: Poem) => {
     if (poem) {
       setEditingPoem(poem);
       setFormData({
@@ -76,7 +76,7 @@ const PoemManagement = () => {
     }
   };
 
-  const handlePreview = (poem: MonthlyPoem) => {
+  const handlePreview = (poem: Poem) => {
     setPreviewPoem(poem);
     setIsPreviewModalOpen(true);
   };

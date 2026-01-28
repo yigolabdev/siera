@@ -8,15 +8,28 @@ export interface User {
   phoneNumber?: string;
   gender?: string;
   birthYear?: string;
+  
+  // 직장 정보
   company?: string;
-  position?: string;
-  occupation?: string; // 호환성 (company + position 결합)
-  role: UserRole;
+  position?: string;  // 직장 직책 (예: "대표이사", "부장" 등)
+  occupation?: string; // Deprecated: Use company + position instead
+  
+  // 시스템 권한 (시애라 클럽 내 역할)
+  role: UserRole;  // 'chairman' | 'committee' | 'member' 등
+  
   joinDate?: string;
   isApproved: boolean;
+  isActive?: boolean;  // 활성화 상태 (기본값: true)
   profileImage?: string;
   bio?: string;
   attendanceRate?: number; // 참여율 (%)
+  
+  // 추가 필드
+  createdAt?: string;
+  updatedAt?: string;
+  isAuthenticated?: boolean;  // Firebase Auth 연동 여부
+  referredBy?: string;  // 추천인
+  hikingLevel?: string;  // 산행 능력
 }
 
 // Member는 User의 alias
@@ -31,7 +44,6 @@ export interface RegisterData {
   birthYear: string;
   company: string;
   position: string;
-  occupation?: string; // 호환성
   referredBy?: string; // 추천인
   hikingLevel?: string; // 산행 능력
   applicationMessage?: string; // 신청 메시지
@@ -46,12 +58,14 @@ export interface PendingUser {
   birthYear: string;
   company: string;
   position: string;
-  occupation?: string; // 호환성
+  occupation?: string; // Deprecated: Use company instead
   referredBy?: string;
   hikingLevel: string;
   applicationMessage?: string;
   appliedAt: string;
   status: 'pending' | 'approved' | 'rejected';
+  approvedAt?: string;
+  rejectedAt?: string;
 }
 
 // ==================== Event Types ====================
@@ -106,6 +120,7 @@ export interface HikingEvent {
   emergencyContactPhone?: string;
   isSpecial?: boolean;
   isPublished?: boolean; // 공개 여부
+  isDraft?: boolean; // 임시 저장 여부
   status?: 'draft' | 'open' | 'closed' | 'ongoing' | 'completed'; // 산행 상태
   applicationDeadline?: string; // 신청 마감일 (YYYY-MM-DD)
   createdAt?: string; // 생성일
@@ -117,8 +132,8 @@ export interface TeamMember {
   id: string;
   name: string;
   company: string;
-  position?: string; // 직책 (선택)
-  occupation?: string; // 직책 (호환성)
+  position?: string; // 직책
+  occupation?: string; // Deprecated: Use company instead
   phoneNumber?: string;
   isGuest?: boolean; // 게스트 여부
 }
@@ -133,13 +148,13 @@ export interface Team {
   leaderName: string;
   leaderCompany?: string;
   leaderPosition?: string;
-  leaderOccupation?: string; // 호환성
+  leaderOccupation?: string; // Deprecated: Use leaderCompany instead
   leaderPhone?: string;
   members: TeamMember[];
 }
 
 // ==================== Participation Types ====================
-export type ParticipationStatus = 'attending' | 'not-attending' | 'pending' | 'confirmed';
+export type ParticipationStatus = 'attending' | 'not-attending' | 'pending' | 'confirmed' | 'cancelled';
 
 export interface EventParticipation {
   eventId: string;
@@ -150,50 +165,83 @@ export interface EventParticipation {
 
 export interface Participant {
   id: string;
+  eventId?: string;
+  memberId?: string;  // members 컬렉션 참조
   name: string;
   company: string;
   position: string;
+  occupation?: string; // Deprecated: Use company instead
   phoneNumber: string;
   status: ParticipationStatus;
-  occupation?: string; // 호환성 (company + position 결합)
 }
 
-// ==================== Gallery Types ====================
-export interface Photo {
+// ParticipationContext에서 사용하는 상세 참가 정보
+export interface Participation {
   id: string;
   eventId: string;
   userId: string;
   userName: string;
-  imageUrl: string;
-  caption: string;
+  userEmail: string;
+  isGuest: boolean;
+  status: ParticipationStatus;
+  registeredAt: string;
+  cancelledAt?: string;
+  cancellationReason?: string;
+  teamId?: string;
+  teamName?: string;
+  paymentStatus?: 'pending' | 'completed' | 'confirmed' | 'cancelled';
+  specialRequirements?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==================== Photo/Gallery Types ====================
+export interface Photo {
+  id: string;
+  eventId: string;
+  eventTitle: string;  // 산행 제목
+  eventYear: string;   // 연도 (필터링용)
+  eventMonth: string;  // 월 (필터링용)
+  uploadedBy: string;  // ✅ 표준화: 업로더 ID
+  uploadedByName: string;  // ✅ 표준화: 업로더 이름
   uploadedAt: string;
+  imageUrl: string;
+  caption?: string;
   likes: number;
+  likedBy: string[];  // 좋아요 누른 사용자 ID 목록
 }
 
 // ==================== Community Types ====================
-export type PostCategory = 'general' | 'info' | 'question';
+export type PostCategory = 'general' | 'info' | 'question' | 'poem';  // poem 추가
 
 export interface Post {
   id: string;
-  userId: string;
-  author: string;
-  title: string;
-  content: string;
   category: PostCategory;
-  createdAt: string;
-  updatedAt: string;
+  title: string;
+  author: string;  // ✅ 표준화: 작성자 이름
+  authorId: string;  // ✅ 표준화: 작성자 ID
+  content: string;
+  date: string;  // 표시용 날짜
   views: number;
   comments: number;
   likes: number;
+  likedBy: string[];  // 좋아요 누른 사용자 ID 목록
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Comment {
   id: string;
   postId: string;
-  userId: string;
-  userName: string;
+  author: string;  // ✅ 표준화: 댓글 작성자 이름
+  authorId: string;  // ✅ 표준화: 작성자 ID
   content: string;
+  date: string;  // 표시용 날짜
+  likes: number;
+  likedBy: string[];  // 좋아요 누른 사용자 ID 목록
+  parentId?: string;  // 대댓글용 (optional)
   createdAt: string;
+  updatedAt: string;
 }
 
 // ==================== Notice Types ====================
@@ -201,50 +249,113 @@ export interface Notice {
   id: string;
   title: string;
   content: string;
+  date: string;  // 표시용 날짜
   isPinned: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 // ==================== Payment Types ====================
-export type PaymentStatus = 'pending' | 'completed' | 'failed';
+export type PaymentStatus = 'pending' | 'completed' | 'confirmed' | 'failed' | 'cancelled';
 
 export interface Payment {
   id: string;
-  userId?: string;
-  title: string;
-  amount: string;
-  purpose?: string;
-  status: PaymentStatus;
-  paidAt?: string;
-  dueDate: string;
-  bankInfo?: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  isGuest: boolean;
+  company: string;
+  position: string;
+  occupation?: string; // Deprecated: Use company instead
+  phoneNumber: string;
+  phone?: string; // Deprecated: Use phoneNumber instead
+  email: string;
+  applicationDate: string;
+  paymentStatus: PaymentStatus;
+  paymentDate?: string;
+  amount: number;
+  paymentMethod?: string;
+  transactionId?: string;
+  memo?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// ==================== Statistics Types ====================
+// ==================== Attendance Types ====================
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export interface AttendanceRecord {
+  id: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  attendanceStatus: AttendanceStatus;
+  checkInTime?: string;
+  checkOutTime?: string;
+  notes?: string;
+  recordedBy: string;  // 기록한 관리자 ID
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AttendanceStats {
   userId: string;
   userName: string;
   totalEvents: number;
   attended: number;
+  absent: number;
+  excused: number;
+  late: number;
   attendanceRate: number;
 }
 
 // ==================== Executive Types ====================
 export interface Executive {
   id: string;
-  memberId: string;
+  memberId?: string;  // members 컬렉션 참조 (optional for backwards compatibility)
   name: string;
-  title: string;
+  position: string;  // 시애라 클럽 직책 (예: "회장", "총무" 등)
+  phoneNumber: string;  // ✅ 표준화: phone → phoneNumber
+  email?: string;
   category: 'chairman' | 'committee';
-  company: string;
-  position: string;
-  phone: string;
-  email: string;
-  profileImage?: string;
+  company?: string;
+  startTerm?: string;  // 임기 시작 (예: "2024-01")
+  endTerm?: string;    // 임기 종료 (예: "2026-12")
   bio?: string;
-  startTerm: string;
-  endTerm: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==================== Hiking History Types ====================
+export interface HikingHistoryItem {
+  id: string;
+  year: string;
+  month: string;
+  date: string;
+  mountain: string;
+  location: string;
+  participants: number;
+  distance?: string;
+  duration?: string;
+  difficulty?: Difficulty;
+  weather?: string;
+  temperature?: string;
+  imageUrl?: string;
+  isSpecial?: boolean;
+  summary?: string;
+  photoCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HikingComment {
+  id: string;
+  hikeId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ==================== Poem Types ====================
@@ -252,25 +363,49 @@ export interface Poem {
   id: string;
   title: string;
   author: string;
+  authorId?: string;
   content: string;
   month: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 // ==================== Guest Application Types ====================
 export interface GuestApplication {
   id: string;
+  name: string;
+  email: string;
+  phoneNumber: string;  // ✅ 표준화: phone → phoneNumber
+  phone?: string; // Deprecated: Use phoneNumber instead
+  company?: string;
+  position?: string;
   eventId: string;
   eventTitle: string;
-  name: string;
-  phone: string;
-  email: string;
-  company: string;
-  position: string;
-  reason: string;
-  referredBy?: string;
+  eventDate: string;
   appliedAt: string;
   status: 'pending' | 'approved' | 'rejected';
+  reason?: string;
+  referredBy?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+}
+
+// ==================== Rules Types ====================
+export interface RulesAmendment {
+  version: string;
+  date: string;
+  description: string;
+}
+
+export interface RulesData {
+  id: string;
+  content: string;
+  version: string;
+  effectiveDate: string;
+  amendments: RulesAmendment[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ==================== Utility Types ====================

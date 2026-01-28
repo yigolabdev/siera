@@ -58,18 +58,33 @@ const errorLogs: StructuredError[] = [];
  * 에러 로깅
  */
 export function logError(
-  error: Error | string,
+  error: unknown,
   level: ErrorLevel = ErrorLevel.ERROR,
   category: ErrorCategory = ErrorCategory.UNKNOWN,
   context?: Record<string, any>
 ): void {
+  // unknown 타입을 Error | string으로 변환
+  let errorMessage: string;
+  let errorStack: string | undefined;
+  
+  if (error instanceof Error) {
+    errorMessage = error.message;
+    errorStack = error.stack?.slice(0, ERROR_CONFIG.maxStackLength);
+  } else if (typeof error === 'string') {
+    errorMessage = error;
+    errorStack = undefined;
+  } else {
+    errorMessage = 'Unknown error';
+    errorStack = undefined;
+  }
+  
   const structuredError: StructuredError = {
     level,
     category,
-    message: typeof error === 'string' ? error : error.message,
+    message: errorMessage,
     timestamp: new Date().toISOString(),
     context,
-    stack: typeof error !== 'string' ? error.stack?.slice(0, ERROR_CONFIG.maxStackLength) : undefined,
+    stack: errorStack,
   };
 
   // 로컬 저장 (최대 100개)

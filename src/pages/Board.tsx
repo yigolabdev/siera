@@ -1,7 +1,7 @@
 import { Bell, Pin, MessageSquare, ThumbsUp, Eye, Search, Plus, X, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
-import { useNotices } from '../contexts/NoticeContext';
+import { useNotices, Notice } from '../contexts/NoticeContext';
 import { usePosts, Comment as PostComment, Post } from '../contexts/PostContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -27,6 +27,7 @@ const Board = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showWriteModal, setShowWriteModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null); // 선택된 공지사항
   
   // 글쓰기 폼
   const [writeForm, setWriteForm] = useState({
@@ -220,7 +221,11 @@ const Board = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-4">중요 공지</h3>
               <div className="space-y-4">
                 {pinnedNotices.map((notice) => (
-                  <Card key={notice.id} className="border-l-4 border-red-600 hover:shadow-lg transition-all">
+                  <Card 
+                    key={notice.id} 
+                    className="border-l-4 border-red-600 hover:shadow-lg transition-all cursor-pointer"
+                    onClick={() => setSelectedNotice(notice)}
+                  >
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-3">
                       <div className="flex items-center gap-2 flex-wrap flex-1">
                         <Badge variant="danger">필독</Badge>
@@ -230,7 +235,13 @@ const Board = () => {
                         {notice.date}
                       </span>
                     </div>
-                    <p className="text-slate-700 leading-relaxed">{notice.content}</p>
+                    {/* 미리보기 텍스트 (최대 2줄) */}
+                    <p className="text-slate-700 leading-relaxed line-clamp-2">
+                      {notice.content}
+                    </p>
+                    <div className="mt-3 text-sm text-blue-600 font-medium">
+                      자세히 보기 →
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -243,14 +254,24 @@ const Board = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-4">일반 공지</h3>
               <div className="space-y-4">
                 {regularNotices.map((notice) => (
-                  <Card key={notice.id} className="hover:shadow-lg transition-all">
+                  <Card 
+                    key={notice.id} 
+                    className="hover:shadow-lg transition-all cursor-pointer"
+                    onClick={() => setSelectedNotice(notice)}
+                  >
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-2">
                       <h3 className="text-xl font-bold text-slate-900 flex-1">{notice.title}</h3>
                       <span className="text-sm text-slate-500 whitespace-nowrap">
                         {notice.date}
                       </span>
                     </div>
-                    <p className="text-slate-700 leading-relaxed">{notice.content}</p>
+                    {/* 미리보기 텍스트 (최대 2줄) */}
+                    <p className="text-slate-700 leading-relaxed line-clamp-2">
+                      {notice.content}
+                    </p>
+                    <div className="mt-3 text-sm text-blue-600 font-medium">
+                      자세히 보기 →
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -627,6 +648,54 @@ const Board = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 공지사항 상세 모달 */}
+      {selectedNotice && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* 모달 헤더 */}
+            <div className="p-6 border-b border-slate-200 flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  {selectedNotice.isPinned && <Badge variant="danger">필독</Badge>}
+                  <Bell className="w-5 h-5 text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                  {selectedNotice.title}
+                </h2>
+                <div className="text-sm text-slate-500">
+                  {selectedNotice.date}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedNotice(null)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-600" />
+              </button>
+            </div>
+            
+            {/* 모달 본문 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="prose max-w-none">
+                <p className="text-slate-700 text-lg leading-relaxed whitespace-pre-wrap">
+                  {selectedNotice.content}
+                </p>
+              </div>
+            </div>
+            
+            {/* 모달 푸터 */}
+            <div className="p-6 border-t border-slate-200">
+              <button
+                onClick={() => setSelectedNotice(null)}
+                className="btn-primary w-full"
+              >
+                닫기
+              </button>
             </div>
           </div>
         </div>

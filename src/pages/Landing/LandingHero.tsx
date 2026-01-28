@@ -199,7 +199,8 @@ export const LandingHero: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/quick-apply')}
-                    className="bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-green-700 transition-all whitespace-nowrap"
+                    disabled={isLoggingIn}
+                    className="bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-green-700 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
                   >
                     간편신청
                   </button>
@@ -208,7 +209,8 @@ export const LandingHero: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/guest-application')}
-                    className="text-white text-sm font-medium px-4 py-2 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600 whitespace-nowrap"
+                    disabled={isLoggingIn}
+                    className="text-white text-sm font-medium px-4 py-2 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900/95"
                   >
                     게스트
                   </button>
@@ -222,7 +224,8 @@ export const LandingHero: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowMobileLoginModal(true)}
-                  className="bg-white text-slate-900 py-3 rounded-lg font-bold text-base hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
+                  disabled={isLoggingIn}
+                  className="bg-white text-slate-900 py-3 rounded-lg font-bold text-base hover:bg-slate-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
                 >
                   <LogIn className="w-5 h-5" />
                   회원 로그인
@@ -231,7 +234,8 @@ export const LandingHero: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/quick-apply')}
-                  className="bg-green-600 text-white text-base font-bold py-3 rounded-lg hover:bg-green-700 transition-all"
+                  disabled={isLoggingIn}
+                  className="bg-green-600 text-white text-base font-bold py-3 rounded-lg hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
                 >
                   간편 산행 신청
                 </button>
@@ -239,7 +243,8 @@ export const LandingHero: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/guest-application')}
-                  className="text-white text-base font-medium py-3 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600"
+                  disabled={isLoggingIn}
+                  className="text-white text-base font-medium py-3 hover:bg-slate-800/50 rounded-lg transition-colors border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   게스트로 신청하기
                 </button>
@@ -342,7 +347,8 @@ export const LandingHero: React.FC = () => {
                   setShowMobileLoginModal(false);
                   navigate('/register');
                 }}
-                className="w-full text-slate-700 border-2 border-slate-300 py-2.5 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-all"
+                disabled={isLoggingIn}
+                className="w-full text-slate-700 border-2 border-slate-300 py-2.5 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
                 회원가입
               </button>

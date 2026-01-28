@@ -1,82 +1,67 @@
 import { TrendingUp, Award, Calendar, Users, BarChart3, Target, Trophy, Medal } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useMembers } from '../contexts/MemberContext';
+import { useEvents } from '../contexts/EventContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
 const Attendance = () => {
+  const { members, isLoading } = useMembers();
+  const { events } = useEvents();
   const [activeTab, setActiveTab] = useState<'rate' | 'count'>('rate');
   
-  const attendanceData = [
-    {
-      id: 1,
-      rank: 1,
-      name: '김대한',
-      position: '회장',
-      totalEvents: 48,
-      attended: 46,
-      rate: 95.8,
-      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    },
-    {
-      id: 2,
-      rank: 2,
-      name: '최우주',
-      position: '임원',
-      totalEvents: 36,
-      attended: 32,
-      rate: 88.9,
-      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    },
-    {
-      id: 3,
-      rank: 3,
-      name: '이민국',
-      position: '부회장',
-      totalEvents: 42,
-      attended: 37,
-      rate: 88.1,
-      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    },
-    {
-      id: 4,
-      rank: 4,
-      name: '정지구',
-      position: '회원',
-      totalEvents: 32,
-      attended: 27,
-      rate: 84.4,
-      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    },
-    {
-      id: 5,
-      rank: 5,
-      name: '박세계',
-      position: '임원',
-      totalEvents: 40,
-      attended: 33,
-      rate: 82.5,
-      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    },
-    {
-      id: 6,
-      rank: 6,
-      name: '홍천지',
-      position: '회원',
-      totalEvents: 28,
-      attended: 22,
-      rate: 78.6,
-      profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    },
-  ];
+  // TODO: 실제로는 별도의 attendance 컬렉션에서 출석 데이터를 가져와야 함
+  // 현재는 members의 attendanceRate를 사용
+  const attendanceData = useMemo(() => {
+    return members
+      .map((member, index) => ({
+        id: member.id,
+        rank: index + 1,
+        name: member.name,
+        position: member.position === 'chairman' ? '회장' : 
+                 member.position === 'committee' ? '운영위원' : '회원',
+        totalEvents: 0, // TODO: 실제 참석 가능 산행 수
+        attended: 0, // TODO: 실제 참석한 산행 수
+        rate: member.attendanceRate || 0,
+        profileImage: member.profileImage || undefined,
+      }))
+      .sort((a, b) => {
+        if (activeTab === 'rate') {
+          return b.rate - a.rate;
+        }
+        return b.attended - a.attended;
+      })
+      .map((member, index) => ({
+        ...member,
+        rank: index + 1,
+      }));
+  }, [members, activeTab]);
   
-  const monthlyStats = [
-    { month: '2023-07', events: 1, avgAttendance: 32 },
-    { month: '2023-08', events: 1, avgAttendance: 35 },
-    { month: '2023-09', events: 1, avgAttendance: 38 },
-    { month: '2023-10', events: 1, avgAttendance: 36 },
-    { month: '2023-11', events: 1, avgAttendance: 34 },
-    { month: '2023-12', events: 1, avgAttendance: 37 },
-  ];
+  // 월별 통계 (TODO: 실제 출석 데이터 기반으로 계산)
+  const monthlyStats = useMemo(() => {
+    const now = new Date();
+    const stats = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      // 해당 월의 산행 수
+      const monthEvents = events.filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate.getFullYear() === date.getFullYear() && 
+               eventDate.getMonth() === date.getMonth();
+      }).length;
+      
+      stats.push({
+        month: monthKey,
+        events: monthEvents,
+        avgAttendance: 0, // TODO: 실제 평균 출석률 계산
+      });
+    }
+    
+    return stats;
+  }, [events]);
   
   const getRankBadge = (rank: number) => {
     if (rank === 1) {
@@ -135,6 +120,17 @@ const Attendance = () => {
     rank: index + 1
   }));
   
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">출석 현황을 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Stats - 모바일에서 숨김 */}

@@ -415,10 +415,20 @@ const Gallery = () => {
               </button>
               <button
                 onClick={handleUpload}
-                disabled={uploadFiles.length === 0 || !selectedEventForUpload}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={uploadFiles.length === 0 || !selectedEventForUpload || isUploading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                업로드
+                {isUploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    업로드 중...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    업로드
+                  </>
+                )}
               </button>
             </div>
           </div>

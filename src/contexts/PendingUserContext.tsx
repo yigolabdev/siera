@@ -56,31 +56,73 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
   // 가입 승인
   const approvePendingUser = async (userId: string) => {
     try {
-      console.log('✅ 가입 승인 처리:', userId);
+      console.log('🚀 가입 승인 처리 시작:', userId);
       
-      // Firebase에서 상태 업데이트
-      const result = await updateDocument('pendingUsers', userId, {
+      // 1. pendingUser 정보 가져오기
+      const pendingUser = pendingUsers.find(u => u.id === userId);
+      if (!pendingUser) {
+        throw new Error('가입 대기자를 찾을 수 없습니다.');
+      }
+      
+      console.log('📋 가입 대기자 정보:', pendingUser);
+      
+      // 2. members 컬렉션에 추가
+      const memberData = {
+        id: pendingUser.id,
+        name: pendingUser.name,
+        email: pendingUser.email,
+        phoneNumber: pendingUser.phoneNumber,
+        gender: pendingUser.gender,
+        birthYear: pendingUser.birthYear,
+        company: pendingUser.company,
+        position: pendingUser.position,
+        bio: pendingUser.applicationMessage || '',
+        role: 'member' as const,
+        isApproved: true,
+        isAuthenticated: true,
+        joinDate: new Date().toISOString().split('T')[0],
+        attendanceRate: 0,
+        profileImage: null,
+        referredBy: pendingUser.referredBy,
+        hikingLevel: pendingUser.hikingLevel,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      console.log('📤 members 컬렉션에 추가 시도:', memberData);
+      
+      const memberResult = await setDocument('members', userId, memberData);
+      
+      if (!memberResult.success) {
+        console.error('❌ members 컬렉션 추가 실패:', memberResult.error);
+        throw new Error(memberResult.error || 'members 컬렉션 추가 실패');
+      }
+      
+      console.log('✅ members 컬렉션 추가 성공');
+      
+      // 3. pendingUsers 상태 업데이트
+      const updateResult = await updateDocument('pendingUsers', userId, {
         status: 'approved',
         approvedAt: new Date().toISOString(),
       });
 
-      if (result.success) {
-        // 로컬 상태 업데이트
-        setPendingUsers(prev =>
-          prev.map(user =>
-            user.id === userId
-              ? { ...user, status: 'approved' as const }
-              : user
-          )
-        );
-        
-        console.log('✅ 가입 승인 완료:', userId);
-        
-        // TODO: 실제로는 이 시점에 Firebase Authentication에 사용자 계정 생성하고
-        // members 컬렉션에 추가하는 로직이 필요합니다.
-      } else {
-        throw new Error(result.error || '가입 승인 실패');
+      if (!updateResult.success) {
+        console.error('❌ pendingUsers 상태 업데이트 실패:', updateResult.error);
+        throw new Error(updateResult.error || 'pendingUsers 상태 업데이트 실패');
       }
+      
+      console.log('✅ pendingUsers 상태 업데이트 성공');
+
+      // 4. 로컬 상태 업데이트
+      setPendingUsers(prev =>
+        prev.map(user =>
+          user.id === userId
+            ? { ...user, status: 'approved' as const }
+            : user
+        )
+      );
+      
+      console.log('✅ 가입 승인 완료:', userId);
     } catch (err: any) {
       console.error('❌ 가입 승인 실패:', err.message);
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {

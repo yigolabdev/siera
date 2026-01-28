@@ -12,7 +12,7 @@ import { formatDate } from '../../utils/format';
 
 const MemberManagement = () => {
   const navigate = useNavigate();
-  const { members } = useMembers(); // 직접 사용 (변환 불필요)
+  const { members, refreshMembers } = useMembers(); // refreshMembers 추가
   const { 
     pendingUsers, 
     approvePendingUser, 
@@ -76,12 +76,19 @@ const MemberManagement = () => {
 
   const handleApprove = async (userId: string) => {
     try {
+      console.log('🎯 회원 승인 처리 시작:', userId);
       await approvePendingUser(userId);
-      alert('회원가입이 승인되었습니다.');
+      console.log('✅ 회원 승인 완료, MemberContext 새로고침 시작');
+      
+      // MemberContext 새로고침하여 회원 목록 업데이트
+      await refreshMembers();
+      console.log('✅ MemberContext 새로고침 완료');
+      
+      alert('회원가입이 승인되었습니다.\n회원 목록에서 확인하실 수 있습니다.');
       setIsDetailModalOpen(false);
-    } catch (error) {
-      console.error('승인 실패:', error);
-      alert('승인에 실패했습니다. 다시 시도해주세요.');
+    } catch (error: any) {
+      console.error('❌ 승인 실패:', error);
+      alert(`승인에 실패했습니다.\n\n${error.message || '다시 시도해주세요.'}`);
     }
   };
 

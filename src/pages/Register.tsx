@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, ArrowLeft, AlertCircle } from 'lucide-react';
+import { UserPlus, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -100,29 +101,40 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 이미 제출 중이면 중복 실행 방지
+    if (isSubmitting) return;
+
     if (!validateForm()) {
       return;
     }
 
-    const success = await register({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      phoneNumber: formData.phoneNumber,
-      gender: formData.gender,
-      birthYear: formData.birthYear,
-      company: formData.company,
-      position: formData.position,
-    });
+    setIsSubmitting(true);
+    try {
+      const success = await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phoneNumber: formData.phoneNumber,
+        gender: formData.gender,
+        birthYear: formData.birthYear,
+        company: formData.company,
+        position: formData.position,
+      });
 
-    if (success) {
-      alert(
-        '입회 신청이 완료되었습니다!\n\n' +
-        '정기산행에 2회 게스트로 참여하신 후,\n' +
-        '운영위원회 승인을 거쳐 가입이 완료됩니다.\n' +
-        '승인 완료 시 이메일로 안내드립니다.'
-      );
-      navigate('/');
+      if (success) {
+        alert(
+          '입회 신청이 완료되었습니다!\n\n' +
+          '정기산행에 2회 게스트로 참여하신 후,\n' +
+          '운영위원회 승인을 거쳐 가입이 완료됩니다.\n' +
+          '승인 완료 시 이메일로 안내드립니다.'
+        );
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('회원가입 오류:', error);
+      alert('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -432,10 +444,20 @@ const Register = () => {
               </Link>
               <button
                 type="submit"
-                className="flex-1 px-6 py-4 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg"
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-4 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-emerald-500"
               >
-                <UserPlus className="w-5 h-5" />
-                가입 신청하기
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    처리 중...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5" />
+                    가입 신청하기
+                  </>
+                )}
               </button>
             </div>
           </form>

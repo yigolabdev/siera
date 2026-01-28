@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FadeIn } from '../../components/ui/FadeIn';
-import { ChevronDown, LogIn } from 'lucide-react';
+import { ChevronDown, LogIn, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContextEnhanced';
 import Modal from '../../components/ui/Modal';
 
@@ -12,6 +12,7 @@ export const LandingHero: React.FC = () => {
   });
   const [rememberMe, setRememberMe] = useState(false);
   const [showMobileLoginModal, setShowMobileLoginModal] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -29,17 +30,29 @@ export const LandingHero: React.FC = () => {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(loginFormData.email, loginFormData.password);
-    if (success) {
-      if (rememberMe) {
-        localStorage.setItem('savedEmail', loginFormData.email);
+    
+    // 이미 로그인 진행 중이면 중복 실행 방지
+    if (isLoggingIn) return;
+    
+    setIsLoggingIn(true);
+    try {
+      const success = await login(loginFormData.email, loginFormData.password);
+      if (success) {
+        if (rememberMe) {
+          localStorage.setItem('savedEmail', loginFormData.email);
+        } else {
+          localStorage.removeItem('savedEmail');
+        }
+        setShowMobileLoginModal(false); // 모달 닫기
+        navigate('/home');
       } else {
-        localStorage.removeItem('savedEmail');
+        alert('이메일 또는 비밀번호가 올바르지 않습니다.');
       }
-      setShowMobileLoginModal(false); // 모달 닫기
-      navigate('/home');
-    } else {
-      alert('이메일 또는 비밀번호가 올바르지 않습니다.');
+    } catch (error) {
+      console.error('로그인 오류:', error);
+      alert('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -133,7 +146,8 @@ export const LandingHero: React.FC = () => {
                     name="email"
                     value={loginFormData.email}
                     onChange={handleLoginChange}
-                    className="w-52 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                    disabled={isLoggingIn}
+                    className="w-52 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="이메일"
                     required
                   />
@@ -144,7 +158,8 @@ export const LandingHero: React.FC = () => {
                     name="password"
                     value={loginFormData.password}
                     onChange={handleLoginChange}
-                    className="w-44 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all"
+                    disabled={isLoggingIn}
+                    className="w-44 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800/50 text-white text-sm placeholder-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-400/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder="비밀번호"
                     required
                   />
@@ -164,10 +179,20 @@ export const LandingHero: React.FC = () => {
                   {/* Login Button */}
                   <button 
                     type="submit" 
-                    className="bg-white text-slate-900 px-5 py-2 rounded-lg font-bold text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    disabled={isLoggingIn}
+                    className="bg-white text-slate-900 px-5 py-2 rounded-lg font-bold text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
                   >
-                    <LogIn className="w-4 h-4" />
-                    로그인
+                    {isLoggingIn ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        처리 중...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="w-4 h-4" />
+                        로그인
+                      </>
+                    )}
                   </button>
                   
                   {/* Quick Apply Button */}
@@ -244,7 +269,8 @@ export const LandingHero: React.FC = () => {
                   name="email"
                   value={loginFormData.email}
                   onChange={handleLoginChange}
-                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
+                  disabled={isLoggingIn}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                   placeholder="example@email.com"
                   required
                 />
@@ -259,7 +285,8 @@ export const LandingHero: React.FC = () => {
                   name="password"
                   value={loginFormData.password}
                   onChange={handleLoginChange}
-                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
+                  disabled={isLoggingIn}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                   placeholder="••••••••"
                   required
                 />
@@ -286,11 +313,21 @@ export const LandingHero: React.FC = () => {
               </div>
               
               <button 
-                type="submit" 
-                className="w-full bg-slate-900 text-white py-3.5 rounded-lg font-bold text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 mt-6"
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full bg-slate-900 text-white py-3.5 rounded-lg font-bold text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 mt-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900"
               >
-                <LogIn className="w-5 h-5" />
-                로그인
+                {isLoggingIn ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    로그인 처리 중...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    로그인
+                  </>
+                )}
               </button>
             </form>
 

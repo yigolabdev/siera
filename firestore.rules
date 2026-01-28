@@ -105,12 +105,29 @@ service cloud.firestore {
     // 게시판 (posts) 컬렉션
     // ========================================
     match /posts/{postId} {
-      // 읽기: 인증되고 승인된 회원만
-      allow read: if isAuthenticated() && isApproved();
+      // 읽기: 모든 인증된 사용자
+      allow read: if isAuthenticated();
       
-      // 생성: 승인된 회원 (본인 정보로)
+      // 생성: 인증된 사용자 (본인 정보로)
       allow create: if isAuthenticated() && 
-                      isApproved() &&
+                      request.auth.uid == request.resource.data.authorId;
+      
+      // 수정: 본인 또는 관리자
+      allow update: if isOwner(resource.data.authorId) || isAdmin();
+      
+      // 삭제: 본인 또는 관리자
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+    
+    // ========================================
+    // 댓글 (comments) 컬렉션
+    // ========================================
+    match /comments/{commentId} {
+      // 읽기: 모든 인증된 사용자
+      allow read: if isAuthenticated();
+      
+      // 생성: 인증된 사용자 (본인 정보로)
+      allow create: if isAuthenticated() && 
                       request.auth.uid == request.resource.data.authorId;
       
       // 수정: 본인 또는 관리자

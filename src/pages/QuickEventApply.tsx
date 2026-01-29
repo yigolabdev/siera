@@ -1,22 +1,65 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Calendar, MapPin, AlertCircle, CheckCircle, Mountain, UserCheck, Clock, ArrowLeft } from 'lucide-react';
+import { Calendar, MapPin, AlertCircle, CheckCircle, Mountain, UserCheck, Clock, ArrowLeft, Search, Building2, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Badge from '../components/ui/Badge';
 import { useEvents } from '../contexts/EventContext';
+import { useMembers } from '../contexts/MemberContext';
 import { formatDate, formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
+import { User } from '../types';
 
 export default function QuickEventApply() {
   const navigate = useNavigate();
   const { events, isLoading } = useEvents();
+  const { members } = useMembers();
   const [name, setName] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const [showMemberSuggestions, setShowMemberSuggestions] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<User | null>(null);
 
   // 페이지 로드 시 맨 위로 스크롤
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // 승인된 회원만 필터링
+  const approvedMembers = useMemo(() => {
+    return members.filter(m => m.isApproved && m.isActive !== false);
+  }, [members]);
+
+  // 이름으로 회원 검색
+  const filteredMembers = useMemo(() => {
+    if (!name.trim() || selectedMember) return [];
+    
+    const searchName = name.trim().toLowerCase();
+    return approvedMembers
+      .filter(member => 
+        member.name.toLowerCase().includes(searchName)
+      )
+      .slice(0, 10); // 최대 10개만 표시
+  }, [name, approvedMembers, selectedMember]);
+
+  // 이름 입력 핸들러
+  const handleNameChange = (value: string) => {
+    setName(value);
+    setSelectedMember(null);
+    setShowMemberSuggestions(true);
+  };
+
+  // 회원 선택 핸들러
+  const handleSelectMember = (member: User) => {
+    setSelectedMember(member);
+    setName(member.name);
+    setShowMemberSuggestions(false);
+  };
+
+  // 선택 취소 핸들러
+  const handleClearSelection = () => {
+    setSelectedMember(null);
+    setName('');
+    setShowMemberSuggestions(false);
+  };
 
   // 신청 가능한 산행 목록 (현재부터 2개월 이내)
   const availableEvents = useMemo(() => {
@@ -47,8 +90,8 @@ export default function QuickEventApply() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim()) {
-      alert('이름을 입력해주세요.');
+    if (!selectedMember) {
+      alert('등록된 회원을 선택해주세요.');
       return;
     }
 
@@ -71,15 +114,28 @@ export default function QuickEventApply() {
 
     setIsSubmitting(true);
 
-    // 시뮬레이션: 서버 통신 지연
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // TODO: 실제 Firebase 연동
-    console.log('간편 산행 신청:', { name, eventId: currentEvent.id, course: selectedCourse });
-    
-    alert('산행 신청이 완료되었습니다!\n자세한 내용은 등록하신 연락처로 안내드립니다.');
-    setIsSubmitting(false);
-    navigate('/');
+    try {
+      // TODO: 실제 Firebase 연동 - ParticipationContext 사용
+      console.log('간편 산행 신청:', { 
+        memberId: selectedMember.id,
+        memberName: selectedMember.name,
+        memberEmail: selectedMember.email,
+        memberCompany: selectedMember.company,
+        eventId: currentEvent.id, 
+        course: selectedCourse 
+      });
+      
+      // 시뮬레이션: 서버 통신 지연
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      alert(`${selectedMember.name}님의 산행 신청이 완료되었습니다!\n자세한 내용은 등록하신 연락처로 안내드립니다.`);
+      navigate('/');
+    } catch (error) {
+      console.error('산행 신청 실패:', error);
+      alert('산행 신청 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getDifficultyLabel = (difficulty: string) => {
@@ -434,19 +490,115 @@ export default function QuickEventApply() {
               <h3 className="text-xl font-bold text-white mb-4 pb-3 border-b border-slate-700">
                 신청자 정보
               </h3>
-              <div>
+              <div className="relative">
                 <label className="block text-white font-semibold mb-2 text-sm">
                   이름 <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all"
-                  placeholder="등록된 회원 이름을 입력하세요"
-                  required
-                  disabled={isSubmitting}
-                />
+                
+                {/* 선택된 회원 표시 */}
+                {selectedMember ? (
+                  <div className="p-4 rounded-xl border-2 border-emerald-500 bg-emerald-500/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">
+                          {selectedMember.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-white">{selectedMember.name}</p>
+                          {selectedMember.company && (
+                            <p className="text-sm text-slate-300 flex items-center gap-1">
+                              <Building2 className="w-3 h-3" />
+                              {selectedMember.company}
+                              {selectedMember.position && ` · ${selectedMember.position}`}
+                            </p>
+                          )}
+                          <p className="text-xs text-emerald-400 mt-1">✓ 등록된 회원</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearSelection}
+                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-5 h-5 text-slate-400" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        onFocus={() => setShowMemberSuggestions(true)}
+                        className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all pr-12"
+                        placeholder="등록된 회원 이름을 입력하세요"
+                        required
+                        disabled={isSubmitting}
+                        autoComplete="off"
+                      />
+                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    </div>
+
+                    {/* 회원 검색 결과 */}
+                    {showMemberSuggestions && filteredMembers.length > 0 && (
+                      <div className="absolute z-10 w-full mt-2 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-2xl max-h-80 overflow-y-auto">
+                        <div className="p-2">
+                          <p className="text-xs text-slate-400 px-3 py-2">
+                            검색 결과 ({filteredMembers.length}명)
+                          </p>
+                          {filteredMembers.map((member) => (
+                            <button
+                              key={member.id}
+                              type="button"
+                              onClick={() => handleSelectMember(member)}
+                              className="w-full p-3 rounded-lg hover:bg-slate-700 transition-colors text-left flex items-center gap-3"
+                            >
+                              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                                {member.name.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-white truncate">{member.name}</p>
+                                {member.company && (
+                                  <p className="text-sm text-slate-300 flex items-center gap-1 truncate">
+                                    <Building2 className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {member.company}
+                                      {member.position && ` · ${member.position}`}
+                                    </span>
+                                  </p>
+                                )}
+                                {!member.company && member.email && (
+                                  <p className="text-xs text-slate-400 truncate">{member.email}</p>
+                                )}
+                              </div>
+                              <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 검색 결과 없음 */}
+                    {showMemberSuggestions && name.trim() && filteredMembers.length === 0 && (
+                      <div className="absolute z-10 w-full mt-2 bg-slate-800 border-2 border-red-500/50 rounded-xl shadow-2xl p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-semibold text-red-400">등록된 회원을 찾을 수 없습니다</p>
+                            <p className="text-sm text-slate-300 mt-1">
+                              입력하신 이름으로 등록된 회원이 없습니다.<br />
+                              정확한 이름을 입력하시거나, 회원 가입 후 신청해주세요.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                
                 <p className="mt-2 text-sm text-slate-400">
                   ※ 동호회에 등록된 정확한 이름을 입력해주세요
                 </p>
@@ -479,11 +631,11 @@ export default function QuickEventApply() {
                 disabled={
                   applicationClosed ||
                   isSubmitting ||
-                  !name.trim() ||
+                  !selectedMember ||
                   (currentEvent.courses && currentEvent.courses.length > 0 && !selectedCourse)
                 }
                 className={`flex-1 px-6 py-4 rounded-xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg ${
-                  applicationClosed || isSubmitting || !name.trim() || (currentEvent.courses && currentEvent.courses.length > 0 && !selectedCourse)
+                  applicationClosed || isSubmitting || !selectedMember || (currentEvent.courses && currentEvent.courses.length > 0 && !selectedCourse)
                     ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
                     : 'bg-emerald-500 text-white hover:bg-emerald-600'
                 }`}

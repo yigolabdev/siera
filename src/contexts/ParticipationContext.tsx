@@ -15,7 +15,14 @@ interface ParticipationContextType {
   getParticipationsByEvent: (eventId: string) => Participation[];
   getParticipationsByUser: (userId: string) => Participation[];
   getUserParticipationForEvent: (userId: string, eventId: string) => Participation | undefined;
-  registerForEvent: (eventId: string, userId: string, userName: string, userEmail: string, isGuest?: boolean) => Promise<void>;
+  registerForEvent: (
+    eventId: string, 
+    userId: string, 
+    userName: string, 
+    userEmail: string, 
+    isGuest?: boolean,
+    onPaymentCreate?: (participationId: string, eventId: string) => Promise<void>
+  ) => Promise<void>;
   cancelParticipation: (id: string, reason?: string) => Promise<void>;
   updateParticipationStatus: (id: string, status: Participation['status']) => Promise<void>;
   assignTeam: (id: string, teamId: string, teamName: string) => Promise<void>;
@@ -133,7 +140,8 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
     userId: string, 
     userName: string, 
     userEmail: string,
-    isGuest: boolean = false
+    isGuest: boolean = false,
+    onPaymentCreate?: (participationId: string, eventId: string) => Promise<void>
   ) => {
     try {
       // 이미 등록되어 있는지 확인
@@ -145,23 +153,42 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
         throw new Error('이미 이 산행에 신청하셨습니다.');
       }
       
-      await addParticipation({
+      // 1. 산행 신청 생성
+      const participationId = `participation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const now = new Date().toISOString();
+      
+      const participation: Participation = {
+        id: participationId,
         eventId,
         userId,
         userName,
         userEmail,
         isGuest,
         status: 'pending',
-        registeredAt: new Date().toISOString(),
-      });
+        registeredAt: now,
+        createdAt: now,
+        updatedAt: now,
+      };
       
-      console.log('✅ 산행 신청 완료:', { eventId, userId });
+      // Firestore에 저장
+      const result = await setDocument('participations', participationId, participation);
+      if (result.success) {
+        setParticipations(prev => [...prev, participation]);
+        console.log('✅ 산행 신청 완료:', { eventId, userId, participationId });
+        
+        // 2. 결제 레코드 생성 콜백 호출
+        if (onPaymentCreate) {
+          await onPaymentCreate(participationId, eventId);
+        }
+      } else {
+        throw new Error(result.error || '참가 신청 추가 실패');
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, userId });
       throw error;
     }
-  }, [participations, addParticipation]);
+  }, [participations]);
 
   const cancelParticipation = useCallback(async (id: string, reason?: string) => {
     try {

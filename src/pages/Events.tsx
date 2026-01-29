@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useDevMode } from '../contexts/DevModeContext';
 import { useEvents } from '../contexts/EventContext';
 import { useParticipations } from '../contexts/ParticipationContext';
+import { usePayments } from '../contexts/PaymentContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
@@ -15,6 +16,7 @@ const Events = () => {
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
   const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId, refreshParticipants, isLoading: eventsLoading, checkAndUpdateWeather } = useEvents();
   const { registerForEvent, getUserParticipationForEvent, cancelParticipation } = useParticipations();
+  const { createPaymentForParticipation } = usePayments();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
   const [searchParams] = useSearchParams();
@@ -235,12 +237,26 @@ const Events = () => {
     try {
       setSelectedCourse(course);
       
-      // Firebase에 참가 등록
+      // Firebase에 참가 등록 및 결제 레코드 생성
       await registerForEvent(
         event.id,
         user.id.toString(),
         user.name || '',
-        user.email || ''
+        user.email || '',
+        false, // isGuest
+        async (participationId, eventId) => {
+          // 참가 신청 후 자동으로 결제 레코드 생성
+          await createPaymentForParticipation(
+            {
+              id: participationId,
+              eventId: eventId,
+              userId: user.id.toString(),
+              userName: user.name || '',
+              userEmail: user.email || '',
+            },
+            event.cost // 산행 참가비
+          );
+        }
       );
       
       // 참가자 목록 새로고침
@@ -251,7 +267,7 @@ const Events = () => {
       // 바로 입금 정보 모달 표시
       setShowPaymentModal(true);
       
-      console.log('✅ 산행 신청 완료:', { eventId: event.id, userId: user.id, course });
+      console.log('✅ 산행 신청 및 결제 레코드 생성 완료:', { eventId: event.id, userId: user.id, course });
     } catch (error: any) {
       console.error('❌ 산행 신청 실패:', error);
       alert(error.message || '산행 신청에 실패했습니다. 다시 시도해주세요.');

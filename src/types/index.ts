@@ -273,10 +273,11 @@ export type PaymentStatus = 'pending' | 'completed' | 'confirmed' | 'failed' | '
 
 export interface Payment {
   id: string;
+  participationId?: string; // 참가 신청 ID (연결)
   eventId: string;
   userId: string;
   userName: string;
-  isGuest: boolean;
+  isGuest?: boolean;
   company: string;
   position: string;
   occupation?: string; // Deprecated: Use company instead

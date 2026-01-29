@@ -7,6 +7,7 @@ import { useEvents } from '../contexts/EventContext';
 import { useMembers } from '../contexts/MemberContext';
 import { usePoems } from '../contexts/PoemContext';
 import { useParticipations } from '../contexts/ParticipationContext';
+import { usePayments } from '../contexts/PaymentContext';
 import { useNotices } from '../contexts/NoticeContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -20,6 +21,7 @@ const Home = () => {
   const { members } = useMembers();
   const { currentPoem } = usePoems();
   const { getUserParticipationForEvent, cancelParticipation, registerForEvent } = useParticipations();
+  const { createPaymentForParticipation } = usePayments();
   const { notices } = useNotices();
   
   // 참석 여부 상태 (Firebase에서 가져오기)

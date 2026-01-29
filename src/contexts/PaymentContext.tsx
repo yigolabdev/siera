@@ -18,6 +18,13 @@ interface PaymentContextType {
   confirmPayment: (id: string) => Promise<void>;
   cancelPayment: (id: string, reason?: string) => Promise<void>;
   refreshPayments: () => Promise<void>;
+  createPaymentForParticipation: (participation: {
+    id: string;
+    eventId: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+  }, eventCost?: string) => Promise<void>;
 }
 
 const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
@@ -158,6 +165,66 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
     await loadPayments();
   }, [loadPayments]);
 
+  /**
+   * 산행 신청 시 자동으로 결제 레코드 생성
+   * @param participation - 참가 신청 정보
+   * @param eventCost - 산행 참가비 (선택사항)
+   */
+  const createPaymentForParticipation = useCallback(async (
+    participation: {
+      id: string;
+      eventId: string;
+      userId: string;
+      userName: string;
+      userEmail: string;
+    },
+    eventCost?: string
+  ) => {
+    try {
+      // 이미 결제 레코드가 있는지 확인
+      const existingPayment = payments.find(
+        p => p.participationId === participation.id
+      );
+      
+      if (existingPayment) {
+        console.log('⚠️ 이미 결제 레코드가 존재합니다:', existingPayment.id);
+        return;
+      }
+      
+      // 참가비 파싱 (예: "20,000원" -> 20000)
+      const amount = eventCost 
+        ? parseInt(eventCost.replace(/[^0-9]/g, '')) || 0
+        : 0;
+      
+      // 결제 레코드 생성 (pending 상태)
+      await addPayment({
+        participationId: participation.id,
+        eventId: participation.eventId,
+        userId: participation.userId,
+        userName: participation.userName,
+        email: participation.userEmail,
+        company: '', // 추후 회원 정보에서 가져올 수 있음
+        position: '',
+        phoneNumber: '',
+        applicationDate: new Date().toISOString(),
+        paymentStatus: 'pending',
+        amount: amount,
+        memo: '산행 신청 완료 (입금 대기)',
+      });
+      
+      console.log('✅ 결제 레코드 자동 생성 완료:', {
+        participationId: participation.id,
+        amount,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 결제 레코드 생성 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participation });
+      // 결제 레코드 생성 실패해도 산행 신청은 완료되어야 함
+      // throw하지 않고 로그만 남김
+    }
+  }, [payments, addPayment]);
+
   const getPaymentById = useCallback((id: string) => {
     return payments.find(payment => payment.id === id);
   }, [payments]);
@@ -188,6 +255,7 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
     confirmPayment,
     cancelPayment,
     refreshPayments,
+    createPaymentForParticipation,
   }), [
     payments,
     isLoading,
@@ -202,6 +270,7 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
     confirmPayment,
     cancelPayment,
     refreshPayments,
+    createPaymentForParticipation,
   ]);
 
   return <PaymentContext.Provider value={value}>{children}</PaymentContext.Provider>;

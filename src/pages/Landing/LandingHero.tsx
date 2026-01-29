@@ -12,6 +12,8 @@ export const LandingHero: React.FC = () => {
   });
   const [rememberMe, setRememberMe] = useState(false);
   const [showMobileLoginModal, setShowMobileLoginModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -46,11 +48,28 @@ export const LandingHero: React.FC = () => {
         setShowMobileLoginModal(false); // 모달 닫기
         navigate('/home');
       } else {
-        alert('이메일 또는 비밀번호가 올바르지 않습니다.');
+        // 로그인 실패 시 에러 모달 표시
+        setErrorMessage('이메일 또는 비밀번호가 올바르지 않습니다.');
+        setShowErrorModal(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('로그인 오류:', error);
-      alert('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      
+      // Firebase 에러 메시지를 사용자 친화적으로 변환
+      let userMessage = '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+      
+      if (error?.code === 'auth/wrong-password' || error?.code === 'auth/invalid-credential') {
+        userMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      } else if (error?.code === 'auth/user-not-found') {
+        userMessage = '등록되지 않은 이메일입니다.';
+      } else if (error?.code === 'auth/too-many-requests') {
+        userMessage = '너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error?.code === 'auth/network-request-failed') {
+        userMessage = '네트워크 연결을 확인해주세요.';
+      }
+      
+      setErrorMessage(userMessage);
+      setShowErrorModal(true);
     } finally {
       setIsLoggingIn(false);
     }
@@ -110,13 +129,15 @@ export const LandingHero: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
                   onClick={scrollToAbout}
-                  className="inline-block border-2 border-white text-white px-10 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors duration-300"
+                  disabled={isLoggingIn}
+                  className="inline-block border-2 border-white text-white px-10 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white"
                 >
                   더보기
                 </button>
                 <button 
                   onClick={() => navigate('/about')}
-                  className="inline-block border-2 border-white bg-white text-black px-10 py-3 text-sm font-bold uppercase tracking-widest hover:bg-transparent hover:text-white transition-colors duration-300"
+                  disabled={isLoggingIn}
+                  className="inline-block border-2 border-white bg-white text-black px-10 py-3 text-sm font-bold uppercase tracking-widest hover:bg-transparent hover:text-white transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-black"
                 >
                   시애라 소개 보기
                 </button>
@@ -171,7 +192,8 @@ export const LandingHero: React.FC = () => {
                       id="rememberMeHero"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-3.5 h-3.5 text-slate-400 bg-slate-800 border-slate-600 rounded focus:ring-slate-400 cursor-pointer"
+                      disabled={isLoggingIn}
+                      className="w-3.5 h-3.5 text-slate-400 bg-slate-800 border-slate-600 rounded focus:ring-slate-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <span className="ml-1.5 text-white/80 text-xs">저장</span>
                   </label>
@@ -256,7 +278,7 @@ export const LandingHero: React.FC = () => {
 
       {/* Mobile Login Modal */}
       {showMobileLoginModal && (
-        <Modal onClose={() => setShowMobileLoginModal(false)} maxWidth="max-w-md">
+        <Modal onClose={() => !isLoggingIn && setShowMobileLoginModal(false)} maxWidth="max-w-md">
           <div className="p-6">
             {/* Title - 중앙 정렬, X 버튼 제거 (Modal 컴포넌트 자체 제공) */}
             <div className="text-center mb-6">
@@ -304,14 +326,16 @@ export const LandingHero: React.FC = () => {
                     id="rememberMeMobile"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 text-slate-600 bg-white border-slate-300 rounded focus:ring-slate-500 focus:ring-2 cursor-pointer"
+                    disabled={isLoggingIn}
+                    className="w-4 h-4 text-slate-600 bg-white border-slate-300 rounded focus:ring-slate-500 focus:ring-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <span className="ml-2 text-sm font-medium text-slate-700">로그인 정보 저장</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => alert('비밀번호 찾기 기능은 준비 중입니다.')}
-                  className="text-sm text-slate-600 hover:text-slate-900 font-medium"
+                  disabled={isLoggingIn}
+                  className="text-sm text-slate-600 hover:text-slate-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   비밀번호 찾기
                 </button>
@@ -357,10 +381,50 @@ export const LandingHero: React.FC = () => {
         </Modal>
       )}
 
+      {/* Error Modal */}
+      {showErrorModal && (
+        <Modal onClose={() => setShowErrorModal(false)} maxWidth="max-w-md">
+          <div className="p-6 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            
+            <h3 className="text-xl font-bold text-slate-900 mb-2">로그인 실패</h3>
+            <p className="text-slate-600 mb-6">
+              {errorMessage}
+            </p>
+            
+            <button
+              onClick={() => setShowErrorModal(false)}
+              className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold text-base hover:bg-slate-800 transition-all"
+            >
+              확인
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Loading Overlay - 로딩 중 전체 화면 차단 */}
+      {isLoggingIn && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center">
+          <div className="bg-white rounded-xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm mx-4">
+            <Loader2 className="w-12 h-12 text-slate-900 animate-spin" />
+            <div className="text-center">
+              <p className="text-lg font-bold text-slate-900 mb-1">로그인 중입니다</p>
+              <p className="text-sm text-slate-600">잠시만 기다려주세요...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce text-white/70 cursor-pointer" onClick={scrollToAbout}>
-        <ChevronDown size={32} strokeWidth={1} />
-      </div>
+      {!isLoggingIn && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce text-white/70 cursor-pointer" onClick={scrollToAbout}>
+          <ChevronDown size={32} strokeWidth={1} />
+        </div>
+      )}
     </section>
   );
 };

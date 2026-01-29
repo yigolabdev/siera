@@ -60,9 +60,22 @@ const PaymentManagement = () => {
 
   // 선택된 이벤트의 결제 목록
   const eventPayments = useMemo(() => {
-    if (!selectedEventId) return [];
+    if (!selectedEventId) {
+      console.log('💰 [결제 관리] selectedEventId가 없음');
+      return [];
+    }
     const eventPaymentsList = getPaymentsByEvent(selectedEventId);
-    console.log(`💰 [결제 관리] ${selectedEventId} 이벤트의 결제 목록:`, eventPaymentsList.length, '건');
+    console.log(`💰 [결제 관리] ${selectedEventId} 이벤트의 결제 목록:`, {
+      eventId: selectedEventId,
+      payments개수: eventPaymentsList.length,
+      전체payments개수: payments.length,
+      eventPaymentsList: eventPaymentsList.map(p => ({
+        id: p.id,
+        userName: p.userName,
+        paymentStatus: p.paymentStatus,
+        eventId: p.eventId
+      }))
+    });
     return eventPaymentsList;
   }, [selectedEventId, getPaymentsByEvent, payments]); // payments를 의존성에 추가
 

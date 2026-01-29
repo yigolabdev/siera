@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, CreditCard, CheckCircle, Clock, Users, AlertCircle, Calendar, Filter, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
@@ -26,43 +26,28 @@ const PaymentManagement = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'completed' | 'pending' | 'confirmed' | 'cancelled'>('all');
   
-  // 실제 이벤트 목록 생성 (정기산행 + 특별산행)
+  // 모든 이벤트 목록 사용 (공개된 모든 산행)
   const events = useMemo(() => {
-    const eventList: HikingEvent[] = [];
-    
-    // 정기 산행 추가
-    if (currentEvent) {
-      eventList.push({
-        id: currentEvent.id,
-        title: currentEvent.title,
-        mountain: currentEvent.mountain || currentEvent.location,
-        date: currentEvent.date,
-        cost: parseInt(currentEvent.cost.replace(/[^0-9]/g, '')),
-        maxParticipants: currentEvent.maxParticipants,
-        currentParticipants: currentEvent.currentParticipants || 0,
-      });
-    }
-    
-    // 특별 산행 추가 (신청 기간일 때만)
-    if (specialEvent && specialApplicationStatus !== 'no-event') {
-      eventList.push({
-        id: specialEvent.id,
-        title: `${specialEvent.title} (특별산행)`,
-        mountain: specialEvent.mountain || specialEvent.location,
-        date: specialEvent.date,
-        cost: parseInt(specialEvent.cost.replace(/[^0-9]/g, '')),
-        maxParticipants: specialEvent.maxParticipants,
-        currentParticipants: specialEvent.currentParticipants || 0,
-      });
-    }
-    
-    return eventList;
-  }, [currentEvent, specialEvent, specialApplicationStatus]);
+    return allEvents
+      .filter(event => event.isPublished && !event.isDraft)
+      .map(event => ({
+        id: event.id,
+        title: event.isSpecial ? `${event.title} (특별산행)` : event.title,
+        mountain: event.mountain || event.location,
+        date: event.date,
+        cost: parseInt(event.cost.replace(/[^0-9]/g, '')),
+        maxParticipants: event.maxParticipants,
+        currentParticipants: event.currentParticipants || 0,
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // 최신순
+  }, [allEvents]);
 
-  // 첫 번째 이벤트를 기본 선택
-  if (!selectedEventId && events.length > 0) {
-    setSelectedEventId(events[0].id);
-  }
+  // 첫 번째 이벤트를 기본 선택 (useEffect로 이동하여 무한 루프 방지)
+  useMemo(() => {
+    if (!selectedEventId && events.length > 0) {
+      setSelectedEventId(events[0].id);
+    }
+  }, [events, selectedEventId]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
@@ -150,22 +135,48 @@ const PaymentManagement = () => {
         </Card>
       ) : (
         <>
-          {/* Event Selector */}
+          {/* Event Selector - 버튼 방식 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-3">
               산행 선택
             </label>
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full md:w-auto px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {events.map(event => (
-                <option key={event.id} value={event.id}>
-                  {event.title} - {event.mountain} ({new Date(event.date).toLocaleDateString('ko-KR')})
-                </option>
+                <button
+                  key={event.id}
+                  onClick={() => setSelectedEventId(event.id)}
+                  className={`p-4 rounded-xl text-left transition-all border-2 ${
+                    selectedEventId === event.id
+                      ? 'bg-primary-50 border-primary-600 shadow-md'
+                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-bold text-lg text-slate-900">{event.title}</h3>
+                    {selectedEventId === event.id && (
+                      <CheckCircle className="w-5 h-5 text-primary-600 flex-shrink-0 ml-2" />
+                    )}
+                  </div>
+                  <div className="space-y-1 text-sm text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>{new Date(event.date).toLocaleDateString('ko-KR')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      <span>신청자: {eventPayments.filter(p => p.eventId === event.id).length}명</span>
+                    </div>
+                  </div>
+                  {selectedEventId === event.id && (
+                    <div className="mt-3 pt-3 border-t border-primary-200">
+                      <div className="text-sm text-primary-700 font-medium">
+                        현재 선택된 산행
+                      </div>
+                    </div>
+                  )}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Stats Cards */}

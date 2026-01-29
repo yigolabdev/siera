@@ -4,6 +4,7 @@ import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDoc
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { waitForFirebase } from '../lib/firebase/config';
 import { getEventWeather } from '../utils/weather';
+import { useAuth } from './AuthContextEnhanced';
 
 interface EventContextType {
   events: HikingEvent[];
@@ -30,21 +31,39 @@ interface EventContextType {
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
+// EventProvider 내부에서만 useAuth 사용
 export const EventProvider = ({ children }: { children: ReactNode }) => {
   const [events, setEvents] = useState<HikingEvent[]>([]);
   const [participants, setParticipants] = useState<Record<string, Participant[]>>({});
   const [teams, setTeams] = useState<Record<string, Team[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
-  // Firebase 초기 데이터 로드
+  // 🔥 AuthContext를 Provider 내부에서 사용
+  const auth = useAuth();
+  
+  // Firebase 초기 데이터 로드 및 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadInitialData();
+      console.log('🔄 [EventContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadInitialData();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []);
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading]); // auth.user 대신 auth.firebaseUser 사용
   
   const loadInitialData = async () => {
     try {

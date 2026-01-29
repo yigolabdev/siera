@@ -251,7 +251,7 @@ const Gallery = () => {
               type="button"
             >
               <Upload className="w-5 h-5" />
-              사진 업로드
+              사진 업로드하기
             </button>
           )}
         </div>
@@ -285,7 +285,7 @@ const Gallery = () => {
             type="button"
           >
             <Upload className="w-5 h-5" />
-            사진 업로드
+            사진 업로드하기
           </button>
         )}
       </div>
@@ -415,9 +415,12 @@ const Gallery = () => {
                   isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300'
                 }`}
               >
-                <Upload className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                <p className="text-slate-600 mb-2">
-                  이곳에 파일을 드래그하거나 아래 버튼을 클릭하세요
+                <Upload className="w-16 h-16 mx-auto mb-4 text-blue-500" />
+                <p className="text-slate-900 font-bold text-lg mb-3">
+                  ⭐ 아래 버튼을 클릭하여 사진을 선택하세요
+                </p>
+                <p className="text-slate-600 mb-4">
+                  또는 이곳에 파일을 드래그하여 추가할 수 있습니다
                 </p>
                 <input
                   id="file-upload-input"
@@ -429,11 +432,12 @@ const Gallery = () => {
                 />
                 <label
                   htmlFor="file-upload-input"
-                  className="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-medium"
+                  className="mt-2 inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-bold text-lg shadow-lg hover:shadow-xl"
                 >
-                  📁 파일 선택하기
+                  <ImageIcon className="w-6 h-6" />
+                  📁 컴퓨터에서 사진 선택
                 </label>
-                <p className="text-xs text-slate-500 mt-3">
+                <p className="text-sm text-slate-600 mt-4 font-medium">
                   JPG, PNG, GIF 형식 지원 (최대 10MB)
                 </p>
               </div>

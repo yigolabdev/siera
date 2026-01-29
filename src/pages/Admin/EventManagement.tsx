@@ -204,7 +204,34 @@ const EventManagement = () => {
           if (today >= dayAfterEvent) {
             try {
               console.log(`[자동 아카이빙] ${event.title} 산행을 완료 처리합니다.`);
+              
+              // 1. 산행 상태를 completed로 변경
               await updateEvent(event.id, { status: 'completed' });
+
+              // 2. hikingHistory 컬렉션에 자동 생성
+              const participants = getParticipantsByEventId(event.id);
+              const attendanceCount = participants.filter(p => p.status === 'confirmed').length;
+
+              const historyItem = {
+                id: `history-${event.id}`,
+                eventId: event.id,
+                title: event.title,
+                date: event.date,
+                year: new Date(event.date).getFullYear().toString(),
+                location: event.location,
+                mountain: event.mountain || '',
+                altitude: event.altitude || '',
+                participants: attendanceCount,
+                photos: [], // 추후 갤러리에서 채워짐
+                summary: event.description || '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+
+              // Firebase hikingHistory 컬렉션에 저장
+              const { setDocument: saveHistoryDoc } = await import('../../lib/firebase/firestore');
+              await saveHistoryDoc('hikingHistory', historyItem.id, historyItem);
+              console.log(`✅ [자동 아카이빙] ${event.title} 히스토리 생성 완료`);
             } catch (error) {
               console.error(`[자동 아카이빙 실패] ${event.title}:`, error);
             }
@@ -445,8 +472,40 @@ const EventManagement = () => {
   const handleCompleteHiking = async (eventId: string) => {
     if (confirm('산행을 완료 처리하시겠습니까?\n완료된 산행은 이전 산행 목록으로 이동됩니다.')) {
       try {
+        const event = events.find(e => e.id === eventId);
+        if (!event) {
+          alert('산행을 찾을 수 없습니다.');
+          return;
+        }
+
+        // 1. 산행 상태를 completed로 변경
         await updateEvent(eventId, { status: 'completed' });
-        alert('산행이 완료되었습니다. 수고하셨습니다!');
+
+        // 2. hikingHistory 컬렉션에 자동 생성
+        const participants = getParticipantsByEventId(eventId);
+        const attendanceCount = participants.filter(p => p.status === 'confirmed').length;
+
+        const historyItem: any = {
+          id: `history-${eventId}`,
+          eventId: eventId,
+          title: event.title,
+          date: event.date,
+          year: new Date(event.date).getFullYear().toString(),
+          location: event.location,
+          mountain: event.mountain || '',
+          altitude: event.altitude || '',
+          participants: attendanceCount,
+          photos: [], // 추후 갤러리에서 채워짐
+          summary: event.description || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Firebase hikingHistory 컬렉션에 저장
+        const { setDocument } = await import('../../lib/firebase/firestore');
+        await setDocument('hikingHistory', historyItem.id, historyItem);
+        
+        alert('산행이 완료되었습니다. 수고하셨습니다!\n산행 기록이 이전 산행 목록에 자동으로 추가되었습니다.');
       } catch (error: any) {
         console.error('산행 완료 실패:', error);
         alert(`산행 완료 처리에 실패했습니다: ${error.message}`);

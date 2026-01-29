@@ -3,10 +3,12 @@ import { Mountain, User, Mail, Phone, Briefcase, Building, UserPlus, ArrowLeft, 
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
 import { useEvents } from '../contexts/EventContext';
+import { useGuestApplications } from '../contexts/GuestApplicationContext';
 
 const GuestApplication = () => {
   const navigate = useNavigate();
   const { events, isLoading } = useEvents();
+  const { addGuestApplication } = useGuestApplications();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,6 +17,7 @@ const GuestApplication = () => {
     position: '',
     referredBy: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 페이지 로드 시 맨 위로 스크롤
   useEffect(() => {
@@ -45,7 +48,7 @@ const GuestApplication = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!currentEvent) {
@@ -59,10 +62,36 @@ const GuestApplication = () => {
       return;
     }
     
-    // TODO: 실제 API 호출로 대체
-    console.log('게스트 신청:', formData);
-    alert('산행 신청이 완료되었습니다!\n담당자 확인 후 연락드리겠습니다.');
-    navigate('/');
+    setIsSubmitting(true);
+    
+    try {
+      // Firebase에 게스트 신청 저장
+      await addGuestApplication({
+        name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        company: formData.company,
+        position: formData.position,
+        referredBy: formData.referredBy || undefined,
+        eventId: currentEvent.id,
+        eventTitle: currentEvent.title,
+        eventDate: currentEvent.date,
+      });
+      
+      console.log('✅ 게스트 신청 완료:', {
+        name: formData.name,
+        eventId: currentEvent.id,
+        eventTitle: currentEvent.title,
+      });
+      
+      alert('산행 신청이 완료되었습니다!\n담당자 확인 후 연락드리겠습니다.');
+      navigate('/');
+    } catch (error) {
+      console.error('❌ 게스트 신청 실패:', error);
+      alert('신청 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   // 신청 마감일 정보 계산
@@ -387,15 +416,26 @@ const GuestApplication = () => {
               </Link>
               <button 
                 type="submit" 
-                disabled={applicationClosed}
+                disabled={applicationClosed || isSubmitting}
                 className={`flex-1 px-6 py-4 rounded-xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg ${
-                  applicationClosed
+                  applicationClosed || isSubmitting
                     ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
                     : 'bg-emerald-500 text-white hover:bg-emerald-600'
                 }`}
               >
-                <UserPlus className="w-5 h-5" />
-                {applicationClosed ? '신청 마감' : '신청하기'}
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    처리 중...
+                  </>
+                ) : applicationClosed ? (
+                  '신청 마감'
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5" />
+                    신청하기
+                  </>
+                )}
               </button>
             </div>
           </form>

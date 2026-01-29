@@ -186,6 +186,7 @@ export interface Participant {
   occupation?: string; // Deprecated: Use company instead
   phoneNumber?: string;
   status: ParticipationStatus;
+  isGuest?: boolean; // 게스트 여부 표시
 }
 
 // ParticipationContext에서 사용하는 상세 참가 정보

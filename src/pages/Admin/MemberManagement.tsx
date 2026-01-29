@@ -544,35 +544,34 @@ const MemberManagement = () => {
                   >
                     활성 ({memberStats.active})
                   </button>
-                  <button
-                    onClick={() => setStatusFilter('inactive')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                      statusFilter === 'inactive'
-                        ? 'bg-slate-600 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  비활성 ({memberStats.inactive})
-                </button>
-              </div>
-            </div>
-
-              {/* 운영진 동기화 버튼 */}
-              <div className="ml-auto">
-                <button
-                  onClick={handleSyncExecutivesToMembers}
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-                >
-                  <UserCog className="w-5 h-5" />
-                  운영진 동기화
-                </button>
-              </div>
-            </div>
+              <button
+                onClick={() => setStatusFilter('inactive')}
+                className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                  statusFilter === 'inactive'
+                    ? 'bg-slate-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              비활성 ({memberStats.inactive})
+            </button>
           </div>
-          </div>
+        </div>
 
-          {/* Member List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* 운영진 동기화 버튼 */}
+          <div className="ml-auto">
+            <button
+              onClick={handleSyncExecutivesToMembers}
+              className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <UserCog className="w-5 h-5" />
+              운영진 동기화
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Member List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMembers.length > 0 ? (
               filteredMembers.map(member => (
                 <Card 

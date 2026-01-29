@@ -107,6 +107,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
               name: participation.userName,
               email: participation.userEmail,
               status: participation.status as 'confirmed' | 'pending',
+              isGuest: participation.isGuest || false, // 게스트 여부 포함
             });
           });
           setParticipants(participantsByEvent);
@@ -358,6 +359,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
           name: participation.userName,
           email: participation.userEmail,
           status: participation.status as 'confirmed' | 'pending',
+          isGuest: participation.isGuest || false, // 게스트 여부 포함
         }));
         
         setParticipants(prev => ({

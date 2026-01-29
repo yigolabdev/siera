@@ -25,15 +25,7 @@ const Events = () => {
   const eventIdFromUrl = searchParams.get('eventId');
   
   // 날씨 데이터 (DB에서 가져오기 또는 기본값)
-  const [weatherData, setWeatherData] = useState<WeatherData>({
-    temperature: 8,
-    feelsLike: 5,
-    condition: 'cloudy',
-    precipitation: 20,
-    windSpeed: 3.5,
-    humidity: 65,
-    uvIndex: 'moderate',
-  });
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
 
   // 날씨 상태에 따른 아이콘 및 텍스트
   const getWeatherIcon = (condition: string) => {
@@ -51,7 +43,7 @@ const Events = () => {
     }
   };
 
-  const weatherInfo = getWeatherIcon(weatherData.condition);
+  const weatherInfo = weatherData ? getWeatherIcon(weatherData.condition) : { icon: Cloud, color: 'text-slate-400', bg: 'bg-slate-50', text: '로딩 중' };
   const WeatherIcon = weatherInfo.icon;
   
   // EventContext에서 이벤트 가져오기
@@ -386,61 +378,71 @@ const Events = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-orange-50 rounded-lg">
-                    <Thermometer className="w-4 h-4 text-orange-500" />
+              {weatherData ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-orange-50 rounded-lg">
+                        <Thermometer className="w-4 h-4 text-orange-500" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">기온</p>
+                        <p className="text-sm font-bold text-slate-900">{weatherData.temperature}°C</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-blue-50 rounded-lg">
+                        <Wind className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">풍속</p>
+                        <p className="text-sm font-bold text-slate-900">{weatherData.windSpeed}m/s</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-cyan-50 rounded-lg">
+                        <Droplets className="w-4 h-4 text-cyan-500" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">습도</p>
+                        <p className="text-sm font-bold text-slate-900">{weatherData.humidity}%</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-indigo-50 rounded-lg">
+                        <CloudRain className="w-4 h-4 text-indigo-500" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">강수확률</p>
+                        <p className="text-sm font-bold text-slate-900">{weatherData.precipitation}%</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-slate-500">기온</p>
-                    <p className="text-sm font-bold text-slate-900">{weatherData.temperature}°C</p>
+                  
+                  {/* 체감온도 및 자외선 */}
+                  <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                    <span className="text-slate-600">
+                      체감온도 <span className="font-semibold text-slate-900">{weatherData.feelsLike}°C</span>
+                    </span>
+                    <Badge variant={weatherData.uvIndex === 'low' ? 'success' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? 'danger' : 'warning'}>
+                      자외선 {weatherData.uvIndex === 'low' ? '낮음' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? '높음' : '보통'}
+                    </Badge>
                   </div>
+                  
+                  <p className="text-xs text-slate-500 mt-2 text-center">
+                    ⚠️ 산행 당일 날씨가 변경될 수 있습니다
+                  </p>
+                </>
+              ) : (
+                <div className="py-6 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mx-auto mb-3"></div>
+                  <p className="text-sm text-slate-600">날씨 정보를 불러오는 중...</p>
+                  <p className="text-xs text-slate-500 mt-1">기상청 API 호출 중</p>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-50 rounded-lg">
-                    <Wind className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">풍속</p>
-                    <p className="text-sm font-bold text-slate-900">{weatherData.windSpeed}m/s</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-cyan-50 rounded-lg">
-                    <Droplets className="w-4 h-4 text-cyan-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">습도</p>
-                    <p className="text-sm font-bold text-slate-900">{weatherData.humidity}%</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-indigo-50 rounded-lg">
-                    <CloudRain className="w-4 h-4 text-indigo-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">강수확률</p>
-                    <p className="text-sm font-bold text-slate-900">{weatherData.precipitation}%</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* 체감온도 및 자외선 */}
-              <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
-                <span className="text-slate-600">
-                  체감온도 <span className="font-semibold text-slate-900">{weatherData.feelsLike}°C</span>
-                </span>
-                <Badge variant={weatherData.uvIndex === 'low' ? 'success' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? 'danger' : 'warning'}>
-                  자외선 {weatherData.uvIndex === 'low' ? '낮음' : weatherData.uvIndex === 'high' || weatherData.uvIndex === 'very-high' ? '높음' : '보통'}
-                </Badge>
-              </div>
-              
-              <p className="text-xs text-slate-500 mt-2 text-center">
-                ⚠️ 산행 당일 날씨가 변경될 수 있습니다
-              </p>
+              )}
             </div>
           </div>
           

@@ -281,9 +281,8 @@ const MemberManagement = () => {
           company: exec.company || '',
           position: exec.position, // 시애라 직책 (운영위원장 등)
           role: exec.category === 'chairman' ? 'chairman' : 'committee',
-          dateJoined: new Date().toISOString().split('T')[0],
-          hikesParticipated: 0,
-          totalHikingDistance: 0,
+          joinDate: new Date().toISOString().split('T')[0],
+          isApproved: true,
           isActive: true,
           bio: exec.bio,
           createdAt: exec.createdAt || new Date().toISOString(),

@@ -110,12 +110,12 @@ export const convertToGrid = (lat: number, lon: number) => {
 };
 
 /**
- * 기상청 초단기실황 API 호출
+ * 기상청 지상관측 API 호출 (ASOS - 종관기상관측)
  * 현재 날씨 정보 조회
+ * API 문서: https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php
  */
 export const fetchCurrentWeather = async (
-  latitude: number = 37.5665,
-  longitude: number = 126.9780
+  targetDate?: string // YYYYMMDDHHMM 형식 (없으면 현재 시각)
 ): Promise<WeatherData> => {
   try {
     // API 키가 없으면 mock 데이터 반환
@@ -124,78 +124,104 @@ export const fetchCurrentWeather = async (
       return getMockWeatherData();
     }
     
-    // 격자 좌표 변환
-    const grid = convertToGrid(latitude, longitude);
-    
-    // 현재 시간 정보
+    // 시간 설정 (기본: 현재 시각)
     const now = new Date();
-    const baseDate = now.toISOString().split('T')[0].replace(/-/g, '');
-    const baseTime = `${String(now.getHours()).padStart(2, '0')}00`;
+    let tm1, tm2;
     
-    // 기상청 API URL (스크린샷의 형식 참고)
-    const url = `https://apihub.kma.go.kr/api/typ01/url/kma_sfcdd.php`;
+    if (targetDate) {
+      // 특정 날짜의 날씨 조회
+      tm1 = targetDate.slice(0, 12); // YYYYMMDDHHMM
+      tm2 = targetDate.slice(0, 12);
+    } else {
+      // 현재 날씨 조회 (최근 31일 이내)
+      const endTime = new Date(now.getTime());
+      const startTime = new Date(now.getTime() - 1 * 60 * 60 * 1000); // 1시간 전
+      
+      tm1 = formatKMADateTime(startTime);
+      tm2 = formatKMADateTime(endTime);
+    }
+    
+    // 기상청 ASOS API URL
+    const url = `https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php`;
     const params = new URLSearchParams({
-      tm: baseDate,
-      stn: '0',
+      tm1: tm1,
+      tm2: tm2,
+      stn: '108', // 서울 지점번호
       help: '1',
       authKey: KMA_API_KEY,
     });
     
-    console.log('🌤️ 기상청 API 호출:', `${url}?${params}`);
+    console.log('🌤️ 기상청 API 호출:', `${url}?${params.toString()}`);
     
-    const response = await fetch(`${url}?${params}`);
+    const response = await fetch(`${url}?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/plain',
+      },
+    });
     
     if (!response.ok) {
-      throw new Error(`API 호출 실패: ${response.status}`);
+      throw new Error(`API 호출 실패: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.text();
-    console.log('📡 기상청 API 응답:', data);
+    console.log('📡 기상청 API 응답 (첫 500자):', data.substring(0, 500));
     
     // 텍스트 데이터 파싱
-    const lines = data.split('\n');
+    const lines = data.split('\n').filter(line => line.trim().length > 0);
+    
     if (lines.length < 2) {
       throw new Error('응답 데이터 형식 오류');
     }
     
-    // 서울 데이터 찾기 (STN=108)
-    const seoulData = lines.find(line => line.includes('108 '));
-    if (!seoulData) {
-      throw new Error('서울 날씨 데이터를 찾을 수 없습니다');
+    // 헤더 제거 (첫 줄은 헤더)
+    const dataLines = lines.slice(1);
+    
+    // 가장 최근 데이터 (마지막 줄)
+    const latestData = dataLines[dataLines.length - 1];
+    
+    if (!latestData) {
+      throw new Error('날씨 데이터를 찾을 수 없습니다');
     }
     
     // 데이터 파싱 (공백으로 구분)
-    const values = seoulData.trim().split(/\s+/);
+    // 형식: TM WD WS GST_WD GST_WS PA PS PT PR TA TD HM PV RN ...
+    const values = latestData.trim().split(/\s+/);
     
-    // 기온, 풍속, 습도 추출
-    const temperature = parseFloat(values[4] || '0'); // TA (기온)
-    const windSpeed = parseFloat(values[8] || '0'); // WS (풍속)
-    const humidity = parseFloat(values[10] || '0'); // HM (습도)
+    console.log('📊 파싱된 데이터:', {
+      TM: values[0],
+      WD: values[1],
+      WS: values[2],
+      PA: values[6],
+      TA: values[9],
+      HM: values[11],
+    });
     
-    // 체감온도 계산
-    const feelsLike = Math.round(temperature - (windSpeed * 0.5));
+    // 기상 데이터 추출
+    const temperature = parseFloat(values[9] || '0'); // TA: 기온(°C)
+    const windSpeed = parseFloat(values[2] || '0'); // WS: 풍속(m/s)
+    const humidity = parseFloat(values[11] || '0'); // HM: 습도(%)
+    const pressure = parseFloat(values[6] || '0'); // PA: 현지기압(hPa)
     
-    // 날씨 상태 추정 (간단한 로직)
-    let condition: WeatherCondition = 'cloudy';
-    if (temperature > 15 && humidity < 60) {
-      condition = 'sunny';
-    } else if (humidity > 80) {
-      condition = 'rainy';
-    }
+    // 체감온도 계산 (Wind Chill Index)
+    const feelsLike = calculateWindChill(temperature, windSpeed);
     
-    // 강수 확률 추정
-    const precipitation = humidity > 70 ? Math.min(humidity - 20, 80) : 20;
+    // 날씨 상태 추정
+    const condition = estimateCondition(temperature, humidity, windSpeed);
+    
+    // 강수 확률 추정 (습도 기반)
+    const precipitation = estimatePrecipitation(humidity);
     
     // UV 지수 추정
     const uvIndex = estimateUVIndex(temperature, condition);
     
     return {
-      temperature,
-      feelsLike,
+      temperature: Math.round(temperature * 10) / 10,
+      feelsLike: Math.round(feelsLike * 10) / 10,
       condition,
       precipitation,
-      windSpeed,
-      humidity,
+      windSpeed: Math.round(windSpeed * 10) / 10,
+      humidity: Math.round(humidity),
       uvIndex,
     };
   } catch (error) {
@@ -203,6 +229,60 @@ export const fetchCurrentWeather = async (
     // 에러 시 mock 데이터 반환
     return getMockWeatherData();
   }
+};
+
+/**
+ * 날짜를 기상청 API 형식으로 변환
+ * YYYYMMDDHHMM 형식
+ */
+const formatKMADateTime = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${year}${month}${day}${hour}${minute}`;
+};
+
+/**
+ * 체감온도 계산 (Wind Chill Index)
+ */
+const calculateWindChill = (temp: number, windSpeed: number): number => {
+  if (temp > 10 || windSpeed < 1.3) {
+    return temp;
+  }
+  
+  // Wind Chill Formula
+  return 13.12 + 0.6215 * temp - 11.37 * Math.pow(windSpeed * 3.6, 0.16) + 0.3965 * temp * Math.pow(windSpeed * 3.6, 0.16);
+};
+
+/**
+ * 날씨 상태 추정 (기온, 습도, 풍속 기반)
+ */
+const estimateCondition = (temp: number, humidity: number, windSpeed: number): WeatherCondition => {
+  // 습도가 높으면 비 또는 눈
+  if (humidity > 85) {
+    return temp < 3 ? 'snowy' : 'rainy';
+  }
+  
+  // 습도가 중간이면 흐림
+  if (humidity > 65) {
+    return 'cloudy';
+  }
+  
+  // 습도가 낮으면 맑음
+  return 'sunny';
+};
+
+/**
+ * 강수 확률 추정 (습도 기반)
+ */
+const estimatePrecipitation = (humidity: number): number => {
+  if (humidity > 85) return 80;
+  if (humidity > 70) return 50;
+  if (humidity > 60) return 30;
+  return 10;
 };
 
 /**
@@ -328,19 +408,75 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10분
  * 캐시된 날씨 데이터 조회 (자동 갱신)
  */
 export const getCachedWeather = async (
-  latitude?: number,
-  longitude?: number
+  targetDate?: string
 ): Promise<WeatherData> => {
   const now = Date.now();
   
-  // 캐시가 유효하면 캐시 데이터 반환
-  if (cachedWeather && (now - lastFetchTime) < CACHE_DURATION) {
+  // 특정 날짜가 지정되지 않은 경우 캐시 사용
+  if (!targetDate) {
+    // 캐시가 유효하면 캐시 데이터 반환
+    if (cachedWeather && (now - lastFetchTime) < CACHE_DURATION) {
+      return cachedWeather;
+    }
+    
+    // 캐시가 없거나 만료되면 새로 조회
+    cachedWeather = await fetchCurrentWeather();
+    lastFetchTime = now;
+    
     return cachedWeather;
   }
   
-  // 캐시가 없거나 만료되면 새로 조회
-  cachedWeather = await fetchCurrentWeather(latitude, longitude);
-  lastFetchTime = now;
-  
-  return cachedWeather;
+  // 특정 날짜가 지정된 경우 항상 새로 조회
+  return await fetchCurrentWeather(targetDate);
+};
+
+/**
+ * 산행 날짜의 날씨 예보 조회
+ * @param eventDate - 산행 날짜 (ISO 8601 형식: YYYY-MM-DD 또는 Date 객체)
+ * @returns WeatherData
+ */
+export const getEventWeather = async (eventDate: string | Date): Promise<WeatherData> => {
+  try {
+    // Date 객체로 변환
+    const date = typeof eventDate === 'string' ? new Date(eventDate) : eventDate;
+    const now = new Date();
+    
+    // 날짜 차이 계산
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    console.log(`🗓️ 산행 날짜까지 ${diffDays}일 남음`);
+    
+    // 과거 날짜는 현재 날씨 반환
+    if (diffDays < 0) {
+      console.log('⚠️ 과거 날짜이므로 현재 날씨를 반환합니다.');
+      return await fetchCurrentWeather();
+    }
+    
+    // 30일 이내면 기상청 API로 예보 조회 시도
+    if (diffDays <= 30) {
+      // 산행 당일 정오(12시) 기준으로 날씨 조회
+      const targetDateTime = new Date(date);
+      targetDateTime.setHours(12, 0, 0, 0);
+      const targetDateTimeStr = formatKMADateTime(targetDateTime);
+      
+      console.log(`🌤️ ${diffDays}일 후 날씨 조회: ${targetDateTimeStr}`);
+      
+      // 현재는 과거 데이터만 조회 가능하므로, 미래 예보는 현재 날씨 기반 추정
+      if (diffDays > 0) {
+        console.log('⚠️ 기상청 API는 과거 데이터만 제공하므로 현재 날씨 기반으로 추정합니다.');
+        return await fetchCurrentWeather();
+      }
+      
+      // 당일이면 실제 API 호출
+      return await fetchCurrentWeather(targetDateTimeStr);
+    }
+    
+    // 30일 이후는 현재 날씨 반환 (예보 불가)
+    console.log('⚠️ 30일 이후 날짜이므로 현재 날씨를 반환합니다.');
+    return await fetchCurrentWeather();
+    
+  } catch (error) {
+    console.error('❌ 산행 날씨 조회 실패:', error);
+    return getMockWeatherData();
+  }
 };

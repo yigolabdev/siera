@@ -8,6 +8,7 @@ import { useParticipations } from '../contexts/ParticipationContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
+import { getEventWeather, WeatherData } from '../utils/weather';
 
 const Events = () => {
   const { user } = useAuth();
@@ -21,16 +22,16 @@ const Events = () => {
   // URL에서 eventId 가져오기
   const eventIdFromUrl = searchParams.get('eventId');
   
-  // 날씨 데이터 (추후 실제 API 연동)
-  const weatherData = {
+  // 날씨 데이터 (기상청 API 연동)
+  const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 8,
     feelsLike: 5,
-    condition: 'cloudy' as const,
+    condition: 'cloudy',
     precipitation: 20,
     windSpeed: 3.5,
     humidity: 65,
-    uvIndex: 'moderate' as 'low' | 'moderate' | 'high' | 'very-high',
-  };
+    uvIndex: 'moderate',
+  });
 
   // 날씨 상태에 따른 아이콘 및 텍스트
   const getWeatherIcon = (condition: string) => {
@@ -77,6 +78,24 @@ const Events = () => {
         : selectedEvent.currentParticipants,
     };
   }, [selectedEvent, isDevMode, currentApplicationStatus]);
+  
+  // 날씨 데이터 로드 (산행 날짜 기준)
+  useEffect(() => {
+    const loadWeather = async () => {
+      try {
+        // 선택된 이벤트가 있으면 해당 날짜의 날씨 조회
+        if (event && event.date) {
+          console.log('🗓️ 산행 날짜 날씨 조회:', event.date);
+          const weather = await getEventWeather(event.date);
+          setWeatherData(weather);
+        }
+      } catch (error) {
+        console.error('날씨 데이터 로드 실패:', error);
+      }
+    };
+    
+    loadWeather();
+  }, [event]);
   
   // 참석자 목록 (실제 신청자)
   const participants = event ? getParticipantsByEventId(event.id) : [];

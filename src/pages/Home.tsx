@@ -11,7 +11,7 @@ import { useNotices } from '../contexts/NoticeContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
-import { getCachedWeather, WeatherData } from '../utils/weather';
+import { getCachedWeather, getEventWeather, WeatherData } from '../utils/weather';
 
 const Home = () => {
   const { user } = useAuth();
@@ -40,12 +40,20 @@ const Home = () => {
     uvIndex: 'moderate',
   });
   
-  // 날씨 데이터 로드
+  // 날씨 데이터 로드 (산행 날짜 기준)
   useEffect(() => {
     const loadWeather = async () => {
       try {
-        const weather = await getCachedWeather();
-        setWeatherData(weather);
+        // 산행 이벤트가 있으면 해당 날짜의 날씨 조회
+        if (currentEvent && currentEvent.date) {
+          console.log('🗓️ 산행 날짜 날씨 조회:', currentEvent.date);
+          const weather = await getEventWeather(currentEvent.date);
+          setWeatherData(weather);
+        } else {
+          // 없으면 현재 날씨 조회
+          const weather = await getCachedWeather();
+          setWeatherData(weather);
+        }
       } catch (error) {
         console.error('날씨 데이터 로드 실패:', error);
       }
@@ -57,7 +65,7 @@ const Home = () => {
     const interval = setInterval(loadWeather, 10 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [currentEvent]);
   
   // 회원 통계 계산
   const calculateStats = {

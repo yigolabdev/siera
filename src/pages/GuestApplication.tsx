@@ -27,16 +27,45 @@ const GuestApplication = () => {
   // 신청 가능한 산행 (현재부터 2개월 이내)
   const currentEvent = useMemo(() => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0); // 오늘 00:00:00으로 설정
     const twoMonthsLater = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    
+    console.log('🔍 [GuestApplication] 산행 필터링 시작:', {
+      totalEvents: events.length,
+      now: now.toISOString(),
+      twoMonthsLater: twoMonthsLater.toISOString(),
+    });
     
     const availableEvents = events
       .filter((event) => {
         const eventDate = new Date(event.date);
-        return eventDate >= now && 
-               eventDate <= twoMonthsLater && 
-               event.isPublished !== false;
+        eventDate.setHours(0, 0, 0, 0);
+        
+        const isPublished = event.isPublished !== false && event.isDraft !== true;
+        const isNotCompleted = event.status !== 'completed';
+        const isInDateRange = eventDate >= now && eventDate <= twoMonthsLater;
+        
+        const isAvailable = isPublished && isNotCompleted && isInDateRange;
+        
+        console.log(`  - ${event.title}:`, {
+          date: event.date,
+          eventDate: eventDate.toISOString(),
+          isPublished,
+          isDraft: event.isDraft,
+          status: event.status,
+          isNotCompleted,
+          isInDateRange,
+          isAvailable,
+        });
+        
+        return isAvailable;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    console.log('✅ [GuestApplication] 필터링 완료:', {
+      availableEventsCount: availableEvents.length,
+      selectedEvent: availableEvents[0]?.title || null,
+    });
     
     return availableEvents[0] || null;
   }, [events]);

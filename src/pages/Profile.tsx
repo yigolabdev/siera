@@ -5,6 +5,7 @@ import { useExecutives } from '../contexts/ExecutiveContext';
 import { User, Mail, Phone, Briefcase, Building, Lock, Save, Eye, EyeOff, Camera, Trash2, Shield, Edit, Calendar, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { uploadFile, deleteFile } from '../lib/firebase/storage';
+import { formatPhoneNumberInput, removePhoneNumberHyphens, formatPhoneNumber } from '../utils/format';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
@@ -41,7 +42,7 @@ const Profile = () => {
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        phone: user.phoneNumber || '',
+        phone: user.phoneNumber ? formatPhoneNumber(user.phoneNumber) : '', // DB 값을 포맷팅하여 표시
         gender: user.gender || '',
         birthYear: user.birthYear || '',
         company: user.company || '',
@@ -64,27 +65,10 @@ const Profile = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
-  
-  // 전화번호 포맷팅 함수
-  const formatPhoneNumber = (value: string) => {
-    // 숫자만 추출
-    const numbers = value.replace(/[^\d]/g, '');
-    
-    // 길이에 따라 포맷팅
-    if (numbers.length <= 3) {
-      return numbers;
-    } else if (numbers.length <= 7) {
-      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
-    } else if (numbers.length <= 10) {
-      return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`;
-    } else {
-      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
-    }
-  };
 
   // 전화번호 입력 핸들러
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
+    const formatted = formatPhoneNumberInput(e.target.value);
     setFormData({ ...formData, phone: formatted });
   };
 
@@ -187,7 +171,7 @@ const Profile = () => {
       const updateData: Record<string, any> = {
         name: formData.name,
         email: formData.email,
-        phoneNumber: formData.phone,
+        phoneNumber: removePhoneNumberHyphens(formData.phone), // 하이픈 제거 후 저장
         gender: formData.gender,
         birthYear: formData.birthYear,
         company: formData.company,

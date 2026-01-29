@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
+import { formatPhoneNumberInput, removePhoneNumberHyphens } from '../utils/format';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -28,29 +29,11 @@ const Register = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  // 전화번호 자동 하이픈 포맷팅
-  const formatPhoneNumber = (value: string): string => {
-    // 숫자만 추출
-    const numbers = value.replace(/[^\d]/g, '');
-    
-    // 길이에 따라 하이픈 추가
-    if (numbers.length <= 3) {
-      return numbers;
-    } else if (numbers.length <= 7) {
-      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
-    } else if (numbers.length <= 11) {
-      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`;
-    } else {
-      // 11자리 초과 시 11자리까지만
-      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
-    }
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
     // 전화번호 필드인 경우 자동 포맷팅 적용
-    const formattedValue = name === 'phoneNumber' ? formatPhoneNumber(value) : value;
+    const formattedValue = name === 'phoneNumber' ? formatPhoneNumberInput(value) : value;
     
     setFormData({
       ...formData,
@@ -143,7 +126,7 @@ const Register = () => {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        phoneNumber: formData.phoneNumber,
+        phoneNumber: removePhoneNumberHyphens(formData.phoneNumber), // 하이픈 제거 후 저장
         gender: formData.gender,
         birthYear: formData.birthYear,
         company: formData.company,

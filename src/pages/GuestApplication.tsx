@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Mountain, User, Mail, Phone, Briefcase, Building, UserPlus, ArrowLeft, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
+import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate, formatPhoneNumberInput, removePhoneNumberHyphens } from '../utils/format';
 import { useEvents } from '../contexts/EventContext';
 import { useGuestApplications } from '../contexts/GuestApplicationContext';
 
@@ -71,10 +71,21 @@ const GuestApplication = () => {
   }, [events]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // 전화번호 입력 시 자동 하이픈 추가
+    if (name === 'phoneNumber') {
+      const formatted = formatPhoneNumberInput(value);
+      setFormData({
+        ...formData,
+        [name]: formatted,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +109,7 @@ const GuestApplication = () => {
       await addGuestApplication({
         name: formData.name,
         email: formData.email,
-        phoneNumber: formData.phoneNumber,
+        phoneNumber: removePhoneNumberHyphens(formData.phoneNumber), // 하이픈 제거 후 저장
         company: formData.company || undefined,
         position: formData.position || undefined,
         referredBy: formData.referredBy || undefined,

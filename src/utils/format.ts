@@ -46,6 +46,36 @@ export const formatPhoneNumber = (phone: string): string => {
 };
 
 /**
+ * 전화번호 입력 중 자동 하이픈 추가
+ * 010-1234-5678, 02-123-4567, 031-123-4567 등 다양한 형식 지원
+ */
+export const formatPhoneNumberInput = (value: string): string => {
+  // 숫자만 추출
+  const numbers = value.replace(/\D/g, '');
+  
+  // 길이에 따라 다른 포맷 적용
+  if (numbers.length <= 3) {
+    return numbers;
+  } else if (numbers.length <= 7) {
+    // 010-1234 or 02-123
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  } else if (numbers.length <= 10) {
+    // 010-1234-567 or 02-123-456
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+  } else {
+    // 010-1234-5678 (11자리)
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  }
+};
+
+/**
+ * 전화번호에서 하이픈 제거 (DB 저장용)
+ */
+export const removePhoneNumberHyphens = (phone: string): string => {
+  return phone.replace(/\D/g, '');
+};
+
+/**
  * 파일 크기를 읽기 쉬운 형식으로 변환
  */
 export const formatFileSize = (bytes: number): string => {

@@ -353,6 +353,7 @@ const MemberManagement = () => {
     inactive: members.filter(m => m.isActive === false).length,
     chairman: members.filter(m => m.role === 'chairman').length,
     committee: members.filter(m => m.role === 'committee').length,
+    executives: members.filter(m => m.role === 'chairman' || m.role === 'committee').length, // 운영진 전체
     member: members.filter(m => m.role === 'member').length,
   };
 
@@ -492,8 +493,9 @@ const MemberManagement = () => {
               <div className="flex items-center justify-center mb-2">
                 <UserCog className="w-6 h-6 text-blue-600" />
               </div>
-              <p className="text-slate-600 text-sm mb-1">운영위원</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.committee}명</p>
+              <p className="text-slate-600 text-sm mb-1">운영진</p>
+              <p className="text-3xl font-bold text-slate-900">{memberStats.executives}명</p>
+              <p className="text-xs text-slate-500 mt-1">회장단 {memberStats.chairman} · 운영위원 {memberStats.committee}</p>
             </Card>
           </div>
 

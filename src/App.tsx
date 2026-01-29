@@ -46,6 +46,7 @@ const AnnualFeeManagement = lazy(() => import('./pages/Admin/AnnualFeeManagement
 const ExecutiveManagement = lazy(() => import('./pages/Admin/ExecutiveManagement'));
 const ContentManagement = lazy(() => import('./pages/Admin/ContentManagement'));
 const AdminManual = lazy(() => import('./pages/Admin/AdminManual'));
+const WeatherTest = lazy(() => import('./pages/Admin/WeatherTest'));
 
 // 로딩 컴포넌트
 const PageLoader = () => (
@@ -116,6 +117,7 @@ function App() {
               <Route path="events" element={<EventManagement />} />
               <Route path="content" element={<ContentManagement />} />
               <Route path="manual" element={<AdminManual />} />
+              <Route path="weather-test" element={<WeatherTest />} />
             </Route>
             
             {/* Print View - 별도 레이아웃 없이 */}

@@ -124,24 +124,61 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
     try {
       console.log('✅ 게스트 신청 승인 처리:', applicationId);
       
+      // 1. 게스트 신청 정보 가져오기
+      const application = guestApplications.find(app => app.id === applicationId);
+      if (!application) {
+        throw new Error('게스트 신청 정보를 찾을 수 없습니다.');
+      }
+
+      // 2. 게스트 신청 상태 업데이트
       const result = await updateDocument('guestApplications', applicationId, {
         status: 'approved',
         approvedAt: new Date().toISOString(),
       });
 
-      if (result.success) {
-        setGuestApplications(prev =>
-          prev.map(app =>
-            app.id === applicationId
-              ? { ...app, status: 'approved' as const, approvedAt: new Date().toISOString() }
-              : app
-          )
-        );
-        
-        console.log('✅ 게스트 신청 승인 완료:', applicationId);
-      } else {
+      if (!result.success) {
         throw new Error(result.error || '게스트 신청 승인 실패');
       }
+
+      // 3. participations 컬렉션에 참가자 추가
+      const participationId = `participation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const now = new Date().toISOString();
+      
+      const participationData = {
+        id: participationId,
+        eventId: application.eventId,
+        userId: applicationId, // 게스트는 applicationId를 userId로 사용
+        userName: application.name,
+        userEmail: application.email,
+        isGuest: true, // 게스트 표시
+        status: 'confirmed',
+        registeredAt: now,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      console.log('📤 participations 추가:', participationData);
+
+      const participationResult = await setDocument('participations', participationId, participationData);
+      
+      if (!participationResult.success) {
+        throw new Error('참가자 등록 실패');
+      }
+
+      // 4. 로컬 상태 업데이트
+      setGuestApplications(prev =>
+        prev.map(app =>
+          app.id === applicationId
+            ? { ...app, status: 'approved' as const, approvedAt: new Date().toISOString() }
+            : app
+        )
+      );
+      
+      console.log('✅ 게스트 신청 승인 및 참가자 등록 완료:', {
+        applicationId,
+        participationId,
+        eventId: application.eventId,
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ 게스트 신청 승인 실패:', message);

@@ -829,7 +829,14 @@ const Events = () => {
                   >
                     <span className="text-sm font-bold text-slate-500 min-w-[32px]">{index + 1}</span>
                     <div className="flex-1">
-                      <p className="font-bold text-slate-900">{participant.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-slate-900">{participant.name}</p>
+                        {participant.isGuest && (
+                          <span className="inline-flex items-center justify-center w-6 h-6 bg-amber-100 text-amber-700 text-xs font-bold rounded border border-amber-300">
+                            G
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-slate-600">
                         {participant.company && participant.position 
                           ? `${participant.company} · ${participant.position}`

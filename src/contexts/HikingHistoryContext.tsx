@@ -85,7 +85,7 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
   // Firebase에서 산행 이력 및 후기 로드
   useEffect(() => {
     const initializeData = async () => {
-      await waitForFirebase();
+      // Firebase는 동기적으로 초기화됨
       await loadHistory();
       await loadComments();
     };

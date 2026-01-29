@@ -64,7 +64,7 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
   // Firebase 초기 데이터 로드
   useEffect(() => {
     const initializeData = async () => {
-      await waitForFirebase();
+      // Firebase는 동기적으로 초기화됨
       await loadParticipations();
     };
     initializeData();

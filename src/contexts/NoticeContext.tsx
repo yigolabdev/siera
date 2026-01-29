@@ -52,7 +52,7 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
   // Firebase에서 공지사항 로드
   useEffect(() => {
     const initializeData = async () => {
-      await waitForFirebase();
+      // Firebase는 동기적으로 초기화됨
       await loadNotices();
     };
     initializeData();

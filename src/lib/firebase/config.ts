@@ -20,40 +20,23 @@ let app;
 let auth;
 let db;
 let storage;
-let isFirebaseInitialized = false;
 
 try {
+  console.log('🔥 Firebase 초기화 시작...');
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
-  isFirebaseInitialized = true;
   
-  console.log('✅ Firebase initialized successfully');
+  console.log('✅ Firebase 초기화 완료!');
 } catch (error) {
-  console.error('❌ Firebase initialization error:', error);
+  console.error('❌ Firebase 초기화 실패:', error);
+  throw error; // 초기화 실패 시 에러를 던져서 명확하게 함
 }
 
-// Firebase 초기화 완료 Promise
+// Firebase는 이미 동기적으로 초기화되었으므로 즉시 resolve
 export const waitForFirebase = (): Promise<void> => {
-  return new Promise((resolve) => {
-    if (isFirebaseInitialized) {
-      resolve();
-    } else {
-      // Firebase가 초기화될 때까지 최대 5초 대기
-      const checkInterval = setInterval(() => {
-        if (isFirebaseInitialized) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 100);
-      
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve(); // 타임아웃 후에도 진행
-      }, 5000);
-    }
-  });
+  return Promise.resolve();
 };
 
-export { app, auth, db, storage, isFirebaseInitialized };
+export { app, auth, db, storage };

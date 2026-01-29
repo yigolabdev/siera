@@ -75,7 +75,7 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeData = async () => {
-      await waitForFirebase();
+      // Firebase는 동기적으로 초기화됨
       
       // user가 undefined인 경우 (초기 로딩 중) 대기
       if (user === undefined) {

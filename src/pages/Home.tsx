@@ -24,6 +24,19 @@ const Home = () => {
   const { createPaymentForParticipation } = usePayments();
   const { notices } = useNotices();
   
+  // 디버깅 로그
+  useEffect(() => {
+    console.log('🏠 [Home] 렌더링 상태:', {
+      eventsLoading,
+      eventsCount: events.length,
+      hasCurrentEvent: !!currentEvent,
+      currentEventTitle: currentEvent?.title,
+      currentEventDate: currentEvent?.date,
+      currentEventPublished: currentEvent?.isPublished,
+      currentEventDraft: currentEvent?.isDraft,
+    });
+  }, [eventsLoading, events, currentEvent]);
+  
   // 참석 여부 상태 (Firebase에서 가져오기)
   const myParticipationStatus = useMemo(() => {
     if (!user || !currentEvent) return null;

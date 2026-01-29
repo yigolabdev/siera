@@ -34,6 +34,9 @@ const Gallery = () => {
   // 컴포넌트 마운트 확인
   useEffect(() => {
     console.log('✅ Gallery 컴포넌트 마운트됨');
+    console.log('👤 현재 로그인 상태:', user ? '로그인됨 (' + user.email + ')' : '로그아웃 상태');
+    console.log('📷 사진 개수:', photos.length);
+    console.log('🏔️ 산행 개수:', events.length);
   }, []);
   
   // showUploadModal 변경 추적
@@ -232,30 +235,180 @@ const Gallery = () => {
   // 빈 상태일 때
   if (photos.length === 0 && !isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">사진첩</h1>
-          <p className="text-slate-600">시애라클럽의 추억을 함께 공유하세요.</p>
+      <>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">사진첩</h1>
+            <p className="text-slate-600">시애라클럽의 추억을 함께 공유하세요.</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+            <ImageIcon className="w-24 h-24 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">아직 업로드된 사진이 없습니다</h3>
+            <p className="text-slate-600 mb-6">
+              첫 번째 산행 사진을 업로드해보세요!
+            </p>
+            {user && (
+              <button
+                onClick={handleOpenUploadModal}
+                onMouseEnter={() => console.log('🖱️ 마우스가 업로드 버튼 위에 올라감')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+                type="button"
+                style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+              >
+                <Upload className="w-5 h-5" />
+                사진 업로드하기
+              </button>
+            )}
+            {!user && (
+              <p className="text-sm text-slate-500 mt-4">⚠️ 사진 업로드는 로그인이 필요합니다.</p>
+            )}
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <ImageIcon className="w-24 h-24 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">아직 업로드된 사진이 없습니다</h3>
-          <p className="text-slate-600 mb-6">
-            첫 번째 산행 사진을 업로드해보세요!
-          </p>
-          {user && (
-            <button
-              onClick={handleOpenUploadModal}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-              type="button"
-            >
-              <Upload className="w-5 h-5" />
-              사진 업로드하기
-            </button>
-          )}
-        </div>
-      </div>
+        {/* 업로드 모달 - 빈 상태용 */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b sticky top-0 bg-white">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">사진 업로드</h2>
+                  <button 
+                    onClick={() => {
+                      console.log('🔴 모달 닫기 버튼 클릭 (빈 상태)');
+                      setShowUploadModal(false);
+                    }}
+                    type="button"
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* 산행 선택 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    산행 선택
+                  </label>
+                  <select
+                    value={selectedEventForUpload}
+                    onChange={(e) => setSelectedEventForUpload(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2"
+                  >
+                    <option value="">산행을 선택하세요</option>
+                    {availableEvents.length === 0 ? (
+                      <option disabled>등록된 산행이 없습니다</option>
+                    ) : (
+                      availableEvents.map(event => (
+                        <option key={event.id} value={event.id}>
+                          {event.title} ({event.date})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                {/* 드래그 앤 드롭 영역 */}
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  className={`border-2 border-dashed rounded-lg p-12 text-center ${
+                    isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300'
+                  }`}
+                >
+                  <Upload className="w-16 h-16 mx-auto mb-4 text-blue-500" />
+                  <p className="text-slate-900 font-bold text-lg mb-3">
+                    ⭐ 아래 버튼을 클릭하여 사진을 선택하세요
+                  </p>
+                  <p className="text-slate-600 mb-4">
+                    또는 이곳에 파일을 드래그하여 추가할 수 있습니다
+                  </p>
+                  <input
+                    id="file-upload-input-empty"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="file-upload-input-empty"
+                    className="mt-2 inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-bold text-lg shadow-lg hover:shadow-xl"
+                  >
+                    <ImageIcon className="w-6 h-6" />
+                    📁 컴퓨터에서 사진 선택
+                  </label>
+                  <p className="text-sm text-slate-600 mt-4 font-medium">
+                    JPG, PNG, GIF 형식 지원 (최대 10MB)
+                  </p>
+                </div>
+
+                {/* 업로드할 파일 목록 */}
+                {uploadFiles.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">업로드할 사진 ({uploadFiles.length}개)</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {uploadFiles.map(file => (
+                        <div key={file.id} className="relative">
+                          <img
+                            src={file.preview}
+                            alt="미리보기"
+                            className="w-full aspect-square object-cover rounded-lg"
+                          />
+                          <button
+                            onClick={() => removeUploadFile(file.id)}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <input
+                            type="text"
+                            placeholder="사진 설명 (선택사항)"
+                            value={file.caption}
+                            onChange={(e) => updateCaption(file.id, e.target.value)}
+                            className="mt-2 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t bg-slate-50 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-white transition-colors"
+                  type="button"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={uploadFiles.length === 0 || !selectedEventForUpload || isUploading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                  type="button"
+                >
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      업로드 중...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      업로드
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -271,8 +424,8 @@ const Gallery = () => {
         </div>
       ) : (
         <>
-      {/* 헤더 */}
-      <div className="flex justify-between items-center mb-8">
+          {/* 헤더 */}
+          <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">사진첩</h1>
           <p className="text-slate-600">시애라클럽의 추억을 함께 공유하세요.</p>
@@ -281,12 +434,17 @@ const Gallery = () => {
         {user && (
           <button
             onClick={handleOpenUploadModal}
+            onMouseEnter={() => console.log('🖱️ 마우스가 업로드 버튼 위에 올라감 (상단)')}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
             type="button"
+            style={{ cursor: 'pointer', pointerEvents: 'auto' }}
           >
             <Upload className="w-5 h-5" />
             사진 업로드하기
           </button>
+        )}
+        {!user && (
+          <p className="text-sm text-slate-500">⚠️ 로그인 후 사진을 업로드할 수 있습니다.</p>
         )}
       </div>
 
@@ -504,7 +662,7 @@ const Gallery = () => {
           </div>
         </div>
       )}
-      </>
+        </>
       )}
     </div>
   );

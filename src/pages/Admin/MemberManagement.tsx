@@ -1060,55 +1060,56 @@ const MemberManagement = () => {
       {isPasswordModalOpen && (
         <Modal
           onClose={handlePasswordCancel}
-          title="관리자 비밀번호 확인"
           maxWidth="max-w-md"
         >
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-              <p className="text-sm text-amber-800">
-                중요한 작업을 수행하기 위해 관리자 비밀번호가 필요합니다.
-              </p>
+          <div className="p-6 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-slate-900" />
             </div>
             
-            <label className="block text-slate-700 font-semibold mb-2">
-              비밀번호 <Badge variant="danger">필수</Badge>
-            </label>
-            <input
-              type="password"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handlePasswordConfirm();
-                }
-              }}
-              className="input-field"
-              placeholder="관리자 비밀번호를 입력하세요"
-              autoFocus
-            />
-            <p className="text-xs text-slate-500 mt-2">
-              현재 로그인한 계정({user?.email})의 비밀번호를 입력하세요
+            <h3 className="text-xl font-bold text-slate-900 mb-2">관리자 비밀번호 확인</h3>
+            <p className="text-slate-600 mb-6">
+              중요한 작업을 수행하기 위해 비밀번호를 입력해주세요
             </p>
-          </div>
+            
+            <div className="text-left mb-6">
+              <label className="block text-slate-700 font-semibold mb-2">
+                비밀번호
+              </label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordConfirm();
+                  }
+                }}
+                className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
+                placeholder="현재 로그인한 계정의 비밀번호"
+                autoFocus
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                {user?.email}
+              </p>
+            </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={handlePasswordCancel}
-              className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors font-medium"
-            >
-              취소
-            </button>
-            <button
-              onClick={handlePasswordConfirm}
-              className="flex-1 btn-primary flex items-center justify-center gap-2"
-            >
-              <Check className="w-5 h-5" />
-              확인
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handlePasswordCancel}
+                className="flex-1 py-3 rounded-lg font-bold text-base text-slate-700 border-2 border-slate-300 hover:bg-slate-50 transition-all"
+              >
+                취소
+              </button>
+              <button
+                onClick={handlePasswordConfirm}
+                className="flex-1 py-3 rounded-lg font-bold text-base bg-slate-900 text-white hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+              >
+                <Shield className="w-5 h-5" />
+                확인
+              </button>
+            </div>
           </div>
-        </div>
         </Modal>
       )}
     </div>

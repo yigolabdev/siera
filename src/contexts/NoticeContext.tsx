@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument, deleteDocument } from '../li
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Notice } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface NoticeContextType {
   notices: Notice[];
@@ -21,11 +22,17 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
 
   const loadNotices = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      console.log('🔄 [NoticeContext] notices 데이터 로드 시작');
 
       const result = await getDocuments<Notice>('notices');
       if (result.success && result.data) {
@@ -34,7 +41,7 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         setNotices(sortedNotices);
-        console.log('✅ Firebase에서 공지사항 로드:', sortedNotices.length);
+        console.log('✅ Firebase에서 공지사항 로드:', sortedNotices.length, '개');
       } else {
         console.log('ℹ️ Firebase에서 로드된 공지사항이 없습니다.');
         setNotices([]);
@@ -43,20 +50,35 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Firebase 공지사항 로드 실패:', message);
       setError(message);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'NoticeContext.loadNotices',
+      });
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Firebase에서 공지사항 로드
+  // Firebase에서 공지사항 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadNotices();
+      console.log('🔄 [NoticeContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadNotices();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadNotices를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading, loadNotices]);
 
   const addNotice = useCallback(async (noticeData: Omit<Notice, 'id' | 'date' | 'createdAt' | 'updatedAt'>) => {
     try {

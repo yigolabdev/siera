@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument, deleteDocument } from '../li
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { GuestApplication } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface GuestApplicationContextType {
   guestApplications: GuestApplication[];
@@ -22,6 +23,10 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
   const [guestApplications, setGuestApplications] = useState<GuestApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
 
   const loadApplications = useCallback(async () => {
     try {
@@ -54,14 +59,27 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
     }
   }, []);
 
-  // Firebase에서 게스트 신청 데이터 로드
+  // Firebase에서 게스트 신청 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadApplications();
+      console.log('🔄 [GuestApplicationContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadApplications();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadApplications를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading, loadApplications]);
 
   // 게스트 신청 추가
   const addGuestApplication = async (

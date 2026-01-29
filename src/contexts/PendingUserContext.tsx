@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument, deleteDocument } from '../li
 import { PendingUser } from '../types';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface PendingUserContextType {
   pendingUsers: PendingUser[];
@@ -20,15 +21,32 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
 
-  // Firebase에서 가입 대기 사용자 데이터 로드
+  // Firebase에서 가입 대기 사용자 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadPendingUsers();
+      console.log('🔄 [PendingUserContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadPendingUsers();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []);
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading]);
 
   const loadPendingUsers = async () => {
     try {

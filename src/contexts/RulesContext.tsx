@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument } from '../lib/firebase/fires
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { RulesData, RulesAmendment } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface RulesContextType {
   rulesData: RulesData;
@@ -169,11 +170,17 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
   const [rulesData, setRulesData] = useState<RulesData>(initialRulesData);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
 
   const loadRules = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      console.log('🔄 [RulesContext] rules 데이터 로드 시작');
 
       const result = await getDocuments<RulesData>('rules');
       if (result.success && result.data && result.data.length > 0) {
@@ -198,14 +205,27 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Firebase에서 회칙 데이터 로드
+  // Firebase에서 회칙 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadRules();
+      console.log('🔄 [RulesContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadRules();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadRules를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading, loadRules]);
 
   const updateRules = useCallback(async (content: string, version: string, effectiveDate: string) => {
     try {

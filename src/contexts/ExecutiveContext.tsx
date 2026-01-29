@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument, deleteDocument } from '../li
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import type { Executive } from '../types';  // ✅ Use type import
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 export type { Executive };  // ✅ Re-export for compatibility
 
@@ -23,31 +24,54 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
   const [executives, setExecutives] = useState<Executive[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
 
-  // Firebase에서 운영진 데이터 로드
+  // Firebase에서 운영진 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadExecutives();
+      console.log('🔄 [ExecutiveContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadExecutives();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []);
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading]);
 
   const loadExecutives = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
+      console.log('🔄 [ExecutiveContext] executives 데이터 로드 시작');
+
       const result = await getDocuments<Executive>('executives');
       if (result.success && result.data) {
         setExecutives(result.data);
-        console.log('✅ Firebase에서 운영진 데이터 로드:', result.data.length);
+        console.log('✅ Firebase에서 운영진 데이터 로드:', result.data.length, '명');
       } else {
         console.log('ℹ️ Firebase에서 로드된 운영진 데이터가 없습니다.');
+        setExecutives([]);
       }
     } catch (err: any) {
       console.error('❌ Firebase 운영진 데이터 로드 실패:', err.message);
       setError(err.message);
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'ExecutiveContext.loadExecutives',
+      });
     } finally {
       setIsLoading(false);
     }

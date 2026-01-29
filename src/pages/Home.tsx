@@ -45,22 +45,13 @@ const Home = () => {
     const loadWeather = async () => {
       try {
         if (currentEvent) {
+          console.log('🌤️ 날씨 데이터 로드 시작:', currentEvent.date);
+          
           // DB에 저장된 날씨 정보 확인 및 갱신
           await checkAndUpdateWeather(currentEvent.id);
           
-          // 갱신 후 이벤트에서 날씨 정보 가져오기
-          if (currentEvent.weather) {
-            setWeatherData({
-              temperature: currentEvent.weather.temperature,
-              feelsLike: currentEvent.weather.feelsLike,
-              condition: currentEvent.weather.condition,
-              precipitation: currentEvent.weather.precipitation,
-              windSpeed: currentEvent.weather.windSpeed,
-              humidity: currentEvent.weather.humidity,
-              uvIndex: currentEvent.weather.uvIndex,
-            });
-            console.log('✅ DB에서 날씨 정보 로드:', currentEvent.weather);
-          }
+          // 갱신 후 최신 이벤트 정보를 다시 가져오기
+          // (EventContext의 events 상태가 업데이트되면 currentEvent도 자동으로 업데이트됨)
         }
       } catch (error) {
         console.error('날씨 데이터 로드 실패:', error);
@@ -68,7 +59,24 @@ const Home = () => {
     };
     
     loadWeather();
-  }, [currentEvent, checkAndUpdateWeather]);
+  }, [currentEvent?.id, checkAndUpdateWeather]); // id만 의존성으로
+  
+  // currentEvent.weather가 변경되면 화면 업데이트
+  useEffect(() => {
+    if (currentEvent?.weather) {
+      setWeatherData({
+        temperature: currentEvent.weather.temperature,
+        feelsLike: currentEvent.weather.feelsLike,
+        condition: currentEvent.weather.condition,
+        precipitation: currentEvent.weather.precipitation,
+        windSpeed: currentEvent.weather.windSpeed,
+        humidity: currentEvent.weather.humidity,
+        uvIndex: currentEvent.weather.uvIndex,
+      });
+      console.log('✅ DB에서 날씨 정보 로드:', currentEvent.weather);
+      console.log('📅 산행 날짜:', currentEvent.date);
+    }
+  }, [currentEvent?.weather]);
   
   // 회원 통계 계산
   const calculateStats = {

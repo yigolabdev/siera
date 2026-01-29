@@ -399,14 +399,14 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       const result = await firestoreUpdate('events', eventId, { weather: eventWeather });
       
       if (result.success) {
-        // 로컬 상태 업데이트
-        setEvents(prev => prev.map(e => 
-          e.id === eventId 
-            ? { ...e, weather: eventWeather }
-            : e
-        ));
+        console.log('✅ 날씨 정보 Firebase 저장 완료:', eventWeather);
         
-        console.log('✅ 날씨 정보 업데이트 완료:', eventWeather);
+        // Firebase에서 최신 데이터 다시 로드
+        const eventsResult = await getDocuments<HikingEvent>('events');
+        if (eventsResult.success && eventsResult.data) {
+          setEvents(eventsResult.data);
+          console.log('✅ 이벤트 목록 새로고침 완료');
+        }
       } else {
         throw new Error(result.error || '날씨 정보 저장 실패');
       }

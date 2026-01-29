@@ -83,23 +83,11 @@ const Events = () => {
   useEffect(() => {
     const loadWeather = async () => {
       try {
-        if (event && event.id) {
+        if (event?.id) {
+          console.log('🌤️ 날씨 데이터 로드 시작:', event.date);
+          
           // DB에 저장된 날씨 정보 확인 및 갱신
           await checkAndUpdateWeather(event.id);
-          
-          // 갱신 후 이벤트에서 날씨 정보 가져오기
-          if (event.weather) {
-            setWeatherData({
-              temperature: event.weather.temperature,
-              feelsLike: event.weather.feelsLike,
-              condition: event.weather.condition,
-              precipitation: event.weather.precipitation,
-              windSpeed: event.weather.windSpeed,
-              humidity: event.weather.humidity,
-              uvIndex: event.weather.uvIndex,
-            });
-            console.log('✅ DB에서 날씨 정보 로드:', event.weather);
-          }
         }
       } catch (error) {
         console.error('날씨 데이터 로드 실패:', error);
@@ -107,7 +95,24 @@ const Events = () => {
     };
     
     loadWeather();
-  }, [event, checkAndUpdateWeather]);
+  }, [event?.id, checkAndUpdateWeather]); // id만 의존성으로
+  
+  // event.weather가 변경되면 화면 업데이트
+  useEffect(() => {
+    if (event?.weather) {
+      setWeatherData({
+        temperature: event.weather.temperature,
+        feelsLike: event.weather.feelsLike,
+        condition: event.weather.condition,
+        precipitation: event.weather.precipitation,
+        windSpeed: event.weather.windSpeed,
+        humidity: event.weather.humidity,
+        uvIndex: event.weather.uvIndex,
+      });
+      console.log('✅ DB에서 날씨 정보 로드:', event.weather);
+      console.log('📅 산행 날짜:', event.date);
+    }
+  }, [event?.weather]);
   
   // 참석자 목록 (실제 신청자)
   const participants = event ? getParticipantsByEventId(event.id) : [];

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePendingUsers } from '../../contexts/PendingUserContext';
 import { useGuestApplications } from '../../contexts/GuestApplicationContext';
+import { useExecutives } from '../../contexts/ExecutiveContext';
 import { useAuth } from '../../contexts/AuthContextEnhanced';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -12,11 +13,13 @@ import { UserRole, PendingUser, Member } from '../../types';
 import { formatDate } from '../../utils/format';
 import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../../lib/firebase/config';
+import { setDocument } from '../../lib/firebase/firestore';
 
 const MemberManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { members, refreshMembers, updateMember } = useMembers(); // updateMember 추가
+  const { executives } = useExecutives(); // 운영진 정보 추가
   const { 
     pendingUsers, 
     approvePendingUser, 
@@ -220,6 +223,69 @@ const MemberManagement = () => {
         alert(`회원 상태 변경에 실패했습니다: ${error.message}`);
       }
     });
+  };
+
+  // 운영진을 회원으로 동기화하는 함수
+  const handleSyncExecutivesToMembers = async () => {
+    if (!confirm('운영진 정보를 회원 목록에 동기화하시겠습니까?\n\n이미 회원 목록에 있는 운영진은 건너뜁니다.')) {
+      return;
+    }
+
+    try {
+      console.log('🔄 운영진 → 회원 동기화 시작...');
+      console.log(`  - 운영진 ${executives.length}명`);
+      console.log(`  - 기존 회원 ${members.length}명`);
+
+      const existingMemberEmails = new Set(members.map(m => m.email));
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      for (const exec of executives) {
+        if (existingMemberEmails.has(exec.email)) {
+          console.log(`⏭️  이미 존재: ${exec.name} (${exec.email})`);
+          skippedCount++;
+          continue;
+        }
+
+        // memberId가 있으면 그것을 사용하고, 없으면 새로 생성
+        const memberId = exec.memberId || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const memberData: Member = {
+          id: memberId,
+          name: exec.name,
+          email: exec.email,
+          phoneNumber: exec.phoneNumber,
+          occupation: '',
+          company: exec.company || '',
+          position: exec.position, // 시애라 직책 (운영위원장 등)
+          role: exec.category === 'chairman' ? 'chairman' : 'committee',
+          dateJoined: new Date().toISOString().split('T')[0],
+          hikesParticipated: 0,
+          totalHikingDistance: 0,
+          isActive: true,
+          bio: exec.bio,
+          createdAt: exec.createdAt || new Date().toISOString(),
+        };
+
+        const result = await setDocument('members', memberId, memberData);
+        
+        if (result.success) {
+          console.log(`✅ 추가 완료: ${exec.name} (${exec.email}) - ${exec.position}`);
+          addedCount++;
+        } else {
+          console.log(`❌ 추가 실패: ${exec.name} (${exec.email})`);
+        }
+      }
+
+      // 회원 목록 새로고침
+      await refreshMembers();
+
+      alert(`운영진 동기화 완료!\n\n추가됨: ${addedCount}명\n이미 존재: ${skippedCount}명`);
+      console.log('✅ 동기화 완료!');
+    } catch (error: any) {
+      console.error('❌ 동기화 중 오류 발생:', error);
+      alert(`동기화에 실패했습니다: ${error.message}`);
+    }
   };
 
   const filteredMembers = members.filter(member => {
@@ -487,6 +553,18 @@ const MemberManagement = () => {
                   }`}
                 >
                   비활성 ({memberStats.inactive})
+                </button>
+              </div>
+            </div>
+
+              {/* 운영진 동기화 버튼 */}
+              <div className="ml-auto">
+                <button
+                  onClick={handleSyncExecutivesToMembers}
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                >
+                  <UserCog className="w-5 h-5" />
+                  운영진 동기화
                 </button>
               </div>
             </div>

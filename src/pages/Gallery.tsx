@@ -69,12 +69,56 @@ const Gallery = () => {
     ? photos
     : photos.filter(p => `${p.eventYear}-${p.eventMonth}` === selectedEvent);
   
+  // 사진을 앨범으로 그룹화 (title + uploadedBy + eventId 기준)
+  interface PhotoAlbum {
+    id: string;
+    title: string;
+    eventTitle: string;
+    eventId: string;
+    coverPhoto: string;
+    photoCount: number;
+    uploadedBy: string;
+    uploadedByName: string;
+    uploadedAt: string;
+    photos: typeof filteredPhotos;
+  }
+
+  const photoAlbums: PhotoAlbum[] = Object.values(
+    filteredPhotos.reduce((acc, photo) => {
+      const albumKey = `${photo.title || 'untitled'}_${photo.uploadedBy}_${photo.eventId}`;
+      
+      if (!acc[albumKey]) {
+        acc[albumKey] = {
+          id: albumKey,
+          title: photo.title || '제목 없음',
+          eventTitle: photo.eventTitle,
+          eventId: photo.eventId,
+          coverPhoto: photo.imageUrl,
+          photoCount: 0,
+          uploadedBy: photo.uploadedBy,
+          uploadedByName: photo.uploadedByName,
+          uploadedAt: photo.uploadedAt,
+          photos: []
+        };
+      }
+      
+      acc[albumKey].photos.push(photo);
+      acc[albumKey].photoCount = acc[albumKey].photos.length;
+      
+      return acc;
+    }, {} as Record<string, PhotoAlbum>)
+  ).sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  
   // 각 월별 사진 개수 계산
   const photoCountByMonth: Record<string, number> = {};
   photos.forEach(photo => {
     const key = `${photo.eventYear}-${photo.eventMonth}`;
     photoCountByMonth[key] = (photoCountByMonth[key] || 0) + 1;
   });
+
+  // 앨범 선택 상태
+  const [selectedAlbum, setSelectedAlbum] = useState<PhotoAlbum | null>(null);
+  const [albumSlideIndex, setAlbumSlideIndex] = useState(0);
 
   // 업로드 버튼 핸들러 (명확한 함수로 분리)
   const handleOpenUploadModal = () => {
@@ -494,74 +538,158 @@ const Gallery = () => {
         ))}
       </div>
 
-      {/* 사진 그리드 */}
+      {/* 앨범 그리드 */}
       {isLoading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="text-slate-600 mt-4">사진을 불러오는 중...</p>
         </div>
-      ) : filteredPhotos.length === 0 ? (
+      ) : photoAlbums.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
           <ImageIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-600">선택한 기간에 사진이 없습니다.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredPhotos.map((photo, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {photoAlbums.map((album) => (
             <div
-              key={photo.id}
-              className="relative group cursor-pointer rounded-lg overflow-hidden aspect-square bg-slate-100"
-              onClick={() => setSelectedImage(index)}
+              key={album.id}
+              className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all cursor-pointer overflow-hidden group"
+              onClick={() => {
+                setSelectedAlbum(album);
+                setAlbumSlideIndex(0);
+              }}
             >
-              <img
-                src={photo.imageUrl}
-                alt={photo.title || photo.eventTitle}
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                  <p className="font-semibold text-sm truncate">{photo.eventTitle}</p>
-                  {photo.title && (
-                    <p className="text-xs text-white/80 truncate">{photo.title}</p>
-                  )}
+              {/* 대표 사진 */}
+              <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
+                <img
+                  src={album.coverPhoto}
+                  alt={album.title}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                />
+                {/* 사진 개수 배지 */}
+                <div className="absolute top-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                  <ImageIcon className="w-4 h-4" />
+                  {album.photoCount}
                 </div>
               </div>
               
-              {/* 우측 상단 버튼 그룹 */}
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {/* 좋아요 버튼 */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike(photo.id);
-                  }}
-                  className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
-                >
-                  <Heart
-                    className={`w-4 h-4 ${
-                      likedPhotos.has(photo.id) ? 'fill-red-500 text-red-500' : 'text-slate-600'
-                    }`}
-                  />
-                </button>
+              {/* 앨범 정보 */}
+              <div className="p-4">
+                <h3 className="font-bold text-lg text-slate-900 mb-1 truncate">{album.title}</h3>
+                <p className="text-sm text-slate-600 mb-3 flex items-center gap-1">
+                  <Mountain className="w-4 h-4" />
+                  {album.eventTitle}
+                </p>
+                
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center gap-1">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+                      {album.uploadedByName.charAt(0)}
+                    </div>
+                    <span>{album.uploadedByName}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(album.uploadedAt).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </div>
+                </div>
                 
                 {/* 삭제 버튼 (관리자 또는 업로더만) */}
-                {user && (user.role === 'admin' || user.role === 'chairman' || photo.uploadedBy === user.id) && (
+                {user && (user.role === 'admin' || user.role === 'chairman' || album.uploadedBy === user.id) && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm('이 사진을 삭제하시겠습니까?')) {
-                        deletePhoto(photo.id);
+                      if (window.confirm(`"${album.title}" 앨범의 모든 사진(${album.photoCount}장)을 삭제하시겠습니까?`)) {
+                        album.photos.forEach(photo => deletePhoto(photo.id));
                       }
                     }}
-                    className="p-2 bg-red-500/90 text-white rounded-full hover:bg-red-600 transition-colors"
-                    title="사진 삭제"
+                    className="mt-3 w-full px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1"
                   >
                     <Trash2 className="w-4 h-4" />
+                    앨범 삭제
                   </button>
                 )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 앨범 슬라이드쇼 모달 */}
+      {selectedAlbum && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+          <button
+            onClick={() => {
+              setSelectedAlbum(null);
+              setAlbumSlideIndex(0);
+            }}
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-lg transition-colors z-10"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {/* 이전 버튼 */}
+          {albumSlideIndex > 0 && (
+            <button
+              onClick={() => setAlbumSlideIndex(prev => prev - 1)}
+              className="absolute left-4 p-3 text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+          )}
+
+          {/* 다음 버튼 */}
+          {albumSlideIndex < selectedAlbum.photos.length - 1 && (
+            <button
+              onClick={() => setAlbumSlideIndex(prev => prev + 1)}
+              className="absolute right-4 p-3 text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          )}
+
+          {/* 사진 표시 */}
+          <div className="max-w-6xl max-h-[90vh] w-full px-16">
+            <img
+              src={selectedAlbum.photos[albumSlideIndex].imageUrl}
+              alt={selectedAlbum.title}
+              className="w-full h-full object-contain"
+            />
+            
+            {/* 사진 정보 */}
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-6 py-3 rounded-lg backdrop-blur-sm">
+              <p className="text-center font-medium">{selectedAlbum.title}</p>
+              <p className="text-center text-sm text-white/80">
+                {albumSlideIndex + 1} / {selectedAlbum.photos.length}
+              </p>
+            </div>
+          </div>
+
+          {/* 썸네일 네비게이션 */}
+          <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-4xl overflow-x-auto px-4">
+            {selectedAlbum.photos.map((photo, index) => (
+              <button
+                key={photo.id}
+                onClick={() => setAlbumSlideIndex(index)}
+                className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden transition-all ${
+                  index === albumSlideIndex
+                    ? 'ring-2 ring-white scale-110'
+                    : 'opacity-50 hover:opacity-100'
+                }`}
+              >
+                <img
+                  src={photo.imageUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

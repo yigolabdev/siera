@@ -52,6 +52,28 @@ const MemberManagement = () => {
   const [selectedGuestApplication, setSelectedGuestApplication] = useState<any | null>(null);
   const [isGuestDetailModalOpen, setIsGuestDetailModalOpen] = useState(false);
 
+  // 디버깅: members와 executives 데이터 로그
+  useEffect(() => {
+    console.log('👥 [MemberManagement] Members 데이터:', {
+      총인원: members.length,
+      회원목록: members.map(m => ({
+        name: m.name,
+        email: m.email,
+        role: m.role,
+        isActive: m.isActive
+      }))
+    });
+    console.log('👔 [MemberManagement] Executives 데이터:', {
+      총인원: executives.length,
+      운영진목록: executives.map(e => ({
+        name: e.name,
+        email: e.email,
+        category: e.category,
+        position: e.position
+      }))
+    });
+  }, [members, executives]);
+
   // 탭 변경 시 데이터 새로고침
   useEffect(() => {
     console.log('🔄 [MemberManagement] 탭 변경, 데이터 새로고침:', activeTab);
@@ -300,6 +322,23 @@ const MemberManagement = () => {
       statusFilter === 'all' ||
       (statusFilter === 'active' && (member.isActive !== false)) ||
       (statusFilter === 'inactive' && (member.isActive === false));
+    
+    // 디버깅: test 사용자 필터링 로그
+    if (member.name === 'test' || member.email.includes('test')) {
+      console.log(`🔍 [필터링] test 사용자:`, {
+        name: member.name,
+        email: member.email,
+        role: member.role,
+        isActive: member.isActive,
+        matchesSearch,
+        matchesRole,
+        matchesStatus,
+        roleFilter,
+        statusFilter,
+        최종결과: matchesSearch && matchesRole && matchesStatus
+      });
+    }
+    
     return matchesSearch && matchesRole && matchesStatus;
   });
 

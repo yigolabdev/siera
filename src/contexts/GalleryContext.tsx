@@ -21,41 +21,60 @@ interface GalleryContextType {
 const GalleryContext = createContext<GalleryContextType | undefined>(undefined);
 
 export const GalleryProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, firebaseUser, isLoading: authLoading } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const loadPhotos = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
+      console.log('🔄 [GalleryContext] photos 데이터 로드 시작');
+
       const result = await getDocuments<Photo>('photos');
       if (result.success && result.data) {
         setPhotos(result.data);
-        console.log('✅ Firebase에서 사진 데이터 로드:', result.data.length);
+        console.log('✅ Firebase에서 사진 데이터 로드:', result.data.length, '개');
       } else {
         console.log('ℹ️ Firebase에서 로드된 사진 데이터가 없습니다.');
+        setPhotos([]);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Firebase 사진 데이터 로드 실패:', message);
       setError(message);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'GalleryContext.loadPhotos',
+      });
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Firebase에서 사진 데이터 로드
+  // Firebase에서 사진 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadPhotos();
+      console.log('🔄 [GalleryContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!firebaseUser,
+        email: firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (firebaseUser || !hasLoadedOnce) {
+        await loadPhotos();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadPhotos를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!authLoading) {
+      initializeData();
+    }
+  }, [firebaseUser, authLoading, loadPhotos]);
 
   // 사진 업로드
   const uploadPhotos = useCallback(async (

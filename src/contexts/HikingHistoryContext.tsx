@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument, deleteDocument } from '../li
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { HikingHistoryItem, HikingComment } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface HikingHistoryContextType {
   history: HikingHistoryItem[];
@@ -25,11 +26,17 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
   const [comments, setComments] = useState<Record<string, HikingComment[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
 
   const loadHistory = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      console.log('🔄 [HikingHistoryContext] history 데이터 로드 시작');
 
       const result = await getDocuments<HikingHistoryItem>('hikingHistory');  // ✅ camelCase로 변경
       if (result.success && result.data) {
@@ -38,15 +45,18 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         setHistory(sortedHistory);
-        console.log('✅ Firebase에서 산행 이력 로드:', sortedHistory.length);
+        console.log('✅ Firebase에서 산행 이력 로드:', sortedHistory.length, '개');
       } else {
         console.log('ℹ️ Firebase에서 로드된 산행 이력이 없습니다.');
+        setHistory([]);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Firebase 산행 이력 로드 실패:', message);
       setError(message);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'HikingHistoryContext.loadHistory',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +64,8 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
 
   const loadComments = useCallback(async () => {
     try {
+      console.log('🔄 [HikingHistoryContext] comments 데이터 로드 시작');
+      
       const result = await getDocuments<HikingComment>('hikingComments');
       if (result.success && result.data) {
         // hikeId별로 그룹화
@@ -73,24 +85,41 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
         });
 
         setComments(commentsByHike);
-        console.log('✅ Firebase에서 산행 후기 로드:', result.data.length);
+        console.log('✅ Firebase에서 산행 후기 로드:', result.data.length, '개');
+      } else {
+        setComments({});
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Firebase 산행 후기 로드 실패:', message);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'HikingHistoryContext.loadComments',
+      });
     }
   }, []);
 
-  // Firebase에서 산행 이력 및 후기 로드
+  // Firebase에서 산행 이력 및 후기 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadHistory();
-      await loadComments();
+      console.log('🔄 [HikingHistoryContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadHistory();
+        await loadComments();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadHistory, loadComments를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading, loadHistory, loadComments]);
 
   // 연도별 산행 이력 조회
   const getHistoryByYear = useCallback((year: string) => {

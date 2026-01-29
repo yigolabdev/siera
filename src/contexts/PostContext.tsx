@@ -25,11 +25,12 @@ interface PostContextType {
 const PostContext = createContext<PostContextType | undefined>(undefined);
 
 export const PostProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, firebaseUser, isLoading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Firebase에서 게시글 데이터 로드 - user가 로드된 후에만 실행
   // Firebase에서 게시글 및 댓글 로드 (useCallback으로 최적화)
@@ -38,6 +39,8 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
 
+      console.log('🔄 [PostContext] posts 데이터 로드 시작');
+
       const result = await getDocuments<Post>('posts');
       if (result.success && result.data) {
         // 최신순 정렬
@@ -45,15 +48,18 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setPosts(sortedPosts);
-        console.log('✅ Firebase에서 게시글 데이터 로드:', sortedPosts.length);
+        console.log('✅ Firebase에서 게시글 데이터 로드:', sortedPosts.length, '개');
       } else {
         console.log('ℹ️ Firebase에서 로드된 게시글 데이터가 없습니다.');
+        setPosts([]);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Firebase 게시글 데이터 로드 실패:', message);
       setError(message);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'PostContext.loadPosts',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -61,33 +67,45 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
 
   const loadComments = useCallback(async () => {
     try {
+      console.log('🔄 [PostContext] comments 데이터 로드 시작');
+      
       const result = await getDocuments<Comment>('comments');
       if (result.success && result.data) {
         setComments(result.data);
-        console.log('✅ Firebase에서 댓글 데이터 로드:', result.data.length);
+        console.log('✅ Firebase에서 댓글 데이터 로드:', result.data.length, '개');
+      } else {
+        setComments([]);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Firebase 댓글 데이터 로드 실패:', message);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'PostContext.loadComments',
+      });
     }
   }, []);
 
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
+      console.log('🔄 [PostContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!firebaseUser,
+        email: firebaseUser?.email,
+        hasLoadedOnce
+      });
       
-      // user가 undefined인 경우 (초기 로딩 중) 대기
-      if (user === undefined) {
-        return;
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (firebaseUser || !hasLoadedOnce) {
+        await loadPosts();
+        await loadComments();
+        setHasLoadedOnce(true);
       }
-      
-      // user가 null이거나 user 객체가 있는 경우 데이터 로드
-      await loadPosts();
-      await loadComments();
     };
-    initializeData();
-  }, [user]); // loadPosts, loadComments를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!authLoading) {
+      initializeData();
+    }
+  }, [firebaseUser, authLoading, loadPosts, loadComments]);
 
   // 게시글 추가
   const addPost = useCallback(async (

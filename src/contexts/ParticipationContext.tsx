@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDoc
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Participation } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface ParticipationContextType {
   participations: Participation[];
@@ -35,17 +36,23 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
   const [participations, setParticipations] = useState<Participation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
   
   const loadParticipations = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
+      console.log('🔄 [ParticipationContext] participations 데이터 로드 시작');
+      
       const result = await getDocuments<Participation>('participations');
       
       if (result.success && result.data) {
         setParticipations(result.data);
-        console.log('✅ Firebase에서 참가 데이터 로드:', result.data.length);
+        console.log('✅ Firebase에서 참가 데이터 로드:', result.data.length, '개');
       } else {
         setParticipations([]);
         console.log('ℹ️ Firebase에서 로드된 참가 데이터가 없습니다.');
@@ -55,20 +62,35 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
       console.error('❌ Firebase 참가 데이터 로드 실패:', message);
       setError(message);
       setParticipations([]);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'ParticipationContext.loadParticipations',
+      });
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Firebase 초기 데이터 로드
+  // Firebase 초기 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadParticipations();
+      console.log('🔄 [ParticipationContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadParticipations();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadParticipations를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading, loadParticipations]);
 
   const addParticipation = useCallback(async (participationData: Omit<Participation, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {

@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDoc
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Payment } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface PaymentContextType {
   payments: Payment[];
@@ -33,17 +34,23 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
   
   const loadPayments = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
+      console.log('🔄 [PaymentContext] payments 데이터 로드 시작');
+      
       const result = await getDocuments<Payment>('payments');
       
       if (result.success && result.data) {
         setPayments(result.data);
-        console.log('✅ Firebase에서 결제 데이터 로드:', result.data.length);
+        console.log('✅ Firebase에서 결제 데이터 로드:', result.data.length, '개');
       } else {
         setPayments([]);
         console.log('ℹ️ Firebase에서 로드된 결제 데이터가 없습니다.');
@@ -53,20 +60,35 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
       console.error('❌ Firebase 결제 데이터 로드 실패:', message);
       setError(message);
       setPayments([]);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'PaymentContext.loadPayments',
+      });
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Firebase 초기 데이터 로드
+  // Firebase 초기 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadPayments();
+      console.log('🔄 [PaymentContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadPayments();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadPayments를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading, loadPayments]);
 
   const addPayment = useCallback(async (paymentData: Omit<Payment, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {

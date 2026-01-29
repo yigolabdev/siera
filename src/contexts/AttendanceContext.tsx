@@ -3,6 +3,7 @@ import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDoc
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { AttendanceRecord, AttendanceStats } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { useAuth } from './AuthContextEnhanced';
 
 interface AttendanceContextType {
   attendances: AttendanceRecord[];
@@ -26,17 +27,23 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  
+  // 🔥 AuthContext 사용
+  const auth = useAuth();
   
   const loadAttendances = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
+      console.log('🔄 [AttendanceContext] attendances 데이터 로드 시작');
+      
       const result = await getDocuments<AttendanceRecord>('attendances');
       
       if (result.success && result.data) {
         setAttendances(result.data);
-        console.log('✅ Firebase에서 출석 데이터 로드:', result.data.length);
+        console.log('✅ Firebase에서 출석 데이터 로드:', result.data.length, '개');
       } else {
         setAttendances([]);
         console.log('ℹ️ Firebase에서 로드된 출석 데이터가 없습니다.');
@@ -46,20 +53,35 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
       console.error('❌ Firebase 출석 데이터 로드 실패:', message);
       setError(message);
       setAttendances([]);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'AttendanceContext.loadAttendances',
+      });
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Firebase 초기 데이터 로드
+  // Firebase 초기 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
     const initializeData = async () => {
-      // Firebase는 동기적으로 초기화됨
-      await loadAttendances();
+      console.log('🔄 [AttendanceContext] 데이터 로드 시작, 인증 상태:', {
+        isAuthenticated: !!auth.firebaseUser,
+        email: auth.firebaseUser?.email,
+        hasLoadedOnce
+      });
+      
+      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
+      if (auth.firebaseUser || !hasLoadedOnce) {
+        await loadAttendances();
+        setHasLoadedOnce(true);
+      }
     };
-    initializeData();
-  }, []); // loadAttendances를 dependency에서 제거하여 무한 루프 방지
+    
+    // Auth 로딩이 완료된 후에만 실행
+    if (!auth.isLoading) {
+      initializeData();
+    }
+  }, [auth.firebaseUser, auth.isLoading, loadAttendances]);
 
   const addAttendance = useCallback(async (attendanceData: Omit<AttendanceRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {

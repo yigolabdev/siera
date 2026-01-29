@@ -10,7 +10,7 @@ interface GalleryContextType {
   photos: Photo[];
   isLoading: boolean;
   error: string | null;
-  uploadPhotos: (files: File[], eventId: string, eventTitle: string, captions: string[]) => Promise<void>;
+  uploadPhotos: (files: File[], eventId: string, eventTitle: string, galleryTitle: string) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
   toggleLike: (photoId: string, userId: string) => Promise<void>;
   getPhotosByEvent: (eventId: string) => Photo[];
@@ -62,7 +62,7 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
     files: File[],
     eventId: string,
     eventTitle: string,
-    captions: string[]
+    galleryTitle: string
   ) => {
     if (!user) {
       throw new Error('로그인이 필요합니다.');
@@ -73,6 +73,7 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
         fileCount: files.length,
         eventId,
         eventTitle,
+        galleryTitle,
         userId: user.id,
         userName: user.name
       });
@@ -107,7 +108,8 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
           uploadedByName: user.name,
           uploadedAt: now,
           imageUrl: uploadResult.url,
-          caption: captions[index] || '',
+          title: galleryTitle, // 갤러리 제목 (모든 사진에 동일하게 적용)
+          caption: '', // 개별 사진 설명은 빈 문자열
           likes: 0,
           likedBy: [],
         };

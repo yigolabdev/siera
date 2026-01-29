@@ -219,7 +219,8 @@ export interface Photo {
   uploadedByName: string;  // ✅ 표준화: 업로더 이름
   uploadedAt: string;
   imageUrl: string;
-  caption?: string;
+  title?: string;      // 갤러리 제목 (전체 사진 세트의 제목)
+  caption?: string;    // Deprecated: 개별 사진 설명은 사용하지 않음
   likes: number;
   likedBy: string[];  // 좋아요 누른 사용자 ID 목록
 }

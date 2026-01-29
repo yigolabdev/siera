@@ -9,7 +9,6 @@ interface UploadFile {
   id: string;
   file: File;
   preview: string;
-  caption: string;
 }
 
 const Gallery = () => {
@@ -27,6 +26,7 @@ const Gallery = () => {
   // 업로드 관련 상태
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
+  const [galleryTitle, setGalleryTitle] = useState(''); // 갤러리 제목
   const [isDragging, setIsDragging] = useState(false);
   const [selectedEventForUpload, setSelectedEventForUpload] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -138,7 +138,6 @@ const Gallery = () => {
         id: Math.random().toString(36).substr(2, 9),
         file,
         preview: URL.createObjectURL(file),
-        caption: '',
       };
     });
     
@@ -168,6 +167,11 @@ const Gallery = () => {
       return;
     }
     
+    if (!galleryTitle.trim()) {
+      alert('갤러리 제목을 입력해주세요.');
+      return;
+    }
+    
     if (!user) {
       alert('로그인이 필요합니다.');
       return;
@@ -186,20 +190,21 @@ const Gallery = () => {
         fileCount: uploadFiles.length,
         eventId: event.id,
         eventTitle: event.title,
+        galleryTitle: galleryTitle,
         user: user.email
       });
       
       const files = uploadFiles.map(uf => uf.file);
-      const captions = uploadFiles.map(uf => uf.caption);
       
-      await uploadPhotos(files, event.id, event.title, captions);
+      await uploadPhotos(files, event.id, event.title, galleryTitle);
       
       // 정리
       setUploadFiles([]);
+      setGalleryTitle('');
       setShowUploadModal(false);
       setSelectedEventForUpload('');
       
-      alert('사진이 업로드되었습니다!');
+      alert(`${files.length}장의 사진이 업로드되었습니다!`);
     } catch (error: any) {
       console.error('사진 업로드 실패:', error);
       
@@ -224,12 +229,6 @@ const Gallery = () => {
       if (file) URL.revokeObjectURL(file.preview);
       return prev.filter(f => f.id !== id);
     });
-  };
-
-  const updateCaption = (id: string, caption: string) => {
-    setUploadFiles(prev => prev.map(f => 
-      f.id === id ? { ...f, caption } : f
-    ));
   };
 
   // 빈 상태일 때
@@ -290,12 +289,12 @@ const Gallery = () => {
                 {/* 산행 선택 */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    산행 선택
+                    산행 선택 <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedEventForUpload}
                     onChange={(e) => setSelectedEventForUpload(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">산행을 선택하세요</option>
                     {availableEvents.length === 0 ? (
@@ -310,6 +309,24 @@ const Gallery = () => {
                   </select>
                 </div>
 
+                {/* 갤러리 제목 입력 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    갤러리 제목 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={galleryTitle}
+                    onChange={(e) => setGalleryTitle(e.target.value)}
+                    placeholder="예: 겨울 산행 단체 사진, 정상 인증샷 등"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    maxLength={100}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    업로드하는 모든 사진에 적용될 제목입니다
+                  </p>
+                </div>
+
                 {/* 드래그 앤 드롭 영역 */}
                 <div
                   onDrop={handleDrop}
@@ -321,7 +338,7 @@ const Gallery = () => {
                 >
                   <Upload className="w-16 h-16 mx-auto mb-4 text-blue-500" />
                   <p className="text-slate-900 font-bold text-lg mb-3">
-                    ⭐ 아래 버튼을 클릭하여 사진을 선택하세요
+                    📸 여러 장의 사진을 한번에 선택하세요
                   </p>
                   <p className="text-slate-600 mb-4">
                     또는 이곳에 파일을 드래그하여 추가할 수 있습니다
@@ -339,20 +356,31 @@ const Gallery = () => {
                     className="mt-2 inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-bold text-lg shadow-lg hover:shadow-xl"
                   >
                     <ImageIcon className="w-6 h-6" />
-                    📁 컴퓨터에서 사진 선택
+                    📁 사진 선택 (여러 장 가능)
                   </label>
                   <p className="text-sm text-slate-600 mt-4 font-medium">
-                    JPG, PNG, GIF 형식 지원 (최대 10MB)
+                    JPG, PNG, GIF 형식 지원 (최대 10MB) • 한번에 최대 50장
                   </p>
                 </div>
 
                 {/* 업로드할 파일 목록 */}
                 {uploadFiles.length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="font-semibold">업로드할 사진 ({uploadFiles.length}개)</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-semibold text-lg">선택된 사진 ({uploadFiles.length}개)</h3>
+                      <button
+                        onClick={() => {
+                          uploadFiles.forEach(f => URL.revokeObjectURL(f.preview));
+                          setUploadFiles([]);
+                        }}
+                        className="text-sm text-red-600 hover:text-red-700 font-medium"
+                      >
+                        전체 삭제
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto p-2 bg-slate-50 rounded-lg">
                       {uploadFiles.map(file => (
-                        <div key={file.id} className="relative">
+                        <div key={file.id} className="relative group">
                           <img
                             src={file.preview}
                             alt="미리보기"
@@ -360,20 +388,16 @@ const Gallery = () => {
                           />
                           <button
                             onClick={() => removeUploadFile(file.id)}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full"
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3" />
                           </button>
-                          <input
-                            type="text"
-                            placeholder="사진 설명 (선택사항)"
-                            value={file.caption}
-                            onChange={(e) => updateCaption(file.id, e.target.value)}
-                            className="mt-2 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                          />
                         </div>
                       ))}
                     </div>
+                    <p className="text-sm text-slate-600 text-center">
+                      💡 개별 사진 위에 마우스를 올리면 삭제 버튼이 나타납니다
+                    </p>
                   </div>
                 )}
               </div>
@@ -491,30 +515,51 @@ const Gallery = () => {
             >
               <img
                 src={photo.imageUrl}
-                alt={photo.caption || photo.eventTitle}
+                alt={photo.title || photo.eventTitle}
                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                   <p className="font-semibold text-sm truncate">{photo.eventTitle}</p>
-                  {photo.caption && (
-                    <p className="text-xs text-white/80 truncate">{photo.caption}</p>
+                  {photo.title && (
+                    <p className="text-xs text-white/80 truncate">{photo.title}</p>
                   )}
                 </div>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLike(photo.id);
-                }}
-                className="absolute top-2 right-2 p-2 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Heart
-                  className={`w-4 h-4 ${
-                    likedPhotos.has(photo.id) ? 'fill-red-500 text-red-500' : 'text-slate-600'
-                  }`}
-                />
-              </button>
+              
+              {/* 우측 상단 버튼 그룹 */}
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* 좋아요 버튼 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLike(photo.id);
+                  }}
+                  className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+                >
+                  <Heart
+                    className={`w-4 h-4 ${
+                      likedPhotos.has(photo.id) ? 'fill-red-500 text-red-500' : 'text-slate-600'
+                    }`}
+                  />
+                </button>
+                
+                {/* 삭제 버튼 (관리자 또는 업로더만) */}
+                {user && (user.role === 'admin' || user.role === 'chairman' || photo.uploadedBy === user.id) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('이 사진을 삭제하시겠습니까?')) {
+                        deletePhoto(photo.id);
+                      }
+                    }}
+                    className="p-2 bg-red-500/90 text-white rounded-full hover:bg-red-600 transition-colors"
+                    title="사진 삭제"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -544,12 +589,12 @@ const Gallery = () => {
               {/* 산행 선택 */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  산행 선택
+                  산행 선택 <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={selectedEventForUpload}
                   onChange={(e) => setSelectedEventForUpload(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">산행을 선택하세요</option>
                   {availableEvents.length === 0 ? (
@@ -564,6 +609,24 @@ const Gallery = () => {
                 </select>
               </div>
 
+              {/* 갤러리 제목 입력 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  갤러리 제목 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={galleryTitle}
+                  onChange={(e) => setGalleryTitle(e.target.value)}
+                  placeholder="예: 겨울 산행 단체 사진, 정상 인증샷 등"
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  maxLength={100}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  업로드하는 모든 사진에 적용될 제목입니다
+                </p>
+              </div>
+
               {/* 드래그 앤 드롭 영역 */}
               <div
                 onDrop={handleDrop}
@@ -575,7 +638,7 @@ const Gallery = () => {
               >
                 <Upload className="w-16 h-16 mx-auto mb-4 text-blue-500" />
                 <p className="text-slate-900 font-bold text-lg mb-3">
-                  ⭐ 아래 버튼을 클릭하여 사진을 선택하세요
+                  📸 여러 장의 사진을 한번에 선택하세요
                 </p>
                 <p className="text-slate-600 mb-4">
                   또는 이곳에 파일을 드래그하여 추가할 수 있습니다
@@ -593,20 +656,31 @@ const Gallery = () => {
                   className="mt-2 inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors font-bold text-lg shadow-lg hover:shadow-xl"
                 >
                   <ImageIcon className="w-6 h-6" />
-                  📁 컴퓨터에서 사진 선택
+                  📁 사진 선택 (여러 장 가능)
                 </label>
                 <p className="text-sm text-slate-600 mt-4 font-medium">
-                  JPG, PNG, GIF 형식 지원 (최대 10MB)
+                  JPG, PNG, GIF 형식 지원 (최대 10MB) • 한번에 최대 50장
                 </p>
               </div>
 
               {/* 업로드할 파일 목록 */}
               {uploadFiles.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold">업로드할 사진 ({uploadFiles.length}개)</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-lg">선택된 사진 ({uploadFiles.length}개)</h3>
+                    <button
+                      onClick={() => {
+                        uploadFiles.forEach(f => URL.revokeObjectURL(f.preview));
+                        setUploadFiles([]);
+                      }}
+                      className="text-sm text-red-600 hover:text-red-700 font-medium"
+                    >
+                      전체 삭제
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto p-2 bg-slate-50 rounded-lg">
                     {uploadFiles.map(file => (
-                      <div key={file.id} className="relative">
+                      <div key={file.id} className="relative group">
                         <img
                           src={file.preview}
                           alt="미리보기"
@@ -614,20 +688,16 @@ const Gallery = () => {
                         />
                         <button
                           onClick={() => removeUploadFile(file.id)}
-                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full"
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3" />
                         </button>
-                        <input
-                          type="text"
-                          placeholder="사진 설명 (선택사항)"
-                          value={file.caption}
-                          onChange={(e) => updateCaption(file.id, e.target.value)}
-                          className="mt-2 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        />
                       </div>
                     ))}
                   </div>
+                  <p className="text-sm text-slate-600 text-center">
+                    💡 개별 사진 위에 마우스를 올리면 삭제 버튼이 나타납니다
+                  </p>
                 </div>
               )}
             </div>

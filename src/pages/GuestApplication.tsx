@@ -147,6 +147,32 @@ const GuestApplication = () => {
           </div>
         </div>
 
+        {/* 로딩 상태 */}
+        {isLoading ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+              <p className="text-xl text-white font-medium">산행 정보를 불러오는 중...</p>
+            </div>
+          </div>
+        ) : !currentEvent ? (
+          <div className="bg-slate-900 rounded-xl p-12 text-center border border-slate-800">
+            <Mountain className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">신청 가능한 산행이 없습니다</h3>
+            <p className="text-slate-400 mb-6">
+              현재 접수 중인 산행이 없습니다.<br />
+              다음 산행 일정은 곧 공지될 예정입니다.
+            </p>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-lg font-bold hover:bg-slate-100 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              홈으로 돌아가기
+            </Link>
+          </div>
+        ) : (
+          <>
         {/* Notice */}
         <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
           <div className="flex items-start gap-3">
@@ -374,6 +400,8 @@ const GuestApplication = () => {
             </div>
           </form>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

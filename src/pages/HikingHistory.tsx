@@ -196,6 +196,22 @@ const HikingHistory = () => {
         <p className="text-slate-600">시애라클럽의 산행 기록을 확인하세요.</p>
       </div>
 
+      {/* 로딩 상태 */}
+      {isLoading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-xl text-slate-600 font-medium">산행 이력을 불러오는 중...</p>
+          </div>
+        </div>
+      ) : combinedHistory.length === 0 ? (
+        <Card className="p-12 text-center">
+          <Mountain className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <p className="text-xl text-slate-600 mb-2">아직 등록된 산행 이력이 없습니다</p>
+          <p className="text-slate-500">첫 번째 산행에 참여해보세요!</p>
+        </Card>
+      ) : (
+        <>
       {/* 통계 */}
       {combinedHistory.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -509,6 +525,8 @@ const HikingHistory = () => {
             </div>
           </div>
         </Modal>
+      )}
+      </>
       )}
     </div>
   );

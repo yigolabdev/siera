@@ -16,7 +16,7 @@ import { getCachedWeather, WeatherData } from '../utils/weather';
 const Home = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
-  const { events, currentEvent, specialEvent, getParticipantsByEventId, refreshParticipants } = useEvents();
+  const { events, currentEvent, specialEvent, getParticipantsByEventId, refreshParticipants, isLoading: eventsLoading } = useEvents();
   const { members } = useMembers();
   const { currentPoem } = usePoems();
   const { getUserParticipationForEvent, cancelParticipation, registerForEvent } = useParticipations();
@@ -168,8 +168,15 @@ const Home = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-      {/* 산행 미정 상태일 때 - 특별산행이 있으면 배너만 표시 */}
-      {!mainEvent ? (
+      {/* 로딩 상태 */}
+      {eventsLoading ? (
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-xl text-slate-600 font-medium">데이터를 불러오는 중...</p>
+          </div>
+        </div>
+      ) : !mainEvent ? (
         <div>
           {/* Hero Section with Background Image */}
           <div className="relative h-[350px] sm:h-[400px] md:h-[500px] rounded-xl md:rounded-2xl overflow-hidden mb-8 md:mb-12 shadow-xl">

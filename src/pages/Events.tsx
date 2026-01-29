@@ -12,7 +12,7 @@ import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate }
 const Events = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
-  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId, refreshParticipants } = useEvents();
+  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId, refreshParticipants, isLoading: eventsLoading } = useEvents();
   const { registerForEvent, getUserParticipationForEvent, cancelParticipation } = useParticipations();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
@@ -262,8 +262,15 @@ const Events = () => {
         </p>
       </div>
       
-      {/* 산행 미정 상태 */}
-      {(isDevMode && applicationStatus === 'no-event') || !event ? (
+      {/* 로딩 상태 */}
+      {eventsLoading ? (
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-xl text-slate-600 font-medium">산행 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      ) : (isDevMode && applicationStatus === 'no-event') || !event ? (
         <div>
           <div className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden mb-12 shadow-xl">
             <img 

@@ -32,6 +32,16 @@ const ClubInfo = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 로딩 상태 */}
+      {executivesLoading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-xl text-slate-600 font-medium">동아리 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Tabs */}
       <div className="mb-8 border-b border-slate-200">
         <div className="flex gap-1 overflow-x-auto">
@@ -622,6 +632,8 @@ const ClubInfo = () => {
             </div>
           </Card>
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -261,6 +261,16 @@ const Gallery = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 로딩 상태 */}
+      {isLoading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-xl text-slate-600 font-medium">사진을 불러오는 중...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -489,6 +499,8 @@ const Gallery = () => {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

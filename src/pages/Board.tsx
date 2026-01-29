@@ -161,6 +161,16 @@ const Board = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 로딩 상태 */}
+      {isLoading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-xl text-slate-600 font-medium">게시글을 불러오는 중...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Tabs */}
       <div className="mb-8">
         <div className="border-b border-slate-200">
@@ -699,6 +709,8 @@ const Board = () => {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -321,7 +321,7 @@ const Profile = () => {
         <div className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <User className="w-4 h-4 text-primary-600" />
                 이름 <Badge variant="danger">필수</Badge>
               </label>
@@ -335,7 +335,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Mail className="w-4 h-4 text-primary-600" />
                 이메일 <Badge variant="danger">필수</Badge>
               </label>
@@ -351,7 +351,7 @@ const Profile = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Phone className="w-4 h-4 text-primary-600" />
                 연락처 <Badge variant="danger">필수</Badge>
               </label>
@@ -366,7 +366,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <User className="w-4 h-4 text-primary-600" />
                 성별 <Badge variant="danger">필수</Badge>
               </label>
@@ -384,7 +384,7 @@ const Profile = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <User className="w-4 h-4 text-primary-600" />
                 출생연도 <Badge variant="danger">필수</Badge>
               </label>
@@ -399,7 +399,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-500" />
                 입회일자
               </label>
@@ -416,7 +416,7 @@ const Profile = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Building className="w-4 h-4 text-primary-600" />
                 소속
               </label>
@@ -430,7 +430,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Briefcase className="w-4 h-4 text-primary-600" />
                 직책 (직장)
               </label>
@@ -482,7 +482,7 @@ const Profile = () => {
           {/* 산행 정보 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4">
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <User className="w-4 h-4 text-primary-600" />
                 추천인
               </label>
@@ -497,7 +497,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <User className="w-4 h-4 text-primary-600" />
                 산행능력
               </label>
@@ -516,7 +516,7 @@ const Profile = () => {
           </div>
           
           <div>
-            <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+            <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
               <User className="w-4 h-4 text-primary-600" />
               자기소개
             </label>
@@ -583,7 +583,7 @@ const Profile = () => {
         {isEditingPassword ? (
           <div className="space-y-5">
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Lock className="w-4 h-4 text-red-600" />
                 현재 비밀번호 <Badge variant="danger">필수</Badge>
               </label>
@@ -606,7 +606,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Lock className="w-4 h-4 text-red-600" />
                 새 비밀번호 <Badge variant="danger">필수</Badge>
               </label>
@@ -629,7 +629,7 @@ const Profile = () => {
             </div>
             
             <div>
-              <label className="block text-slate-700 font-semibold mb-2 flex items-center gap-2">
+              <label className="flex text-slate-700 font-semibold mb-2 items-center gap-2">
                 <Lock className="w-4 h-4 text-red-600" />
                 새 비밀번호 확인 <Badge variant="danger">필수</Badge>
               </label>

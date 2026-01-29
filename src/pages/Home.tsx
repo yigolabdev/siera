@@ -11,12 +11,12 @@ import { useNotices } from '../contexts/NoticeContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed } from '../utils/format';
-import { getCachedWeather, getEventWeather, WeatherData } from '../utils/weather';
+import { getCachedWeather, WeatherData } from '../utils/weather';
 
 const Home = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
-  const { events, currentEvent, specialEvent, getParticipantsByEventId, refreshParticipants, isLoading: eventsLoading } = useEvents();
+  const { events, currentEvent, specialEvent, getParticipantsByEventId, refreshParticipants, isLoading: eventsLoading, checkAndUpdateWeather } = useEvents();
   const { members } = useMembers();
   const { currentPoem } = usePoems();
   const { getUserParticipationForEvent, cancelParticipation, registerForEvent } = useParticipations();
@@ -29,7 +29,7 @@ const Home = () => {
     return participation?.status || null;
   }, [user, currentEvent, getUserParticipationForEvent]);
   
-  // 날씨 데이터 (기상청 API 연동)
+  // 날씨 데이터 (DB에서 가져오기 또는 기본값)
   const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 8,
     feelsLike: 5,
@@ -40,19 +40,27 @@ const Home = () => {
     uvIndex: 'moderate',
   });
   
-  // 날씨 데이터 로드 (산행 날짜 기준)
+  // 날씨 데이터 로드 (DB 우선, 24시간 이상 경과 시 자동 갱신)
   useEffect(() => {
     const loadWeather = async () => {
       try {
-        // 산행 이벤트가 있으면 해당 날짜의 날씨 조회
-        if (currentEvent && currentEvent.date) {
-          console.log('🗓️ 산행 날짜 날씨 조회:', currentEvent.date);
-          const weather = await getEventWeather(currentEvent.date);
-          setWeatherData(weather);
-        } else {
-          // 없으면 현재 날씨 조회
-          const weather = await getCachedWeather();
-          setWeatherData(weather);
+        if (currentEvent) {
+          // DB에 저장된 날씨 정보 확인 및 갱신
+          await checkAndUpdateWeather(currentEvent.id);
+          
+          // 갱신 후 이벤트에서 날씨 정보 가져오기
+          if (currentEvent.weather) {
+            setWeatherData({
+              temperature: currentEvent.weather.temperature,
+              feelsLike: currentEvent.weather.feelsLike,
+              condition: currentEvent.weather.condition,
+              precipitation: currentEvent.weather.precipitation,
+              windSpeed: currentEvent.weather.windSpeed,
+              humidity: currentEvent.weather.humidity,
+              uvIndex: currentEvent.weather.uvIndex,
+            });
+            console.log('✅ DB에서 날씨 정보 로드:', currentEvent.weather);
+          }
         }
       } catch (error) {
         console.error('날씨 데이터 로드 실패:', error);
@@ -60,12 +68,7 @@ const Home = () => {
     };
     
     loadWeather();
-    
-    // 10분마다 날씨 갱신
-    const interval = setInterval(loadWeather, 10 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, [currentEvent]);
+  }, [currentEvent, checkAndUpdateWeather]);
   
   // 회원 통계 계산
   const calculateStats = {

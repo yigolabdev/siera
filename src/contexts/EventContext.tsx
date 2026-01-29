@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { HikingEvent, Participant, Team, TeamMember, Participation } from '../types';
+import { HikingEvent, Participant, Team, TeamMember, Participation, EventWeather } from '../types';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { waitForFirebase } from '../lib/firebase/config';
+import { getEventWeather } from '../utils/weather';
 
 interface EventContextType {
   events: HikingEvent[];
@@ -23,6 +24,8 @@ interface EventContextType {
   setTeamsForEvent: (eventId: string, teams: Team[]) => Promise<void>;
   refreshEvents: () => Promise<void>;
   refreshParticipants: (eventId: string) => Promise<void>;
+  updateEventWeather: (eventId: string) => Promise<void>;
+  checkAndUpdateWeather: (eventId: string) => Promise<void>;
 }
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
@@ -364,6 +367,88 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  /**
+   * 이벤트의 날씨 정보를 강제로 업데이트
+   * @param eventId - 이벤트 ID
+   */
+  const updateEventWeather = useCallback(async (eventId: string) => {
+    try {
+      const event = events.find(e => e.id === eventId);
+      if (!event) {
+        throw new Error('이벤트를 찾을 수 없습니다');
+      }
+
+      console.log(`🌤️ 이벤트 날씨 정보 업데이트 시작: ${event.title} (${event.date})`);
+      
+      // 기상청 API로 날씨 조회
+      const weatherData = await getEventWeather(event.date);
+      
+      // EventWeather 형식으로 변환
+      const eventWeather: EventWeather = {
+        temperature: weatherData.temperature,
+        feelsLike: weatherData.feelsLike,
+        condition: weatherData.condition,
+        precipitation: weatherData.precipitation,
+        windSpeed: weatherData.windSpeed,
+        humidity: weatherData.humidity,
+        uvIndex: weatherData.uvIndex,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      // Firebase에 저장
+      const result = await firestoreUpdate('events', eventId, { weather: eventWeather });
+      
+      if (result.success) {
+        // 로컬 상태 업데이트
+        setEvents(prev => prev.map(e => 
+          e.id === eventId 
+            ? { ...e, weather: eventWeather }
+            : e
+        ));
+        
+        console.log('✅ 날씨 정보 업데이트 완료:', eventWeather);
+      } else {
+        throw new Error(result.error || '날씨 정보 저장 실패');
+      }
+    } catch (err: any) {
+      console.error('❌ 날씨 정보 업데이트 실패:', err);
+      logError(err, ErrorLevel.ERROR, ErrorCategory.API, { eventId });
+      throw err;
+    }
+  }, [events]);
+
+  /**
+   * 날씨 정보가 오래되었는지 확인하고 필요시 업데이트
+   * @param eventId - 이벤트 ID
+   */
+  const checkAndUpdateWeather = useCallback(async (eventId: string) => {
+    try {
+      const event = events.find(e => e.id === eventId);
+      if (!event) {
+        console.log('⚠️ 이벤트를 찾을 수 없습니다:', eventId);
+        return;
+      }
+
+      const now = new Date();
+      const lastUpdated = event.weather?.lastUpdated ? new Date(event.weather.lastUpdated) : null;
+      
+      // 날씨 정보가 없거나, 마지막 업데이트가 24시간 이전인 경우 업데이트
+      if (!lastUpdated || (now.getTime() - lastUpdated.getTime()) > 24 * 60 * 60 * 1000) {
+        const timeSinceUpdate = lastUpdated 
+          ? Math.round((now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60))
+          : null;
+        
+        console.log(`🔄 날씨 정보 갱신 필요 (마지막 업데이트: ${timeSinceUpdate ? timeSinceUpdate + '시간 전' : '없음'})`);
+        await updateEventWeather(eventId);
+      } else {
+        console.log('✅ 날씨 정보가 최신 상태입니다 (24시간 이내)');
+      }
+    } catch (err: any) {
+      console.error('❌ 날씨 확인 및 업데이트 실패:', err);
+      logError(err, ErrorLevel.WARNING, ErrorCategory.API, { eventId });
+    }
+  }, [events, updateEventWeather]);
+
   // Context value를 useMemo로 메모이제이션
   const value = useMemo(() => ({
     events,
@@ -384,6 +469,8 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     setTeamsForEvent,
     refreshEvents,
     refreshParticipants,
+    updateEventWeather,
+    checkAndUpdateWeather,
   }), [
     events,
     currentEvent,
@@ -403,6 +490,8 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     setTeamsForEvent,
     refreshEvents,
     refreshParticipants,
+    updateEventWeather,
+    checkAndUpdateWeather,
   ]);
 
   return (

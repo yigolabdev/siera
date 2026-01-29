@@ -22,6 +22,7 @@ export enum ErrorCategory {
   VALIDATION = 'validation',
   DATABASE = 'database',
   STORAGE = 'storage',
+  API = 'api',
   UNKNOWN = 'unknown',
 }
 

@@ -98,6 +98,17 @@ export interface PaymentInfo {
   cost?: string; // 참가비 (admin에서 사용)
 }
 
+export interface EventWeather {
+  temperature: number;        // 현재 기온 (°C)
+  feelsLike: number;          // 체감 온도 (°C)
+  condition: 'sunny' | 'cloudy' | 'rainy' | 'snowy'; // 날씨 상태
+  precipitation: number;      // 강수 확률 (%)
+  windSpeed: number;          // 풍속 (m/s)
+  humidity: number;           // 습도 (%)
+  uvIndex: 'low' | 'moderate' | 'high' | 'very-high'; // UV 지수
+  lastUpdated: string;        // 마지막 업데이트 시각 (ISO 8601)
+}
+
 export interface HikingEvent {
   id: string;
   title: string;
@@ -125,6 +136,7 @@ export interface HikingEvent {
   applicationDeadline?: string; // 신청 마감일 (YYYY-MM-DD)
   createdAt?: string; // 생성일
   isRegistered?: boolean; // 현재 사용자의 신청 여부 (클라이언트 사이드)
+  weather?: EventWeather; // 날씨 정보 (하루 1회 업데이트)
 }
 
 // ==================== Team Types ====================

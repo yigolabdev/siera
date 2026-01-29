@@ -8,12 +8,12 @@ import { useParticipations } from '../contexts/ParticipationContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { formatDeadline, getDaysUntilDeadline, isApplicationClosed, formatDate } from '../utils/format';
-import { getEventWeather, WeatherData } from '../utils/weather';
+import { WeatherData } from '../utils/weather';
 
 const Events = () => {
   const { user } = useAuth();
   const { isDevMode, applicationStatus, specialApplicationStatus } = useDevMode();
-  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId, refreshParticipants, isLoading: eventsLoading } = useEvents();
+  const { currentEvent, specialEvent, getEventById, getParticipantsByEventId, getTeamsByEventId, refreshParticipants, isLoading: eventsLoading, checkAndUpdateWeather } = useEvents();
   const { registerForEvent, getUserParticipationForEvent, cancelParticipation } = useParticipations();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
@@ -22,7 +22,7 @@ const Events = () => {
   // URL에서 eventId 가져오기
   const eventIdFromUrl = searchParams.get('eventId');
   
-  // 날씨 데이터 (기상청 API 연동)
+  // 날씨 데이터 (DB에서 가져오기 또는 기본값)
   const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 8,
     feelsLike: 5,
@@ -79,15 +79,27 @@ const Events = () => {
     };
   }, [selectedEvent, isDevMode, currentApplicationStatus]);
   
-  // 날씨 데이터 로드 (산행 날짜 기준)
+  // 날씨 데이터 로드 (DB 우선, 24시간 이상 경과 시 자동 갱신)
   useEffect(() => {
     const loadWeather = async () => {
       try {
-        // 선택된 이벤트가 있으면 해당 날짜의 날씨 조회
-        if (event && event.date) {
-          console.log('🗓️ 산행 날짜 날씨 조회:', event.date);
-          const weather = await getEventWeather(event.date);
-          setWeatherData(weather);
+        if (event && event.id) {
+          // DB에 저장된 날씨 정보 확인 및 갱신
+          await checkAndUpdateWeather(event.id);
+          
+          // 갱신 후 이벤트에서 날씨 정보 가져오기
+          if (event.weather) {
+            setWeatherData({
+              temperature: event.weather.temperature,
+              feelsLike: event.weather.feelsLike,
+              condition: event.weather.condition,
+              precipitation: event.weather.precipitation,
+              windSpeed: event.weather.windSpeed,
+              humidity: event.weather.humidity,
+              uvIndex: event.weather.uvIndex,
+            });
+            console.log('✅ DB에서 날씨 정보 로드:', event.weather);
+          }
         }
       } catch (error) {
         console.error('날씨 데이터 로드 실패:', error);
@@ -95,7 +107,7 @@ const Events = () => {
     };
     
     loadWeather();
-  }, [event]);
+  }, [event, checkAndUpdateWeather]);
   
   // 참석자 목록 (실제 신청자)
   const participants = event ? getParticipantsByEventId(event.id) : [];

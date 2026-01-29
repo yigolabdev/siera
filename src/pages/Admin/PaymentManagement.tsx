@@ -15,6 +15,7 @@ interface HikingEvent {
   cost: number;
   maxParticipants: number;
   currentParticipants: number;
+  status: string;
 }
 
 const PaymentManagement = () => {
@@ -26,10 +27,15 @@ const PaymentManagement = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'completed' | 'pending' | 'confirmed' | 'cancelled'>('all');
   
-  // 모든 이벤트 목록 사용 (공개된 모든 산행)
+  // 모집 중인 이벤트만 필터링 (완료되지 않은 산행)
   const events = useMemo(() => {
     return allEvents
-      .filter(event => event.isPublished && !event.isDraft)
+      .filter(event => 
+        event.isPublished && 
+        !event.isDraft && 
+        event.status !== 'completed' && // 완료된 산행 제외
+        new Date(event.date) >= new Date(new Date().setHours(0, 0, 0, 0)) // 과거 산행 제외
+      )
       .map(event => ({
         id: event.id,
         title: event.isSpecial ? `${event.title} (특별산행)` : event.title,
@@ -38,8 +44,9 @@ const PaymentManagement = () => {
         cost: parseInt(event.cost.replace(/[^0-9]/g, '')),
         maxParticipants: event.maxParticipants,
         currentParticipants: event.currentParticipants || 0,
+        status: event.status || 'draft',
       }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // 최신순
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // 날짜순 (가까운 순)
   }, [allEvents]);
 
   // 첫 번째 이벤트를 기본 선택 (useEffect로 이동하여 무한 루프 방지)
@@ -54,8 +61,10 @@ const PaymentManagement = () => {
   // 선택된 이벤트의 결제 목록
   const eventPayments = useMemo(() => {
     if (!selectedEventId) return [];
-    return getPaymentsByEvent(selectedEventId);
-  }, [payments, selectedEventId, getPaymentsByEvent]);
+    const eventPaymentsList = getPaymentsByEvent(selectedEventId);
+    console.log(`💰 [결제 관리] ${selectedEventId} 이벤트의 결제 목록:`, eventPaymentsList.length, '건');
+    return eventPaymentsList;
+  }, [selectedEventId, getPaymentsByEvent, payments]); // payments를 의존성에 추가
 
   // 필터링된 결제 목록
   const filteredPayments = useMemo(() => {
@@ -164,8 +173,24 @@ const PaymentManagement = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4" />
-                      <span>신청자: {eventPayments.filter(p => p.eventId === event.id).length}명</span>
+                      <span>신청자: {payments.filter(p => p.eventId === event.id).length}명</span>
                     </div>
+                    {event.status && (
+                      <div className="mt-1">
+                        <Badge variant={
+                          event.status === 'open' ? 'success' : 
+                          event.status === 'closed' ? 'warning' : 
+                          event.status === 'ongoing' ? 'info' : 
+                          'default'
+                        }>
+                          {event.status === 'open' ? '접수중' : 
+                           event.status === 'closed' ? '마감' : 
+                           event.status === 'ongoing' ? '진행중' : 
+                           event.status === 'draft' ? '임시저장' : 
+                           event.status}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                   {selectedEventId === event.id && (
                     <div className="mt-3 pt-3 border-t border-primary-200">

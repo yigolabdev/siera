@@ -362,6 +362,13 @@ const ClubInfo = () => {
                               )}
                             </div>
                           </div>
+                          
+                          {exec.bio && (
+                            <div className="mb-3 pb-3 border-b border-slate-200">
+                              <p className="text-sm text-slate-700 leading-relaxed">{exec.bio}</p>
+                            </div>
+                          )}
+                          
                           <div className="space-y-1 text-sm text-slate-600">
                             {exec.email && (
                               <div className="flex items-center gap-2">
@@ -410,6 +417,13 @@ const ClubInfo = () => {
                               )}
                             </div>
                           </div>
+                          
+                          {exec.bio && (
+                            <div className="mb-3 pb-3 border-b border-slate-200">
+                              <p className="text-sm text-slate-700 leading-relaxed">{exec.bio}</p>
+                            </div>
+                          )}
+                          
                           <div className="space-y-1 text-sm text-slate-600">
                             {exec.email && (
                               <div className="flex items-center gap-2">

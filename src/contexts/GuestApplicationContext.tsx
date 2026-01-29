@@ -28,6 +28,8 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
       setIsLoading(true);
       setError(null);
 
+      console.log('🔄 [GuestApplicationContext] guestApplications 데이터 로드 시작');
+
       const result = await getDocuments<GuestApplication>('guestApplications');
       if (result.success && result.data) {
         // 최신 신청순 정렬
@@ -35,7 +37,7 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
           new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
         );
         setGuestApplications(sortedApplications);
-        console.log('✅ Firebase에서 게스트 신청 데이터 로드:', sortedApplications.length);
+        console.log('✅ Firebase에서 게스트 신청 데이터 로드:', sortedApplications.length, '명');
       } else {
         console.log('ℹ️ Firebase에서 로드된 게스트 신청 데이터가 없습니다.');
         setGuestApplications([]);

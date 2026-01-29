@@ -35,6 +35,8 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
 
+      console.log('🔄 [PendingUserContext] pendingUsers 데이터 로드 시작');
+
       const result = await getDocuments<PendingUser>('pendingUsers');
       if (result.success && result.data) {
         // 최신 신청순 정렬
@@ -42,7 +44,7 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
           new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
         );
         setPendingUsers(sortedUsers);
-        console.log('✅ Firebase에서 가입 대기자 데이터 로드:', sortedUsers.length);
+        console.log('✅ Firebase에서 가입 대기자 데이터 로드:', sortedUsers.length, '명');
       } else {
         console.log('ℹ️ Firebase에서 로드된 가입 대기자 데이터가 없습니다.');
         setPendingUsers([]);

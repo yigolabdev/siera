@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Shield, UserCog, Search, UserCheck, UserPlus, Check, X, Eye, Calendar, Briefcase, Building2, Phone, Mail, Mountain, MessageSquare, AlertCircle, UserX, Power } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMembers } from '../../contexts/MemberContext';
@@ -20,13 +20,15 @@ const MemberManagement = () => {
   const { 
     pendingUsers, 
     approvePendingUser, 
-    rejectPendingUser, 
+    rejectPendingUser,
+    refreshPendingUsers,
     isLoading: isPendingLoading 
   } = usePendingUsers();
   const { 
     guestApplications, 
     approveGuestApplication, 
     rejectGuestApplication,
+    refreshGuestApplications,
     isLoading: isGuestLoading 
   } = useGuestApplications();
   
@@ -46,6 +48,28 @@ const MemberManagement = () => {
   const [guestFilter, setGuestFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [selectedGuestApplication, setSelectedGuestApplication] = useState<any | null>(null);
   const [isGuestDetailModalOpen, setIsGuestDetailModalOpen] = useState(false);
+
+  // 탭 변경 시 데이터 새로고침
+  useEffect(() => {
+    console.log('🔄 [MemberManagement] 탭 변경, 데이터 새로고침:', activeTab);
+    
+    if (activeTab === 'members') {
+      refreshMembers();
+    } else if (activeTab === 'approval') {
+      refreshPendingUsers();
+    } else if (activeTab === 'guestApplications') {
+      refreshGuestApplications();
+    }
+  }, [activeTab]);
+
+  // 필터 변경 시 로그
+  useEffect(() => {
+    console.log('🔄 [MemberManagement] 승인 필터 변경:', approvalFilter);
+  }, [approvalFilter]);
+
+  useEffect(() => {
+    console.log('🔄 [MemberManagement] 게스트 필터 변경:', guestFilter);
+  }, [guestFilter]);
 
   // 비밀번호 검증 요청 함수
   const requestPasswordVerification = (action: () => void) => {

@@ -359,9 +359,13 @@ const Events = () => {
         {/* Hero Image */}
         <div className="relative h-64 md:h-80">
           <img 
-            src={event.imageUrl} 
+            src={event.imageUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=500&fit=crop"} 
             alt={event.title}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              // 이미지 로드 실패 시 기본 이미지로 대체
+              e.currentTarget.src = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=500&fit=crop";
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
           

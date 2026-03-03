@@ -16,7 +16,7 @@ const LoadingSpinner = ({ size = 'md', text, fullScreen = false }: LoadingSpinne
   const content = (
     <div className="flex flex-col items-center justify-center space-y-3">
       <Loader2 className={`${sizeClasses[size]} text-primary-600 animate-spin`} />
-      {text && <p className="text-gray-600 font-medium">{text}</p>}
+      {text && <p className="text-slate-600 font-medium">{text}</p>}
     </div>
   );
 

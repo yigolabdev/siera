@@ -23,6 +23,13 @@ export interface User {
   profileImage?: string;
   bio?: string;
   attendanceRate?: number; // 참여율 (%)
+  hikingCount?: number; // 산행 참여 횟수
+  
+  // 로그인 이력
+  loginCount?: number;  // 총 로그인 회수
+  lastLoginAt?: string;  // 최근 로그인 시간 (ISO 8601)
+  lastLoginIP?: string;  // 최근 로그인 IP
+  lastLoginDevice?: string;  // 최근 로그인 디바이스 정보
   
   // 추가 필드
   createdAt?: string;
@@ -30,6 +37,22 @@ export interface User {
   isAuthenticated?: boolean;  // Firebase Auth 연동 여부
   referredBy?: string;  // 추천인
   hikingLevel?: string;  // 산행 능력
+}
+
+// 로그인 이력 상세 기록
+export interface LoginHistory {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  loginAt: string;  // 로그인 시간 (ISO 8601)
+  ipAddress?: string;  // IP 주소
+  userAgent?: string;  // User Agent 문자열
+  device?: string;  // 디바이스 타입 (mobile, tablet, desktop)
+  browser?: string;  // 브라우저 종류
+  os?: string;  // 운영체제
+  location?: string;  // 대략적 위치 (선택적)
+  loginMethod: 'email' | 'google' | 'phone';  // 로그인 방법
 }
 
 // Member는 User의 alias
@@ -62,6 +85,8 @@ export interface PendingUser {
   referredBy?: string;
   hikingLevel: string;
   applicationMessage?: string;
+  profileImage?: string;
+  authProvider?: string;
   appliedAt: string;
   status: 'pending' | 'approved' | 'rejected';
   approvedAt?: string;
@@ -70,7 +95,7 @@ export interface PendingUser {
 
 // ==================== Event Types ====================
 export type Difficulty = '하' | '중하' | '중' | '중상' | '상';
-export type ScheduleType = 'departure' | 'stop' | 'lunch' | 'networking' | 'return' | 'arrival';
+export type ScheduleType = 'departure' | 'stop' | 'lunch' | 'networking' | 'lunch_networking' | 'return' | 'arrival' | 'hiking_start' | 'hiking_end';
 
 export interface ScheduleItem {
   time: string;
@@ -112,6 +137,7 @@ export interface EventWeather {
 export interface HikingEvent {
   id: string;
   title: string;
+  eventNumber?: number; // 산행 회차 (제 N회 산행)
   date: string;
   location: string;
   mountain?: string;
@@ -137,6 +163,13 @@ export interface HikingEvent {
   createdAt?: string; // 생성일
   isRegistered?: boolean; // 현재 사용자의 신청 여부 (클라이언트 사이드)
   weather?: EventWeather; // 날씨 정보 (하루 1회 업데이트)
+  coordinates?: {
+    latitude: number;   // 위도
+    longitude: number;  // 경도
+  };
+  address?: string; // 집결 장소 주소
+  meetingPoint?: string; // 집결 장소 이름
+  surveyPhotos?: string[]; // 답사 사진 URL 목록
 }
 
 // ==================== Team Types ====================
@@ -148,6 +181,9 @@ export interface TeamMember {
   occupation?: string; // Deprecated: Use company instead
   phoneNumber?: string;
   isGuest?: boolean; // 게스트 여부
+  course?: string; // 선택한 코스 (A조, B조, 현장 결정 등)
+  status?: ParticipationStatus; // 참가 상태
+  paymentStatus?: PaymentStatus | 'none'; // 결제 상태
 }
 
 export interface Team {
@@ -196,9 +232,13 @@ export interface Participation {
   userId: string;
   userName: string;
   userEmail: string;
+  userPhone?: string;  // 전화번호
+  userCompany?: string;  // 회사
+  userPosition?: string;  // 직책
+  course?: string;  // 선택한 코스
   isGuest: boolean;
   status: ParticipationStatus;
-  registeredAt: string;
+  registeredAt?: string;  // registeredAt을 선택적으로 변경
   cancelledAt?: string;
   cancellationReason?: string;
   teamId?: string;
@@ -220,6 +260,8 @@ export interface Photo {
   uploadedByName: string;  // ✅ 표준화: 업로더 이름
   uploadedAt: string;
   imageUrl: string;
+  thumbnailUrl?: string;  // 400px 썸네일 (그리드/앨범용)
+  mediumUrl?: string;     // 1200px 중간 크기 (라이트박스용)
   title?: string;      // 갤러리 제목 (전체 사진 세트의 제목)
   caption?: string;    // Deprecated: 개별 사진 설명은 사용하지 않음
   likes: number;
@@ -243,6 +285,19 @@ export interface Post {
   likedBy: string[];  // 좋아요 누른 사용자 ID 목록
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SharedFile {
+  id: string;
+  fileName: string;       // 원본 파일명
+  storagePath: string;    // Firebase Storage 경로
+  downloadURL: string;    // 다운로드 URL
+  fileSize: number;       // 바이트 크기
+  fileType: string;       // MIME type
+  description: string;    // 파일 설명 (관리자 입력)
+  uploadedBy: string;     // 업로더 이름
+  uploadedById: string;   // 업로더 ID
+  createdAt: string;      // 업로드 시간
 }
 
 export interface Comment {
@@ -271,7 +326,7 @@ export interface Notice {
 }
 
 // ==================== Payment Types ====================
-export type PaymentStatus = 'pending' | 'completed' | 'confirmed' | 'failed' | 'cancelled';
+export type PaymentStatus = 'pending' | 'completed' | 'confirmed' | 'failed' | 'cancelled' | 'refunded';
 
 export interface Payment {
   id: string;
@@ -293,6 +348,10 @@ export interface Payment {
   paymentMethod?: string;
   transactionId?: string;
   memo?: string;
+  refundStatus?: 'none' | 'requested' | 'completed'; // 환불 상태
+  refundDate?: string; // 환불 완료일
+  refundAmount?: number; // 환불 금액
+  refundReason?: string; // 환불 사유
   createdAt: string;
   updatedAt: string;
 }
@@ -360,6 +419,7 @@ export interface HikingHistoryItem {
   isSpecial?: boolean;
   summary?: string;
   photoCount?: number;
+  eventNumber?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -389,6 +449,7 @@ export interface Poem {
 // ==================== Guest Application Types ====================
 export interface GuestApplication {
   id: string;
+  userId?: string;  // Firebase Auth UID (정회원 전환 시 이력 연동용)
   name: string;
   email: string;
   phoneNumber: string;  // ✅ 표준화: phone → phoneNumber
@@ -420,6 +481,17 @@ export interface RulesData {
   version: string;
   effectiveDate: string;
   amendments: RulesAmendment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==================== Club History Types ====================
+export interface ClubHistory {
+  id: string;
+  year: string;           // '2005년' 형식
+  badge: string;           // 해당 연도의 태그/배지 텍스트
+  items: string[];         // 해당 연도의 이벤트 목록
+  sortOrder: number;       // 정렬 순서 (낮을수록 먼저 표시)
   createdAt: string;
   updatedAt: string;
 }

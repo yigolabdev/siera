@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
+import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument, queryDocuments } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
-import { Participation } from '../types';
-import { waitForFirebase } from '../lib/firebase/config';
-import { useAuth } from './AuthContextEnhanced';
+import { Participation, Team, Payment } from '../types';
+
+// ==================== 타입 정의 ====================
 
 interface ParticipationContextType {
   participations: Participation[];
@@ -17,12 +17,12 @@ interface ParticipationContextType {
   getParticipationsByUser: (userId: string) => Participation[];
   getUserParticipationForEvent: (userId: string, eventId: string) => Participation | undefined;
   registerForEvent: (
-    eventId: string, 
-    userId: string, 
-    userName: string, 
-    userEmail: string, 
+    eventId: string,
+    userId: string,
+    userName: string,
+    userEmail: string,
     isGuest?: boolean,
-    onPaymentCreate?: (participationId: string, eventId: string) => Promise<void>
+    onPaymentCreate?: (participationId: string, eventId: string) => Promise<void>,
   ) => Promise<void>;
   cancelParticipation: (id: string, reason?: string) => Promise<void>;
   updateParticipationStatus: (id: string, status: Participation['status']) => Promise<void>;
@@ -32,37 +32,132 @@ interface ParticipationContextType {
 
 const ParticipationContext = createContext<ParticipationContextType | undefined>(undefined);
 
+// ==================== 유틸리티 ====================
+
+const generateId = (prefix: string) =>
+  `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+const nowISO = () => new Date().toISOString();
+
+// ==================== 캐스케이드 삭제 유틸리티 ====================
+
+/**
+ * 참가 신청과 관련된 결제 정보 삭제
+ * queryDocuments를 사용하여 필요한 데이터만 조회
+ */
+const cleanupRelatedPayments = async (participationId: string, eventId: string, userId: string) => {
+  try {
+    // participationId로 직접 조회 (가장 정확한 매칭)
+    const byParticipation = await queryDocuments<Payment>('payments', [
+      { field: 'participationId', operator: '==', value: participationId },
+    ]);
+
+    // eventId + userId로 조회 (participationId가 없는 레거시 데이터 대응)
+    const byEventUser = await queryDocuments<Payment>('payments', [
+      { field: 'eventId', operator: '==', value: eventId },
+      { field: 'userId', operator: '==', value: userId },
+    ]);
+
+    // 중복 제거 후 삭제
+    const paymentIds = new Set<string>();
+    const allPayments = [
+      ...(byParticipation.data || []),
+      ...(byEventUser.data || []),
+    ];
+
+    for (const payment of allPayments) {
+      if (!paymentIds.has(payment.id)) {
+        paymentIds.add(payment.id);
+        await deleteDocument('payments', payment.id);
+      }
+    }
+  } catch {
+    // 결제 정리 실패해도 참가 삭제는 진행
+  }
+};
+
+/**
+ * 참가 신청과 관련된 조편성에서 회원 제거
+ * eventId로 필터링하여 해당 이벤트의 팀만 조회
+ */
+const cleanupRelatedTeams = async (participationId: string, eventId: string, userId: string) => {
+  try {
+    const teamsResult = await queryDocuments<Team>('teams', [
+      { field: 'eventId', operator: '==', value: eventId },
+    ]);
+
+    if (!teamsResult.success || !teamsResult.data?.length) return;
+
+    for (const team of teamsResult.data) {
+      let modified = false;
+      let updatedTeam = { ...team };
+
+      // 조장인 경우 제거
+      if (team.leaderId === userId || team.leaderId === participationId) {
+        updatedTeam = {
+          ...updatedTeam,
+          leaderId: '', leaderName: '', leaderCompany: '',
+          leaderPosition: '', leaderOccupation: '',
+        };
+        modified = true;
+      }
+
+      // 조원인 경우 제거
+      const originalCount = team.members?.length ?? 0;
+      const filteredMembers = (team.members ?? []).filter(
+        m => m.id !== userId && m.id !== participationId,
+      );
+      if (filteredMembers.length !== originalCount) {
+        updatedTeam = { ...updatedTeam, members: filteredMembers };
+        modified = true;
+      }
+
+      if (modified) {
+        await setDocument('teams', team.id, updatedTeam);
+      }
+    }
+  } catch {
+    // 조편성 정리 실패해도 참가 삭제는 진행
+  }
+};
+
+/**
+ * 참가 취소/삭제 시 관련 데이터 캐스케이드 정리
+ */
+const cascadeCleanup = async (participationId: string, eventId: string, userId: string) => {
+  await Promise.allSettled([
+    cleanupRelatedTeams(participationId, eventId, userId),
+    cleanupRelatedPayments(participationId, eventId, userId),
+  ]);
+};
+
+// ==================== Provider ====================
+
 export const ParticipationProvider = ({ children }: { children: ReactNode }) => {
   const [participations, setParticipations] = useState<Participation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  
-  // 🔥 AuthContext 사용
-  const auth = useAuth();
-  
+
+  // 초기 데이터 로드 (Auth 독립적 - 간편 신청 페이지용)
+  useEffect(() => {
+    if (!hasLoadedOnce) {
+      loadParticipations();
+      setHasLoadedOnce(true);
+    }
+  }, [hasLoadedOnce]);
+
   const loadParticipations = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      console.log('🔄 [ParticipationContext] participations 데이터 로드 시작');
-      
       const result = await getDocuments<Participation>('participations');
-      
-      if (result.success && result.data) {
-        setParticipations(result.data);
-        console.log('✅ Firebase에서 참가 데이터 로드:', result.data.length, '개');
-      } else {
-        setParticipations([]);
-        console.log('ℹ️ Firebase에서 로드된 참가 데이터가 없습니다.');
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Firebase 참가 데이터 로드 실패:', message);
+      setParticipations(result.success && result.data ? result.data : []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
       setParticipations([]);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'ParticipationContext.loadParticipations',
       });
     } finally {
@@ -70,242 +165,134 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
     }
   }, []);
 
-  // Firebase 초기 데이터 로드 - 로그인 상태 변경 시 재로드
-  useEffect(() => {
-    const initializeData = async () => {
-      console.log('🔄 [ParticipationContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
-      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
-      if (auth.firebaseUser || !hasLoadedOnce) {
-        await loadParticipations();
-        setHasLoadedOnce(true);
-      }
-    };
-    
-    // Auth 로딩이 완료된 후에만 실행
-    if (!auth.isLoading) {
-      initializeData();
-    }
-  }, [auth.firebaseUser, auth.isLoading, loadParticipations]);
+  const addParticipation = useCallback(async (data: Omit<Participation, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // 중복 검사 (취소된 참가는 제외 — 재신청 허용)
+    const existing = participations.find(
+      p => p.eventId === data.eventId && p.userId === data.userId && p.status !== 'cancelled'
+    );
+    if (existing) throw new Error('이미 이 산행에 신청하셨습니다.');
 
-  const addParticipation = useCallback(async (participationData: Omit<Participation, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      const id = `participation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const now = new Date().toISOString();
-      
-      const participation: Participation = {
-        ...participationData,
-        id,
-        createdAt: now,
-        updatedAt: now,
-      };
-      
-      const result = await setDocument('participations', id, participation);
-      if (result.success) {
-        setParticipations(prev => [...prev, participation]);
-        console.log('✅ 참가 신청 추가 성공:', id);
-      } else {
-        throw new Error(result.error || '참가 신청 추가 실패');
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participation: participationData });
-      throw error;
-    }
-  }, []);
+    const id = generateId('participation');
+    const now = nowISO();
+    const participation: Participation = { ...data, id, createdAt: now, updatedAt: now };
 
-  const updateParticipation = useCallback(async (id: string, updatedParticipation: Partial<Participation>) => {
-    try {
-      const updateData = {
-        ...updatedParticipation,
-        updatedAt: new Date().toISOString(),
-      };
-      
-      const result = await firestoreUpdate('participations', id, updateData);
-      if (result.success) {
-        setParticipations(prev => prev.map(participation => 
-          participation.id === id ? { ...participation, ...updateData } : participation
-        ));
-        console.log('✅ 참가 신청 수정 성공:', id);
-      } else {
-        throw new Error(result.error || '참가 신청 수정 실패');
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw error;
-    }
+    const result = await setDocument('participations', id, participation);
+    if (!result.success) throw new Error(result.error || '참가 신청 추가 실패');
+    setParticipations(prev => [...prev, participation]);
+  }, [participations]);
+
+  const updateParticipation = useCallback(async (id: string, updates: Partial<Participation>) => {
+    const updateData = { ...updates, updatedAt: nowISO() };
+    const result = await firestoreUpdate('participations', id, updateData);
+    if (!result.success) throw new Error(result.error || '참가 신청 수정 실패');
+    setParticipations(prev =>
+      prev.map(p => (p.id === id ? { ...p, ...updateData } : p)),
+    );
   }, []);
 
   const deleteParticipation = useCallback(async (id: string) => {
-    try {
-      const result = await deleteDocument('participations', id);
-      if (result.success) {
-        setParticipations(prev => prev.filter(participation => participation.id !== id));
-        console.log('✅ 참가 신청 삭제 성공:', id);
-      } else {
-        throw new Error(result.error || '참가 신청 삭제 실패');
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw error;
+    // 삭제 전 참가 정보로 캐스케이드 정리
+    const participation = participations.find(p => p.id === id);
+    if (participation) {
+      await cascadeCleanup(id, participation.eventId, participation.userId);
     }
-  }, []);
+
+    const result = await deleteDocument('participations', id);
+    if (!result.success) throw new Error(result.error || '참가 신청 삭제 실패');
+    setParticipations(prev => prev.filter(p => p.id !== id));
+  }, [participations]);
 
   const registerForEvent = useCallback(async (
-    eventId: string, 
-    userId: string, 
-    userName: string, 
+    eventId: string,
+    userId: string,
+    userName: string,
     userEmail: string,
-    isGuest: boolean = false,
-    onPaymentCreate?: (participationId: string, eventId: string) => Promise<void>
+    isGuest = false,
+    onPaymentCreate?: (participationId: string, eventId: string) => Promise<void>,
   ) => {
-    try {
-      // 이미 등록되어 있는지 확인
-      const existingParticipation = participations.find(
-        p => p.eventId === eventId && p.userId === userId
-      );
-      
-      if (existingParticipation) {
-        throw new Error('이미 이 산행에 신청하셨습니다.');
-      }
-      
-      // 1. 산행 신청 생성
-      const participationId = `participation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const now = new Date().toISOString();
-      
-      const participation: Participation = {
-        id: participationId,
-        eventId,
-        userId,
-        userName,
-        userEmail,
-        isGuest,
-        status: 'pending',
-        registeredAt: now,
-        createdAt: now,
-        updatedAt: now,
-      };
-      
-      // Firestore에 저장
-      const result = await setDocument('participations', participationId, participation);
-      if (result.success) {
-        setParticipations(prev => [...prev, participation]);
-        console.log('✅ 산행 신청 완료:', { eventId, userId, participationId });
-        
-        // 2. 결제 레코드 생성 콜백 호출
-        if (onPaymentCreate) {
-          await onPaymentCreate(participationId, eventId);
-        }
-      } else {
-        throw new Error(result.error || '참가 신청 추가 실패');
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, userId });
-      throw error;
+    // 중복 검사 (취소된 참가는 제외 — 재신청 허용)
+    const existing = participations.find(p => p.eventId === eventId && p.userId === userId && p.status !== 'cancelled');
+    if (existing) throw new Error('이미 이 산행에 신청하셨습니다.');
+
+    const participationId = generateId('participation');
+    const now = nowISO();
+    const participation: Participation = {
+      id: participationId, eventId, userId, userName, userEmail,
+      isGuest, status: 'pending', registeredAt: now, createdAt: now, updatedAt: now,
+    };
+
+    const result = await setDocument('participations', participationId, participation);
+    if (!result.success) throw new Error(result.error || '참가 신청 추가 실패');
+    setParticipations(prev => [...prev, participation]);
+
+    if (onPaymentCreate) {
+      await onPaymentCreate(participationId, eventId);
     }
   }, [participations]);
 
   const cancelParticipation = useCallback(async (id: string, reason?: string) => {
-    try {
-      await updateParticipation(id, {
-        status: 'cancelled',
-        cancelledAt: new Date().toISOString(),
-        cancellationReason: reason,
-      });
-      console.log('✅ 참가 취소 완료:', id);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw error;
+    // 취소 전 캐스케이드 정리
+    const participation = participations.find(p => p.id === id);
+    if (participation) {
+      await cascadeCleanup(id, participation.eventId, participation.userId);
     }
-  }, [updateParticipation]);
+
+    await updateParticipation(id, {
+      status: 'cancelled',
+      cancelledAt: nowISO(),
+      cancellationReason: reason,
+    });
+  }, [updateParticipation, participations]);
 
   const updateParticipationStatus = useCallback(async (id: string, status: Participation['status']) => {
-    try {
-      await updateParticipation(id, { status });
-      console.log('✅ 참가 상태 변경 완료:', { id, status });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw error;
-    }
+    await updateParticipation(id, { status });
   }, [updateParticipation]);
 
   const assignTeam = useCallback(async (id: string, teamId: string, teamName: string) => {
-    try {
-      await updateParticipation(id, {
-        teamId,
-        teamName,
-      });
-      console.log('✅ 조 배정 완료:', { id, teamId, teamName });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { participationId: id });
-      throw error;
-    }
+    await updateParticipation(id, { teamId, teamName });
   }, [updateParticipation]);
 
   const refreshParticipations = useCallback(async () => {
     await loadParticipations();
   }, [loadParticipations]);
 
-  const getParticipationById = useCallback((id: string) => {
-    return participations.find(participation => participation.id === id);
-  }, [participations]);
+  // ==================== Selectors (읽기 전용) ====================
 
-  const getParticipationsByEvent = useCallback((eventId: string) => {
-    return participations.filter(participation => participation.eventId === eventId);
-  }, [participations]);
+  const getParticipationById = useCallback(
+    (id: string) => participations.find(p => p.id === id),
+    [participations],
+  );
 
-  const getParticipationsByUser = useCallback((userId: string) => {
-    return participations.filter(participation => participation.userId === userId);
-  }, [participations]);
+  const getParticipationsByEvent = useCallback(
+    (eventId: string) => participations.filter(p => p.eventId === eventId),
+    [participations],
+  );
 
-  const getUserParticipationForEvent = useCallback((userId: string, eventId: string) => {
-    return participations.find(
-      participation => participation.userId === userId && participation.eventId === eventId
-    );
-  }, [participations]);
+  const getParticipationsByUser = useCallback(
+    (userId: string) => participations.filter(p => p.userId === userId),
+    [participations],
+  );
+
+  const getUserParticipationForEvent = useCallback(
+    (userId: string, eventId: string) =>
+      participations.find(p => p.userId === userId && p.eventId === eventId),
+    [participations],
+  );
+
+  // ==================== Context Value ====================
 
   const value = useMemo(() => ({
-    participations,
-    isLoading,
-    error,
-    addParticipation,
-    updateParticipation,
-    deleteParticipation,
-    getParticipationById,
-    getParticipationsByEvent,
-    getParticipationsByUser,
-    getUserParticipationForEvent,
-    registerForEvent,
-    cancelParticipation,
-    updateParticipationStatus,
-    assignTeam,
-    refreshParticipations,
+    participations, isLoading, error,
+    addParticipation, updateParticipation, deleteParticipation,
+    getParticipationById, getParticipationsByEvent, getParticipationsByUser,
+    getUserParticipationForEvent, registerForEvent, cancelParticipation,
+    updateParticipationStatus, assignTeam, refreshParticipations,
   }), [
-    participations,
-    isLoading,
-    error,
-    addParticipation,
-    updateParticipation,
-    deleteParticipation,
-    getParticipationById,
-    getParticipationsByEvent,
-    getParticipationsByUser,
-    getUserParticipationForEvent,
-    registerForEvent,
-    cancelParticipation,
-    updateParticipationStatus,
-    assignTeam,
-    refreshParticipations,
+    participations, isLoading, error,
+    addParticipation, updateParticipation, deleteParticipation,
+    getParticipationById, getParticipationsByEvent, getParticipationsByUser,
+    getUserParticipationForEvent, registerForEvent, cancelParticipation,
+    updateParticipationStatus, assignTeam, refreshParticipations,
   ]);
 
   return <ParticipationContext.Provider value={value}>{children}</ParticipationContext.Provider>;
@@ -313,7 +300,7 @@ export const ParticipationProvider = ({ children }: { children: ReactNode }) => 
 
 export const useParticipations = () => {
   const context = useContext(ParticipationContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useParticipations must be used within a ParticipationProvider');
   }
   return context;

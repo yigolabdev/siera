@@ -1,21 +1,24 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
-import { uploadFile, deleteFile, getFileURL } from '../lib/firebase/storage';
+import { uploadFile, deleteFile, getFileURL, uploadImageMultiSize } from '../lib/firebase/storage';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { useAuth } from './AuthContextEnhanced';
 import { Photo } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { SUPER_ADMIN_EMAILS } from '../constants';
 
 interface GalleryContextType {
   photos: Photo[];
   isLoading: boolean;
   error: string | null;
   uploadPhotos: (files: File[], eventId: string, eventTitle: string, galleryTitle: string) => Promise<void>;
+  updateAlbumPhotos: (photoIds: string[], updates: { title?: string; eventId?: string; eventTitle?: string }) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
   toggleLike: (photoId: string, userId: string) => Promise<void>;
   getPhotosByEvent: (eventId: string) => Photo[];
   getPhotosByYearMonth: (year: string, month: string) => Photo[];
   refreshPhotos: () => Promise<void>;
+  _activate: () => void;
 }
 
 const GalleryContext = createContext<GalleryContextType | undefined>(undefined);
@@ -25,56 +28,42 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  const loadPhotos = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Lazy loading: useGallery() 훅이 호출될 때만 데이터 로드
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
 
-      console.log('🔄 [GalleryContext] photos 데이터 로드 시작');
-
-      const result = await getDocuments<Photo>('photos');
-      if (result.success && result.data) {
-        setPhotos(result.data);
-        console.log('✅ Firebase에서 사진 데이터 로드:', result.data.length, '개');
-      } else {
-        console.log('ℹ️ Firebase에서 로드된 사진 데이터가 없습니다.');
-        setPhotos([]);
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Firebase 사진 데이터 로드 실패:', message);
-      setError(message);
-      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
-        context: 'GalleryContext.loadPhotos',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Firebase에서 사진 데이터 로드 - 로그인 상태 변경 시 재로드
+  // Firebase에서 사진 데이터 로드 - 활성화된 후에만
   useEffect(() => {
-    const initializeData = async () => {
-      console.log('🔄 [GalleryContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!firebaseUser,
-        email: firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
-      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
-      if (firebaseUser || !hasLoadedOnce) {
-        await loadPhotos();
-        setHasLoadedOnce(true);
+    if (!_activated) return;
+
+    const loadPhotos = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const result = await getDocuments<Photo>('photos');
+        if (result.success && result.data) {
+          setPhotos(result.data);
+        } else {
+          setPhotos([]);
+        }
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('❌ Firebase 사진 데이터 로드 실패:', message);
+        setError(message);
+        logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+          context: 'GalleryContext.loadPhotos',
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
-    
-    // Auth 로딩이 완료된 후에만 실행
+
     if (!authLoading) {
-      initializeData();
+      loadPhotos();
     }
-  }, [firebaseUser, authLoading, loadPhotos]);
+  }, [_activated, firebaseUser, authLoading]);
 
   // 사진 업로드
   const uploadPhotos = useCallback(async (
@@ -88,33 +77,17 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      console.log('📤 사진 업로드 시작:', {
-        fileCount: files.length,
-        eventId,
-        eventTitle,
-        galleryTitle,
-        userId: user.id,
-        userName: user.name
-      });
-
       const uploadPromises = files.map(async (file, index) => {
-        console.log(`📤 업로드 중 [${index + 1}/${files.length}]:`, file.name);
-
-        // Storage에 파일 업로드
         const timestamp = Date.now();
         const fileName = `${eventId}_${timestamp}_${index}.${file.name.split('.').pop()}`;
-        const storagePath = `gallery/${eventId}/${fileName}`;
+        const basePath = `gallery/${eventId}`;
         
-        console.log('📁 Storage 경로:', storagePath);
+        const multiResult = await uploadImageMultiSize(basePath, fileName, file);
         
-        const uploadResult = await uploadFile(storagePath, file);
-        console.log('✅ Storage 업로드 결과:', uploadResult);
-        
-        if (!uploadResult.success || !uploadResult.url) {
-          throw new Error(`파일 업로드 실패: ${uploadResult.error || '알 수 없는 오류'}`);
+        if (!multiResult.original.success || !multiResult.original.url) {
+          throw new Error(`파일 업로드 실패: ${multiResult.original.error || '알 수 없는 오류'}`);
         }
 
-        // Firestore에 메타데이터 저장
         const photoId = `photo_${timestamp}_${index}`;
         const now = new Date().toISOString();
         const photoData: Photo = {
@@ -126,17 +99,16 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
           uploadedBy: user.id,
           uploadedByName: user.name,
           uploadedAt: now,
-          imageUrl: uploadResult.url,
-          title: galleryTitle, // 갤러리 제목 (모든 사진에 동일하게 적용)
-          caption: '', // 개별 사진 설명은 빈 문자열
+          imageUrl: multiResult.original.url,
+          thumbnailUrl: multiResult.thumbnail.url || undefined,
+          mediumUrl: multiResult.medium.url || undefined,
+          title: galleryTitle,
+          caption: '',
           likes: 0,
           likedBy: [],
         };
-
-        console.log('💾 Firestore 저장 중:', photoId);
         
         const result = await setDocument('photos', photoId, photoData);
-        console.log('✅ Firestore 저장 결과:', result);
         
         if (result.success) {
           return photoData;
@@ -146,7 +118,6 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
 
       const uploadedPhotos = await Promise.all(uploadPromises);
       setPhotos(prev => [...prev, ...uploadedPhotos]);
-      console.log(`✅ ${uploadedPhotos.length}개 사진 업로드 완료`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ 사진 업로드 실패:', message);
@@ -155,12 +126,58 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
-  // 사진 삭제
+  // 앨범 사진 일괄 수정 (제목, 산행 변경)
+  const updateAlbumPhotos = useCallback(async (
+    photoIds: string[],
+    updates: { title?: string; eventId?: string; eventTitle?: string }
+  ) => {
+    if (!user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    try {
+      const updateData: Record<string, any> = { updatedAt: new Date().toISOString() };
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.eventId !== undefined) updateData.eventId = updates.eventId;
+      if (updates.eventTitle !== undefined) updateData.eventTitle = updates.eventTitle;
+
+      const updatePromises = photoIds.map(photoId =>
+        updateDocument('photos', photoId, updateData)
+      );
+      await Promise.all(updatePromises);
+
+      // 로컬 상태 업데이트
+      setPhotos(prev => prev.map(p =>
+        photoIds.includes(p.id)
+          ? { ...p, ...updates }
+          : p
+      ));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 앨범 수정 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE);
+      throw error;
+    }
+  }, [user]);
+
+  // 사진 삭제 (권한 확인 포함)
   const deletePhoto = useCallback(async (photoId: string) => {
+    if (!user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
     try {
       const photo = photos.find(p => p.id === photoId);
       if (!photo) {
         throw new Error('사진을 찾을 수 없습니다.');
+      }
+
+      // 권한 확인: 업로더 본인이거나 관리자(chairman/committee) 또는 슈퍼 관리자만 삭제 가능
+      const isOwner = photo.uploadedBy === user.id;
+      const isAdmin = user.role === 'chairman' || user.role === 'committee' || SUPER_ADMIN_EMAILS.includes(user.email);
+      
+      if (!isOwner && !isAdmin) {
+        throw new Error('사진을 삭제할 권한이 없습니다.');
       }
 
       // Storage에서 파일 삭제
@@ -173,16 +190,16 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
       const result = await deleteDocument('photos', photoId);
       if (result.success) {
         setPhotos(prev => prev.filter(p => p.id !== photoId));
-        console.log('✅ 사진 삭제 완료');
       } else {
         throw new Error(result.error || '사진 삭제 실패');
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 사진 삭제 실패:', message);
       logError(error, ErrorLevel.ERROR, ErrorCategory.STORAGE, { photoId });
       throw error;
     }
-  }, [photos]);
+  }, [photos, user]);
 
   // 좋아요 토글
   const toggleLike = useCallback(async (photoId: string, userId: string) => {
@@ -225,19 +242,40 @@ export const GalleryProvider = ({ children }: { children: ReactNode }) => {
 
   // 사진 새로고침
   const refreshPhotos = useCallback(async () => {
-    await loadPhotos();
-  }, [loadPhotos]);
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const result = await getDocuments<Photo>('photos');
+      if (result.success && result.data) {
+        setPhotos(result.data);
+      } else {
+        setPhotos([]);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Firebase 사진 데이터 새로고침 실패:', message);
+      setError(message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'GalleryContext.refreshPhotos',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const value = {
     photos,
     isLoading,
     error,
     uploadPhotos,
+    updateAlbumPhotos,
     deletePhoto,
     toggleLike,
     getPhotosByEvent,
     getPhotosByYearMonth,
     refreshPhotos,
+    _activate,
   };
 
   return (
@@ -252,5 +290,7 @@ export const useGallery = () => {
   if (context === undefined) {
     throw new Error('useGallery must be used within a GalleryProvider');
   }
+  // Lazy loading: 이 훅이 호출될 때 데이터 로드 활성화
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };

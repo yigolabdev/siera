@@ -2,8 +2,6 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback,
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Member } from '../types';
-import { waitForFirebase } from '../lib/firebase/config';
-import { useAuth } from './AuthContextEnhanced';
 
 interface MemberContextType {
   members: Member[];
@@ -25,60 +23,30 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
-  // 🔥 AuthContext 사용
-  const auth = useAuth();
-  
-  // Firebase 초기 데이터 로드 - 로그인 상태 변경 시 재로드
+  // Firebase 초기 데이터 로드
   useEffect(() => {
-    const initializeData = async () => {
-      console.log('🔄 [MemberContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
-      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
-      if (auth.firebaseUser || !hasLoadedOnce) {
-        await loadInitialData();
-        setHasLoadedOnce(true);
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const membersResult = await getDocuments<Member>('members');
+        
+        if (membersResult.success && membersResult.data) {
+          setMembers(membersResult.data);
+        } else {
+          setMembers([]);
+        }
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    // Auth 로딩이 완료된 후에만 실행
-    if (!auth.isLoading) {
-      initializeData();
-    }
-  }, [auth.firebaseUser, auth.isLoading]);
-  
-  const loadInitialData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log('🔄 [MemberContext] members 데이터 로드 시작');
-      
-      // Firebase에서 회원 데이터 로드
-      const membersResult = await getDocuments<Member>('members');
-      
-      if (membersResult.success && membersResult.data) {
-        setMembers(membersResult.data);
-        console.log('✅ Firebase에서 회원 데이터 로드:', membersResult.data.length, '명');
-      } else {
-        console.log('ℹ️ Firebase에서 로드된 회원 데이터가 없습니다.');
-        setMembers([]);
-      }
-    } catch (err: any) {
-      console.error('❌ Firebase 회원 데이터 로드 실패:', err.message);
-      setError(err.message);
-      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
-        context: 'MemberContext.loadInitialData',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    loadData();
+  }, []); // 빈 배열: 마운트 시 한 번만 실행
 
   const addMember = useCallback(async (member: Member) => {
     try {
@@ -133,7 +101,7 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
   }, [members]);
 
   const getActiveMembers = useCallback(() => {
-    return members.filter(m => m.isApproved); // isApproved로 활성 회원 필터링
+    return members.filter(m => m.isApproved);
   }, [members]);
 
   const getTotalMembers = useCallback(() => {
@@ -141,7 +109,7 @@ export const MemberProvider = ({ children }: { children: ReactNode }) => {
   }, [members]);
 
   const getMembersByPosition = useCallback((position: 'chairman' | 'committee' | 'member') => {
-    return members.filter(member => member.role === position); // position -> role 사용
+    return members.filter(member => member.role === position);
   }, [members]);
   
   const refreshMembers = useCallback(async () => {

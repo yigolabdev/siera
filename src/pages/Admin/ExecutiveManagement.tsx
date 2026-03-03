@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Users, Phone, Mail, Edit2, Save, X, Plus, Trash2, Calendar, AlertCircle, Check, Shield, Search } from 'lucide-react';
 import { useMembers } from '../../contexts/MemberContext';
 import { useExecutives, Executive } from '../../contexts/ExecutiveContext';
+import { sortByPosition } from '../../utils/executiveOrder';
 import { useAuth } from '../../contexts/AuthContextEnhanced';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
-import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { auth } from '../../lib/firebase/config';
+// Firebase Auth imports 제거 - 관리자 인증을 confirm 다이얼로그로 대체
 
 interface Member {
   id: number;
@@ -35,6 +35,18 @@ const ExecutiveManagement = () => {
     position: m.position || '',
   }));
 
+  // 운영진과 members 데이터 병합 (members의 bio 우선 사용)
+  const executivesWithMemberBio = useMemo(() => {
+    return contextExecutives.map(exec => {
+      const memberData = contextMembers.find(m => m.id === exec.memberId);
+      return {
+        ...exec,
+        // members 컬렉션의 bio가 있으면 우선 사용 (프로필 자기소개)
+        displayBio: memberData?.bio || exec.bio,
+      };
+    });
+  }, [contextExecutives, contextMembers]);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Executive | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -51,10 +63,7 @@ const ExecutiveManagement = () => {
     bio: '',
   });
 
-  // 비밀번호 확인 모달
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordAction, setPasswordAction] = useState<(() => void) | null>(null);
+  // (비밀번호 모달 제거 - 관리자 페이지 접근 자체가 권한 체크)
 
   // 회원 검색
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,8 +71,8 @@ const ExecutiveManagement = () => {
   const [editSearchQuery, setEditSearchQuery] = useState('');
   const [showEditSearchResults, setShowEditSearchResults] = useState(false);
 
-  const chairmanBoard = contextExecutives.filter(e => e.category === 'chairman');
-  const committee = contextExecutives.filter(e => e.category === 'committee');
+  const chairmanBoard = sortByPosition(contextExecutives, 'chairman');
+  const committee = sortByPosition(contextExecutives, 'committee');
 
   // 임기 활성화 여부 확인
   const isTermActive = (startTerm?: string, endTerm?: string) => {
@@ -73,56 +82,13 @@ const ExecutiveManagement = () => {
     return currentYearMonth >= startTerm && currentYearMonth <= endTerm;
   };
 
-  // 비밀번호 확인 요청
+  // 관리자 권한 확인 후 작업 실행
   const requestPasswordVerification = (action: () => void) => {
-    setPasswordAction(() => action);
-    setPasswordInput('');
-    setIsPasswordModalOpen(true);
-  };
-
-  // 비밀번호 확인 처리
-  const handlePasswordConfirm = async () => {
-    if (!user || !auth.currentUser) {
-      alert('사용자 정보를 찾을 수 없습니다.');
-      return;
+    // 관리자 페이지 접근 자체가 권한 체크를 거치므로,
+    // 추가 재인증 대신 확인 다이얼로그로 대체
+    if (confirm('이 작업을 진행하시겠습니까?')) {
+      action();
     }
-
-    try {
-      // Firebase Authentication으로 비밀번호 재인증
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        passwordInput
-      );
-      
-      await reauthenticateWithCredential(auth.currentUser, credential);
-      
-      // 재인증 성공
-      setIsPasswordModalOpen(false);
-      setPasswordInput('');
-      if (passwordAction) {
-        passwordAction();
-      }
-      setPasswordAction(null);
-    } catch (error: any) {
-      console.error('비밀번호 확인 실패:', error);
-      
-      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        alert('비밀번호가 올바르지 않습니다.');
-      } else if (error.code === 'auth/too-many-requests') {
-        alert('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
-      } else {
-        alert('비밀번호 확인에 실패했습니다. 다시 시도해주세요.');
-      }
-      
-      setPasswordInput('');
-    }
-  };
-
-  // 비밀번호 모달 취소
-  const handlePasswordCancel = () => {
-    setIsPasswordModalOpen(false);
-    setPasswordInput('');
-    setPasswordAction(null);
   };
 
   // 수정 시작
@@ -245,8 +211,8 @@ const ExecutiveManagement = () => {
       ...newExecutive,
       memberId: String(member.id),
       name: member.name,
-      phoneNumber: member.phoneNumber,
-      email: member.email,
+      phoneNumber: member.phoneNumber || '',
+      email: member.email || '',
       company: member.company || member.occupation,
     });
     setSearchQuery(member.name);
@@ -289,7 +255,7 @@ const ExecutiveManagement = () => {
   };
 
   // 운영진 카드 렌더링
-  const renderExecutiveCard = (executive: Executive) => {
+  const renderExecutiveCard = (executive: Executive & { displayBio?: string }) => {
     const isEditing = editingId === executive.id;
     const data = isEditing ? editForm! : executive;
 
@@ -394,7 +360,7 @@ const ExecutiveManagement = () => {
                 placeholder="직책"
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   임기 시작 *
@@ -467,9 +433,9 @@ const ExecutiveManagement = () => {
                 </button>
               </div>
             </div>
-            {data.bio && (
+            {executive.displayBio && (
               <div className="mt-3 pt-3 border-t border-slate-200">
-                <p className="text-sm text-slate-600 leading-relaxed">{data.bio}</p>
+                <p className="text-sm text-slate-600 leading-relaxed">{executive.displayBio}</p>
               </div>
             )}
             <div className="space-y-2 text-sm text-slate-600">
@@ -502,14 +468,6 @@ const ExecutiveManagement = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">운영진 관리</h1>
-        <p className="text-xl text-slate-600">
-          시에라클럽의 운영진 정보를 관리합니다.
-        </p>
-      </div>
-
       {/* 중요 안내 */}
       <div className="mb-8 p-5 bg-warning-50 border-2 border-warning-200 rounded-xl">
         <div className="flex items-start gap-3">
@@ -533,7 +491,7 @@ const ExecutiveManagement = () => {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-900">운영진</h2>
-              <p className="text-sm text-slate-600">{contextExecutives.length}명</p>
+              <p className="text-sm text-slate-600">{executivesWithMemberBio.length}명</p>
             </div>
           </div>
           <button
@@ -553,13 +511,13 @@ const ExecutiveManagement = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p className="text-slate-600 mt-4">운영진 정보를 불러오는 중...</p>
             </div>
-          ) : contextExecutives.length === 0 ? (
+          ) : executivesWithMemberBio.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <p className="text-xl text-slate-500">등록된 운영진이 없습니다.</p>
             </div>
           ) : (
-            contextExecutives.map(exec => renderExecutiveCard(exec))
+            executivesWithMemberBio.map(exec => renderExecutiveCard(exec))
           )}
         </div>
       </Card>
@@ -674,7 +632,7 @@ const ExecutiveManagement = () => {
                   placeholder="예: 회장, 부위원장, 재무"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     임기 시작
@@ -750,59 +708,7 @@ const ExecutiveManagement = () => {
         </div>
       )}
 
-      {/* 비밀번호 확인 모달 */}
-      {isPasswordModalOpen && (
-        <Modal onClose={handlePasswordCancel} maxWidth="max-w-md">
-          <div className="p-6 text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-slate-900" />
-            </div>
-            
-            <h3 className="text-xl font-bold text-slate-900 mb-2">관리자 비밀번호 확인</h3>
-            <p className="text-slate-600 mb-6">
-              중요한 작업을 수행하기 위해 비밀번호를 입력해주세요
-            </p>
-            
-            <div className="text-left mb-6">
-              <label className="block text-slate-700 font-semibold mb-2">
-                비밀번호
-              </label>
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handlePasswordConfirm();
-                  }
-                }}
-                className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
-                placeholder="현재 로그인한 계정의 비밀번호"
-                autoFocus
-              />
-              <p className="text-xs text-slate-500 mt-2">
-                {user?.email}
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handlePasswordCancel}
-                className="flex-1 py-3 rounded-lg font-bold text-base text-slate-700 border-2 border-slate-300 hover:bg-slate-50 transition-all"
-              >
-                취소
-              </button>
-              <button
-                onClick={handlePasswordConfirm}
-                className="flex-1 py-3 rounded-lg font-bold text-base bg-slate-900 text-white hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-              >
-                <Shield className="w-5 h-5" />
-                확인
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      {/* 관리자 인증 모달 제거 - confirm 다이얼로그로 대체 */}
     </div>
   );
 };

@@ -17,6 +17,7 @@ interface HikingHistoryContextType {
   deleteComment: (hikeId: string, commentId: string) => Promise<void>;
   getCommentsByHikeId: (hikeId: string) => HikingComment[];
   refreshHistory: () => Promise<void>;
+  _activate: () => void;
 }
 
 const HikingHistoryContext = createContext<HikingHistoryContextType | undefined>(undefined);
@@ -28,15 +29,16 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
-  // 🔥 AuthContext 사용
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
+
   const auth = useAuth();
 
   const loadHistory = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log('🔄 [HikingHistoryContext] history 데이터 로드 시작');
 
       const result = await getDocuments<HikingHistoryItem>('hikingHistory');  // ✅ camelCase로 변경
       if (result.success && result.data) {
@@ -45,9 +47,7 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         setHistory(sortedHistory);
-        console.log('✅ Firebase에서 산행 이력 로드:', sortedHistory.length, '개');
       } else {
-        console.log('ℹ️ Firebase에서 로드된 산행 이력이 없습니다.');
         setHistory([]);
       }
     } catch (error: unknown) {
@@ -64,8 +64,6 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
 
   const loadComments = useCallback(async () => {
     try {
-      console.log('🔄 [HikingHistoryContext] comments 데이터 로드 시작');
-      
       const result = await getDocuments<HikingComment>('hikingComments');
       if (result.success && result.data) {
         // hikeId별로 그룹화
@@ -85,7 +83,6 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
         });
 
         setComments(commentsByHike);
-        console.log('✅ Firebase에서 산행 후기 로드:', result.data.length, '개');
       } else {
         setComments({});
       }
@@ -98,16 +95,11 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
     }
   }, []);
 
-  // Firebase에서 산행 이력 및 후기 로드 - 로그인 상태 변경 시 재로드
+  // Firebase에서 산행 이력 및 후기 로드 - 활성화 후 로그인 상태 변경 시 재로드
   useEffect(() => {
+    if (!_activated) return;
+
     const initializeData = async () => {
-      console.log('🔄 [HikingHistoryContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
-      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
       if (auth.firebaseUser || !hasLoadedOnce) {
         await loadHistory();
         await loadComments();
@@ -115,11 +107,10 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
       }
     };
     
-    // Auth 로딩이 완료된 후에만 실행
     if (!auth.isLoading) {
       initializeData();
     }
-  }, [auth.firebaseUser, auth.isLoading, loadHistory, loadComments]);
+  }, [_activated, auth.firebaseUser, auth.isLoading, loadHistory, loadComments]);
 
   // 연도별 산행 이력 조회
   const getHistoryByYear = useCallback((year: string) => {
@@ -158,7 +149,6 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
           ...prev,
           [hikeId]: [...(prev[hikeId] || []), commentData],
         }));
-        console.log('✅ 산행 후기 추가 완료');
       } else {
         throw new Error(result.error || '후기 추가 실패');
       }
@@ -190,7 +180,6 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
           });
           return newComments;
         });
-        console.log('✅ 산행 후기 수정 완료');
       } else {
         throw new Error(result.error || '후기 수정 실패');
       }
@@ -210,7 +199,6 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
           ...prev,
           [hikeId]: (prev[hikeId] || []).filter(c => c.id !== commentId),
         }));
-        console.log('✅ 산행 후기 삭제 완료');
       } else {
         throw new Error(result.error || '후기 삭제 실패');
       }
@@ -244,6 +232,7 @@ export const HikingHistoryProvider = ({ children }: { children: ReactNode }) => 
     deleteComment,
     getCommentsByHikeId,
     refreshHistory,
+    _activate,
   };
 
   return (
@@ -258,5 +247,6 @@ export const useHikingHistory = () => {
   if (context === undefined) {
     throw new Error('useHikingHistory must be used within a HikingHistoryProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };

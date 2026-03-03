@@ -31,6 +31,14 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    proxy: {
+      '/api/kma': {
+        target: 'https://apihub.kma.go.kr',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/kma/, '/api/typ01/url'),
+        secure: false,
+      },
+    },
   },
   // 프리뷰 서버 설정
   preview: {

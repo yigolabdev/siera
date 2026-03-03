@@ -4,6 +4,7 @@ import { ArrowLeft, Shield } from 'lucide-react';
 import { LandingNavbar } from './Landing/LandingNavbar';
 import { LandingFooter } from './Landing/LandingFooter';
 import { FadeIn } from '../components/ui/FadeIn';
+import SEOHead from '../components/SEOHead';
 
 const Privacy = () => {
   const navigate = useNavigate();
@@ -14,6 +15,11 @@ const Privacy = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEOHead
+        title="개인정보처리방침"
+        description="시애라(Sierra) 등산 커뮤니티 개인정보처리방침."
+        path="/privacy"
+      />
       <LandingNavbar />
       
       <div className="max-w-4xl mx-auto px-6 py-16">

@@ -1,25 +1,40 @@
-import { useState, useEffect } from 'react';
-import { Users, Shield, UserCog, Search, UserCheck, UserPlus, Check, X, Eye, Calendar, Briefcase, Building2, Phone, Mail, Mountain, MessageSquare, AlertCircle, UserX, Power } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { sanitizeHtml } from '../../utils/sanitize';
+import { Users, Shield, UserCog, Search, UserCheck, UserPlus, Check, X, Eye, Calendar, Briefcase, Building2, Phone, Mail, Mountain, MessageSquare, AlertCircle, UserX, Power, Edit2, Save, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePendingUsers } from '../../contexts/PendingUserContext';
 import { useGuestApplications } from '../../contexts/GuestApplicationContext';
-import { useExecutives } from '../../contexts/ExecutiveContext';
+import { useExecutives, Executive } from '../../contexts/ExecutiveContext';
+import { useParticipations } from '../../contexts/ParticipationContext';
+import { useEvents } from '../../contexts/EventContext';
+import { sortByPosition } from '../../utils/executiveOrder';
 import { useAuth } from '../../contexts/AuthContextEnhanced';
+import { GuestApplication } from '../../types';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
+import Tabs from '../../components/ui/Tabs';
+import StatCard from '../../components/ui/StatCard';
+import FilterGroup from '../../components/ui/FilterGroup';
 import { UserRole, PendingUser, Member } from '../../types';
 import { formatDate } from '../../utils/format';
-import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../../lib/firebase/config';
 import { setDocument } from '../../lib/firebase/firestore';
+import { 
+  getAuthProvider, 
+  reauthenticateWithGoogle, 
+  reauthenticateWithPassword, 
+  sendReauthPhoneCode, 
+  verifyReauthPhoneCode, 
+  cleanupReauthSession 
+} from '../../lib/firebase/auth';
 
 const MemberManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { members, refreshMembers, updateMember } = useMembers(); // updateMember 추가
-  const { executives } = useExecutives(); // 운영진 정보 추가
+  const { executives, addExecutive, updateExecutive, deleteExecutive, isLoading: isExecutivesLoading } = useExecutives(); // 운영진 정보 추가
   const { 
     pendingUsers, 
     approvePendingUser, 
@@ -34,129 +49,290 @@ const MemberManagement = () => {
     refreshGuestApplications,
     isLoading: isGuestLoading 
   } = useGuestApplications();
+  const { participations, cancelParticipation, deleteParticipation } = useParticipations();
+  const { getEventById } = useEvents();
+
+  // 특정 사용자의 산행 참여 횟수 계산 (취소 제외, 지난 산행만)
+  const getHikingCount = useCallback((userId: string) => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return participations.filter(p => {
+      if (p.userId !== userId || p.status === 'cancelled') return false;
+      const event = getEventById(p.eventId);
+      if (!event?.date) return false;
+      const eventDate = new Date(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate < now; // 지난 산행만 카운트
+    }).length;
+  }, [participations, getEventById]);
+
+  // 특정 사용자의 산행 참여 이력 조회 (취소 제외)
+  const getHikingHistory = useCallback((userId: string) => {
+    return participations
+      .filter(p => p.userId === userId && p.status !== 'cancelled')
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  }, [participations]);
   
-  const [activeTab, setActiveTab] = useState<'members' | 'approval' | 'guestApplications'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'approval' | 'executives'>('members');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive'>('active');
   const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [selectedPendingUser, setSelectedPendingUser] = useState<PendingUser | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
-  // 비밀번호 확인 모달 상태
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  // 재인증 모달 상태
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [verifyAction, setVerifyAction] = useState<(() => void) | null>(null);
+  const [verifyProvider, setVerifyProvider] = useState<'google' | 'phone' | 'email' | 'unknown'>('unknown');
+  const [isVerifying, setIsVerifying] = useState(false);
+  
+  // 이메일/비밀번호 재인증용
   const [passwordInput, setPasswordInput] = useState('');
-  const [passwordAction, setPasswordAction] = useState<(() => void) | null>(null);
+  
+  // SMS 재인증용
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [phoneCodeInput, setPhoneCodeInput] = useState('');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  
+  // Rate limiting 상태
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockUntil, setLockUntil] = useState<Date | null>(null);
+
+  // 회원 상세 모달 상태
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [isMemberDetailModalOpen, setIsMemberDetailModalOpen] = useState(false);
+  const [isEditingMember, setIsEditingMember] = useState(false);
+  const [editMemberForm, setEditMemberForm] = useState<{ company: string; position: string; name: string; phoneNumber: string }>({ company: '', position: '', name: '', phoneNumber: '' });
+  
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const [guestFilter, setGuestFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
-  const [selectedGuestApplication, setSelectedGuestApplication] = useState<any | null>(null);
+  const [selectedGuestApplication, setSelectedGuestApplication] = useState<GuestApplication | null>(null);
   const [isGuestDetailModalOpen, setIsGuestDetailModalOpen] = useState(false);
 
-  // 디버깅: members와 executives 데이터 로그
-  useEffect(() => {
-    console.log('👥 [MemberManagement] Members 데이터:', {
-      총인원: members.length,
-      회원목록: members.map(m => ({
-        name: m.name,
-        email: m.email,
-        role: m.role,
-        isActive: m.isActive
-      }))
-    });
-    console.log('👔 [MemberManagement] Executives 데이터:', {
-      총인원: executives.length,
-      운영진목록: executives.map(e => ({
-        name: e.name,
-        email: e.email,
-        category: e.category,
-        position: e.position
-      }))
-    });
-  }, [members, executives]);
+  // 운영진 관리 상태
+  const [editingExecutiveId, setEditingExecutiveId] = useState<string | null>(null);
+  const [editExecutiveForm, setEditExecutiveForm] = useState<Executive | null>(null);
+  const [isAddingExecutive, setIsAddingExecutive] = useState(false);
+  const [newExecutive, setNewExecutive] = useState<Omit<Executive, 'id' | 'createdAt' | 'updatedAt'>>({
+    memberId: undefined,
+    name: '',
+    position: '',
+    phoneNumber: '',
+    email: '',
+    category: 'chairman',
+    company: '',
+    startTerm: '',
+    endTerm: '',
+    bio: '',
+  });
+  const [executiveSearchQuery, setExecutiveSearchQuery] = useState('');
+  const [showExecutiveSearchResults, setShowExecutiveSearchResults] = useState(false);
+  const [editExecutiveSearchQuery, setEditExecutiveSearchQuery] = useState('');
+  const [showEditExecutiveSearchResults, setShowEditExecutiveSearchResults] = useState(false);
 
   // 탭 변경 시 데이터 새로고침
   useEffect(() => {
-    console.log('🔄 [MemberManagement] 탭 변경, 데이터 새로고침:', activeTab);
-    
     if (activeTab === 'members') {
       refreshMembers();
     } else if (activeTab === 'approval') {
       refreshPendingUsers();
-    } else if (activeTab === 'guestApplications') {
       refreshGuestApplications();
+    } else if (activeTab === 'executives') {
+      refreshMembers(); // 운영진 탭에서도 members 데이터 필요
     }
   }, [activeTab]);
 
-  // 필터 변경 시 로그
-  useEffect(() => {
-    console.log('🔄 [MemberManagement] 승인 필터 변경:', approvalFilter);
-  }, [approvalFilter]);
-
-  useEffect(() => {
-    console.log('🔄 [MemberManagement] 게스트 필터 변경:', guestFilter);
-  }, [guestFilter]);
-
-  // 비밀번호 검증 요청 함수
+  // 관리자 재인증 요청 (인증 제공자 자동 감지)
   const requestPasswordVerification = (action: () => void) => {
-    setPasswordAction(() => action);
+    const provider = getAuthProvider();
+    setVerifyProvider(provider);
+    setVerifyAction(() => action);
     setPasswordInput('');
-    setIsPasswordModalOpen(true);
+    setPhoneCodeInput('');
+    setPhoneCodeSent(false);
+    setIsVerifying(false);
+    setIsSendingCode(false);
+    
+    // Google: 즉시 팝업 실행 (모달 없이)
+    if (provider === 'google') {
+      handleGoogleReauth(action);
+    } else {
+      setIsVerifyModalOpen(true);
+    }
   };
 
-  // 비밀번호 확인 처리
+  // Google 재인증 처리
+  const handleGoogleReauth = async (action: () => void) => {
+    setIsVerifying(true);
+    try {
+      const result = await reauthenticateWithGoogle();
+      if (result.success) {
+        setFailedAttempts(0);
+        setIsVerifyModalOpen(false);
+        action();
+        setVerifyAction(null);
+      } else {
+        alert(result.error || 'Google 재인증에 실패했습니다.');
+      }
+    } catch {
+      alert('Google 재인증에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // SMS 인증코드 전송
+  const handleSendPhoneCode = async () => {
+    if (!auth.currentUser?.phoneNumber) {
+      alert('등록된 전화번호가 없습니다.');
+      return;
+    }
+    
+    setIsSendingCode(true);
+    try {
+      const result = await sendReauthPhoneCode(
+        auth.currentUser.phoneNumber,
+        'reauth-recaptcha-container'
+      );
+      if (result.success) {
+        setPhoneCodeSent(true);
+      } else {
+        alert(result.error || 'SMS 전송에 실패했습니다.');
+      }
+    } catch {
+      alert('SMS 전송에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // SMS 인증코드 확인
+  const handleVerifyPhoneCode = async () => {
+    if (!phoneCodeInput.trim()) {
+      alert('인증코드를 입력해주세요.');
+      return;
+    }
+
+    if (checkLocked()) return;
+
+    setIsVerifying(true);
+    try {
+      const result = await verifyReauthPhoneCode(phoneCodeInput);
+      if (result.success) {
+        setFailedAttempts(0);
+        setIsVerifyModalOpen(false);
+        setPhoneCodeInput('');
+        setPhoneCodeSent(false);
+        cleanupReauthSession();
+        if (verifyAction) verifyAction();
+        setVerifyAction(null);
+      } else {
+        handleVerifyFailed(result.error || '인증코드 확인에 실패했습니다.');
+      }
+    } catch {
+      handleVerifyFailed('인증코드 확인에 실패했습니다.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // 이메일/비밀번호 재인증 확인
   const handlePasswordConfirm = async () => {
     if (!user || !auth.currentUser) {
       alert('사용자 정보를 찾을 수 없습니다.');
       return;
     }
 
+    if (checkLocked()) return;
+
+    setIsVerifying(true);
     try {
-      // Firebase Authentication으로 비밀번호 재인증
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        passwordInput
-      );
-      
-      await reauthenticateWithCredential(auth.currentUser, credential);
-      
-      // 재인증 성공
-      setIsPasswordModalOpen(false);
-      setPasswordInput('');
-      if (passwordAction) {
-        passwordAction();
-      }
-      setPasswordAction(null);
-    } catch (error: any) {
-      console.error('비밀번호 확인 실패:', error);
-      
-      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        alert('비밀번호가 올바르지 않습니다.');
-      } else if (error.code === 'auth/too-many-requests') {
-        alert('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
+      const result = await reauthenticateWithPassword(user.email, passwordInput);
+      if (result.success) {
+        setFailedAttempts(0);
+        setIsVerifyModalOpen(false);
+        setPasswordInput('');
+        if (verifyAction) verifyAction();
+        setVerifyAction(null);
       } else {
-        alert('비밀번호 확인에 실패했습니다. 다시 시도해주세요.');
+        if (result.error === 'wrong-password') {
+          handleVerifyFailed('wrong-password');
+        } else if (result.error === 'too-many-requests') {
+          handleVerifyFailed('too-many-requests');
+        } else {
+          handleVerifyFailed(result.error || '비밀번호 확인에 실패했습니다.');
+        }
       }
-      
-      setPasswordInput('');
+    } catch {
+      handleVerifyFailed('비밀번호 확인에 실패했습니다.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
-  // 비밀번호 모달 취소
-  const handlePasswordCancel = () => {
-    setIsPasswordModalOpen(false);
+  // 잠금 상태 확인
+  const checkLocked = (): boolean => {
+    if (isLocked) {
+      const remainingTime = lockUntil
+        ? Math.ceil((lockUntil.getTime() - Date.now()) / 1000 / 60)
+        : 5;
+      alert(`계정이 일시적으로 잠겼습니다. ${remainingTime}분 후 다시 시도해주세요.`);
+      return true;
+    }
+
+    if (failedAttempts >= 3) {
+      const lockTime = new Date(Date.now() + 5 * 60 * 1000);
+      setIsLocked(true);
+      setLockUntil(lockTime);
+      setTimeout(() => { setIsLocked(false); setFailedAttempts(0); setLockUntil(null); }, 5 * 60 * 1000);
+      alert('계정이 5분간 잠겼습니다. 잠시 후 다시 시도해주세요.');
+      return true;
+    }
+    return false;
+  };
+
+  // 인증 실패 처리
+  const handleVerifyFailed = (errorType: string) => {
+    const newAttempts = failedAttempts + 1;
+    setFailedAttempts(newAttempts);
+
+    if (errorType === 'wrong-password') {
+      const remaining = 3 - newAttempts;
+      alert(`비밀번호가 올바르지 않습니다. (${remaining}회 남음)`);
+    } else if (errorType === 'too-many-requests') {
+      alert('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
+      setIsLocked(true);
+      setTimeout(() => setIsLocked(false), 5 * 60 * 1000);
+    } else {
+      alert(errorType);
+    }
     setPasswordInput('');
-    setPasswordAction(null);
+    setPhoneCodeInput('');
+  };
+
+  // 재인증 모달 취소
+  const handleVerifyCancel = () => {
+    setIsVerifyModalOpen(false);
+    setPasswordInput('');
+    setPhoneCodeInput('');
+    setPhoneCodeSent(false);
+    setVerifyAction(null);
+    setIsVerifying(false);
+    setIsSendingCode(false);
+    cleanupReauthSession();
   };
 
   const handleApprove = async (userId: string) => {
     try {
-      console.log('🎯 회원 승인 처리 시작:', userId);
       await approvePendingUser(userId);
-      console.log('✅ 회원 승인 완료, MemberContext 새로고침 시작');
       
       // MemberContext 새로고침하여 회원 목록 업데이트
       await refreshMembers();
-      console.log('✅ MemberContext 새로고침 완료');
       
       alert('회원가입이 승인되었습니다.\n회원 목록에서 확인하실 수 있습니다.');
       setIsDetailModalOpen(false);
@@ -198,7 +374,24 @@ const MemberManagement = () => {
   const handleRejectGuest = async (applicationId: string) => {
     const reason = prompt('거절 사유를 입력해주세요 (선택):');
     try {
+      // 1. 게스트 신청 거절 처리
+      const application = guestApplications.find(app => app.id === applicationId);
       await rejectGuestApplication(applicationId, reason || undefined);
+
+      // 2. 관련 participation 삭제 (userId와 eventId로 매칭)
+      if (application?.userId && application?.eventId) {
+        const relatedParticipation = participations.find(
+          p => p.userId === application.userId && p.eventId === application.eventId
+        );
+        if (relatedParticipation) {
+          try {
+            await deleteParticipation(relatedParticipation.id);
+          } catch (err) {
+            console.warn('관련 참가 신청 삭제 실패 (게스트 거절은 완료):', err);
+          }
+        }
+      }
+
       alert('게스트 신청이 거절되었습니다.');
       setIsGuestDetailModalOpen(false);
     } catch (error) {
@@ -221,6 +414,422 @@ const MemberManagement = () => {
     return labels[level] || level;
   };
 
+  // ===== 운영진 관리 함수들 =====
+  
+  // 운영진과 members 데이터 병합
+  const executivesWithMemberBio = useMemo(() => {
+    return executives.map(exec => {
+      const memberData = members.find(m => m.id === exec.memberId);
+      return {
+        ...exec,
+        displayBio: memberData?.bio || exec.bio,
+      };
+    });
+  }, [executives, members]);
+
+  // 임기 활성화 여부 확인
+  const isTermActive = (startTerm?: string, endTerm?: string) => {
+    if (!startTerm || !endTerm) return false;
+    const today = new Date();
+    const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    return currentYearMonth >= startTerm && currentYearMonth <= endTerm;
+  };
+
+  // 회원 검색 필터링 (운영진용)
+  const getFilteredMembersForExecutive = (query: string) => {
+    if (!query.trim()) return [];
+    const lowerQuery = query.toLowerCase();
+    return members.filter(member =>
+      member.name.toLowerCase().includes(lowerQuery) ||
+      (member.company?.toLowerCase().includes(lowerQuery)) ||
+      (member.position?.toLowerCase().includes(lowerQuery))
+    );
+  };
+
+  // 운영진 수정 시작
+  const handleEditExecutive = (executive: Executive) => {
+    setEditingExecutiveId(executive.id);
+    setEditExecutiveForm({ ...executive });
+    setEditExecutiveSearchQuery('');
+    setShowEditExecutiveSearchResults(false);
+  };
+
+  // 운영진 수정 취소
+  const handleCancelEditExecutive = () => {
+    setEditingExecutiveId(null);
+    setEditExecutiveForm(null);
+    setEditExecutiveSearchQuery('');
+    setShowEditExecutiveSearchResults(false);
+  };
+
+  // 운영진 수정 저장
+  const handleSaveEditExecutive = async () => {
+    if (editExecutiveForm) {
+      if (!editExecutiveForm.startTerm || !editExecutiveForm.endTerm) {
+        alert('임기를 모두 입력해주세요.');
+        return;
+      }
+      
+      requestPasswordVerification(async () => {
+        try {
+          await updateExecutive(editExecutiveForm.id, editExecutiveForm);
+          
+          // 해당 회원의 members 컬렉션 role도 동기화
+          if (editExecutiveForm.memberId) {
+            const newRole = editExecutiveForm.category === 'chairman' ? 'chairman' : 'committee';
+            await updateMember(editExecutiveForm.memberId, { role: newRole as UserRole });
+          }
+          
+          setEditingExecutiveId(null);
+          setEditExecutiveForm(null);
+          setEditExecutiveSearchQuery('');
+          setShowEditExecutiveSearchResults(false);
+          await refreshMembers();
+          alert('운영진 정보가 수정되었습니다.');
+        } catch (error) {
+          console.error('운영진 수정 실패:', error);
+          alert('운영진 수정에 실패했습니다.');
+        }
+      });
+    }
+  };
+
+  // 새 운영진 추가
+  const handleAddNewExecutive = async () => {
+    if (!newExecutive.position || !newExecutive.startTerm || !newExecutive.endTerm) {
+      alert('필수 항목을 모두 입력해주세요.');
+      return;
+    }
+
+    if (!newExecutive.memberId) {
+      alert('회원을 선택해주세요.');
+      return;
+    }
+
+    requestPasswordVerification(async () => {
+      try {
+        await addExecutive(newExecutive);
+        
+        // 해당 회원의 members 컬렉션 role도 동기화
+        if (newExecutive.memberId) {
+          const newRole = newExecutive.category === 'chairman' ? 'chairman' : 'committee';
+          await updateMember(newExecutive.memberId, { role: newRole as UserRole });
+        }
+        
+        setNewExecutive({
+          memberId: undefined,
+          name: '',
+          position: '',
+          phoneNumber: '',
+          email: '',
+          category: 'chairman',
+          company: '',
+          startTerm: '',
+          endTerm: '',
+          bio: '',
+        });
+        setExecutiveSearchQuery('');
+        setShowExecutiveSearchResults(false);
+        setIsAddingExecutive(false);
+        await refreshMembers();
+        alert('운영진이 추가되었습니다.');
+      } catch (error) {
+        console.error('운영진 추가 실패:', error);
+        alert('운영진 추가에 실패했습니다.');
+      }
+    });
+  };
+
+  // 운영진 삭제
+  const handleDeleteExecutive = async (id: string) => {
+    requestPasswordVerification(async () => {
+      if (confirm('정말 삭제하시겠습니까?')) {
+        try {
+          // 삭제 전에 해당 임원의 memberId를 확인
+          const execToDelete = executives.find(e => e.id === id);
+          
+          await deleteExecutive(id);
+          
+          // 해당 회원의 members 컬렉션 role을 'member'로 복원
+          // (단, 다른 임원 직책이 남아있는지 확인)
+          if (execToDelete?.memberId) {
+            const hasOtherExecRole = executives.some(
+              e => e.id !== id && e.memberId === execToDelete.memberId
+            );
+            if (!hasOtherExecRole) {
+              await updateMember(execToDelete.memberId, { role: 'member' as UserRole });
+            }
+          }
+          
+          await refreshMembers();
+          alert('운영진이 삭제되었습니다.');
+        } catch (error) {
+          console.error('운영진 삭제 실패:', error);
+          alert('운영진 삭제에 실패했습니다.');
+        }
+      }
+    });
+  };
+
+  // 회원 선택 시 정보 자동 입력 (새 운영진 추가)
+  const handleMemberSelectNewExecutive = (member: Member) => {
+    setNewExecutive({
+      ...newExecutive,
+      memberId: String(member.id),
+      name: member.name,
+      phoneNumber: member.phoneNumber || '',
+      email: member.email,
+      company: member.company || '',
+    });
+    setExecutiveSearchQuery(member.name);
+    setShowExecutiveSearchResults(false);
+  };
+
+  // 회원 선택 시 정보 자동 입력 (기존 운영진 수정)
+  const handleMemberSelectEditExecutive = (member: Member) => {
+    if (editExecutiveForm) {
+      setEditExecutiveForm({
+        ...editExecutiveForm,
+        memberId: String(member.id),
+        name: member.name,
+        phoneNumber: member.phoneNumber || '',
+        email: member.email,
+        company: member.company || '',
+      });
+      setEditExecutiveSearchQuery(member.name);
+      setShowEditExecutiveSearchResults(false);
+    }
+  };
+
+  // 검색창 초기화 (운영진)
+  const resetExecutiveSearch = (isNew: boolean) => {
+    if (isNew) {
+      setExecutiveSearchQuery('');
+      setShowExecutiveSearchResults(false);
+      setNewExecutive({
+        ...newExecutive,
+        memberId: undefined,
+        name: '',
+        phoneNumber: '',
+        email: '',
+        company: '',
+      });
+    } else {
+      setEditExecutiveSearchQuery('');
+      setShowEditExecutiveSearchResults(false);
+    }
+  };
+
+  // 운영진 카드 렌더링
+  const renderExecutiveCard = (executive: Executive & { displayBio?: string }) => {
+    const isEditing = editingExecutiveId === executive.id;
+    const data = isEditing ? editExecutiveForm! : executive;
+
+    return (
+      <div
+        key={executive.id}
+        className="p-4 bg-white rounded-xl border border-slate-200 hover:border-slate-300 transition-all"
+      >
+        {isEditing ? (
+          // 수정 모드
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                회원 검색 *
+              </label>
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={editExecutiveSearchQuery || data.name}
+                    onChange={(e) => {
+                      setEditExecutiveSearchQuery(e.target.value);
+                      setShowEditExecutiveSearchResults(true);
+                    }}
+                    onFocus={() => setShowEditExecutiveSearchResults(true)}
+                    className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    placeholder="회원 이름, 직급, 회사 검색..."
+                  />
+                  {editExecutiveSearchQuery && (
+                    <button
+                      onClick={() => resetExecutiveSearch(false)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                
+                {showEditExecutiveSearchResults && editExecutiveSearchQuery && getFilteredMembersForExecutive(editExecutiveSearchQuery).length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {getFilteredMembersForExecutive(editExecutiveSearchQuery).map((member) => (
+                      <button
+                        key={member.id}
+                        onClick={() => handleMemberSelectEditExecutive(member)}
+                        className="w-full px-3 py-2 text-left hover:bg-primary-50 transition-colors border-b border-slate-100 last:border-b-0"
+                      >
+                        <p className="text-sm font-medium text-slate-900">{member.name}</p>
+                        <p className="text-xs text-slate-600">
+                          {member.company} {member.position}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                구분 *
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="edit-category"
+                    value="chairman"
+                    checked={data.category === 'chairman'}
+                    onChange={(e) => setEditExecutiveForm({ ...data, category: e.target.value as 'chairman' | 'committee' })}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-slate-700">회장단</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="edit-category"
+                    value="committee"
+                    checked={data.category === 'committee'}
+                    onChange={(e) => setEditExecutiveForm({ ...data, category: e.target.value as 'chairman' | 'committee' })}
+                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-slate-700">운영위원회</span>
+                </label>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                직책 *
+              </label>
+              <input
+                type="text"
+                value={data.position}
+                onChange={(e) => setEditExecutiveForm({ ...data, position: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                placeholder="직책"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  임기 시작 *
+                </label>
+                <input
+                  type="month"
+                  value={data.startTerm || ''}
+                  onChange={(e) => setEditExecutiveForm({ ...data, startTerm: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  임기 종료 *
+                </label>
+                <input
+                  type="month"
+                  value={data.endTerm || ''}
+                  onChange={(e) => setEditExecutiveForm({ ...data, endTerm: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveEditExecutive}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                저장
+              </button>
+              <button
+                onClick={handleCancelEditExecutive}
+                className="flex-1 px-4 py-2 bg-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-400 transition-colors flex items-center justify-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                취소
+              </button>
+            </div>
+          </div>
+        ) : (
+          // 보기 모드
+          <>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="text-lg font-bold text-slate-900">{data.name}</h4>
+                  <Badge variant={data.category === 'chairman' ? 'success' : 'info'}>
+                    {data.position}
+                  </Badge>
+                </div>
+                {data.company && (
+                  <p className="text-sm text-slate-600">
+                    {data.company}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEditExecutive(executive)}
+                  className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteExecutive(executive.id)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            {executive.displayBio && (
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <p className="text-sm text-slate-600 leading-relaxed">{executive.displayBio}</p>
+              </div>
+            )}
+            <div className="space-y-2 text-sm text-slate-600">
+              {data.phoneNumber && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-slate-400" />
+                  <span>{data.phoneNumber}</span>
+                </div>
+              )}
+              {data.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-slate-400" />
+                  <span>{data.email}</span>
+                </div>
+              )}
+              {data.startTerm && data.endTerm && (
+                <div className="flex items-center gap-2 pt-2 mt-2 border-t border-slate-200">
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs">
+                    {data.startTerm} ~ {data.endTerm}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // ===== 운영진 관리 함수 끝 =====
+
   // 회원 활성화/비활성화 토글
   const handleToggleMemberStatus = async (memberId: string) => {
     const member = members.find(m => m.id === memberId);
@@ -228,18 +837,56 @@ const MemberManagement = () => {
     
     const newStatus = member.isActive === false ? true : false;
     const statusText = newStatus ? '활성화' : '비활성화';
+
+    // 비활성화 시 진행중인 산행 참여 정보 확인
+    let upcomingParticipations: typeof participations = [];
+    if (!newStatus) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      upcomingParticipations = participations.filter(p => {
+        if (p.userId !== memberId || p.status === 'cancelled') return false;
+        const event = getEventById(p.eventId);
+        if (!event?.date) return false;
+        const eventDate = new Date(event.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= now; // 오늘 이후 산행만
+      });
+    }
+
+    const confirmMessage = !newStatus && upcomingParticipations.length > 0
+      ? `${member.name} 회원을 비활성화하시겠습니까?\n\n⚠️ 진행중인 산행 참여 ${upcomingParticipations.length}건이 함께 취소됩니다.\n(참여 신청, 조편성, 결제 정보가 정리됩니다)`
+      : `${member.name} 회원을 ${statusText}하시겠습니까?`;
     
-    if (!confirm(`${member.name} 회원을 ${statusText}하시겠습니까?`)) {
+    if (!confirm(confirmMessage)) {
       return;
     }
     
     requestPasswordVerification(async () => {
       try {
+        // 비활성화 시 진행중인 산행 관련 데이터 정리
+        if (!newStatus && upcomingParticipations.length > 0) {
+          let cancelledCount = 0;
+          for (const participation of upcomingParticipations) {
+            try {
+              // cancelParticipation은 내부적으로 팀, 결제 등 캐스케이드 정리를 수행
+              await cancelParticipation(participation.id, '계정 비활성화로 인한 자동 취소');
+              cancelledCount++;
+            } catch (err) {
+              console.error(`참여 취소 실패 (${participation.id}):`, err);
+            }
+          }
+          console.log(`${member.name} 회원의 산행 참여 ${cancelledCount}건 취소 완료`);
+        }
+
         await updateMember(memberId, { 
           isActive: newStatus,
           updatedAt: new Date().toISOString()
         });
-        alert(`${member.name} 회원이 ${statusText}되었습니다.`);
+
+        const resultMessage = !newStatus && upcomingParticipations.length > 0
+          ? `${member.name} 회원이 비활성화되었습니다.\n\n진행중인 산행 참여 ${upcomingParticipations.length}건이 취소되었습니다.`
+          : `${member.name} 회원이 ${statusText}되었습니다.`;
+        alert(resultMessage);
       } catch (error: any) {
         console.error('회원 상태 변경 실패:', error);
         alert(`회원 상태 변경에 실패했습니다: ${error.message}`);
@@ -249,27 +896,37 @@ const MemberManagement = () => {
 
   // 운영진을 회원으로 동기화하는 함수
   const handleSyncExecutivesToMembers = async () => {
-    if (!confirm('운영진 정보를 회원 목록에 동기화하시겠습니까?\n\n이미 회원 목록에 있는 운영진은 건너뜁니다.')) {
+    if (!confirm('운영진 정보를 회원 목록에 동기화하시겠습니까?\n\n• 회원 목록에 없는 운영진은 추가됩니다.\n• 이미 있는 회원의 직급(role)이 운영진에 맞게 업데이트됩니다.')) {
       return;
     }
 
     try {
-      console.log('🔄 운영진 → 회원 동기화 시작...');
-      console.log(`  - 운영진 ${executives.length}명`);
-      console.log(`  - 기존 회원 ${members.length}명`);
-
-      const existingMemberEmails = new Set(members.map(m => m.email));
+      // 이메일 → memberId 매핑, memberId → member 매핑
+      const memberByEmail = new Map(members.map(m => [m.email, m]));
+      const memberById = new Map(members.map(m => [m.id, m]));
+      
       let addedCount = 0;
-      let skippedCount = 0;
+      let updatedCount = 0;
 
       for (const exec of executives) {
-        if (existingMemberEmails.has(exec.email)) {
-          console.log(`⏭️  이미 존재: ${exec.name} (${exec.email})`);
-          skippedCount++;
+        const newRole = (exec.category === 'chairman' ? 'chairman' : 'committee') as UserRole;
+        
+        // 1) memberId로 먼저 찾기
+        const existingByMemberId = exec.memberId ? memberById.get(exec.memberId) : undefined;
+        // 2) 이메일로 찾기
+        const existingByEmail = memberByEmail.get(exec.email);
+        const existingMember = existingByMemberId || existingByEmail;
+        
+        if (existingMember) {
+          // 기존 회원의 role 업데이트
+          if (existingMember.role !== newRole) {
+            await updateMember(existingMember.id, { role: newRole });
+            updatedCount++;
+          }
           continue;
         }
 
-        // memberId가 있으면 그것을 사용하고, 없으면 새로 생성
+        // 회원 목록에 없는 경우 새로 추가
         const memberId = exec.memberId || `member_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         const memberData: Member = {
@@ -279,8 +936,8 @@ const MemberManagement = () => {
           phoneNumber: exec.phoneNumber,
           occupation: '',
           company: exec.company || '',
-          position: exec.position, // 시애라 직책 (운영위원장 등)
-          role: exec.category === 'chairman' ? 'chairman' : 'committee',
+          position: exec.position,
+          role: newRole,
           joinDate: new Date().toISOString().split('T')[0],
           isApproved: true,
           isActive: true,
@@ -291,70 +948,72 @@ const MemberManagement = () => {
         const result = await setDocument('members', memberId, memberData);
         
         if (result.success) {
-          console.log(`✅ 추가 완료: ${exec.name} (${exec.email}) - ${exec.position}`);
           addedCount++;
-        } else {
-          console.log(`❌ 추가 실패: ${exec.name} (${exec.email})`);
         }
       }
 
       // 회원 목록 새로고침
       await refreshMembers();
 
-      alert(`운영진 동기화 완료!\n\n추가됨: ${addedCount}명\n이미 존재: ${skippedCount}명`);
-      console.log('✅ 동기화 완료!');
+      alert(`운영진 동기화 완료!\n\n추가됨: ${addedCount}명\n직급 업데이트: ${updatedCount}명`);
     } catch (error: any) {
       console.error('❌ 동기화 중 오류 발생:', error);
       alert(`동기화에 실패했습니다: ${error.message}`);
     }
   };
 
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = 
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (member.phoneNumber || '').includes(searchTerm) ||
-      (member.occupation || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (member.company || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || member.role === roleFilter;
-    const matchesStatus = 
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && (member.isActive !== false)) ||
-      (statusFilter === 'inactive' && (member.isActive === false));
-    
-    // 디버깅: test 사용자 필터링 로그
-    if (member.name === 'test' || member.email.includes('test')) {
-      console.log(`🔍 [필터링] test 사용자:`, {
-        name: member.name,
-        email: member.email,
-        role: member.role,
-        isActive: member.isActive,
-        matchesSearch,
-        matchesRole,
-        matchesStatus,
-        roleFilter,
-        statusFilter,
-        최종결과: matchesSearch && matchesRole && matchesStatus
-      });
-    }
-    
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  const filteredMembers = useMemo(() => {
+    return members.filter(member => {
+      // 병합된 계정은 목록에서 제외
+      if ((member as any).mergedInto) return false;
+      
+      const matchesSearch = 
+        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.occupation || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.position || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === 'all' || member.role === roleFilter;
+      const matchesStatus = 
+        (statusFilter === 'active' && (member.isActive !== false)) ||
+        (statusFilter === 'inactive' && (member.isActive === false));
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [members, searchTerm, roleFilter, statusFilter]);
+
+  // 검색/필터 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, statusFilter]);
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+  const paginatedMembers = filteredMembers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const filteredPendingUsers = pendingUsers.filter(user => {
     if (approvalFilter === 'all') return true;
     return user.status === approvalFilter;
   });
 
-  const memberStats = {
-    total: members.length,
-    active: members.filter(m => m.isActive !== false).length,
-    inactive: members.filter(m => m.isActive === false).length,
-    chairman: members.filter(m => m.role === 'chairman').length,
-    committee: members.filter(m => m.role === 'committee').length,
-    executives: members.filter(m => m.role === 'chairman' || m.role === 'committee').length, // 운영진 전체
-    member: members.filter(m => m.role === 'member').length,
-  };
+  const executiveMemberIds = useMemo(() => {
+    return new Set(executives.map(e => e.memberId).filter((id): id is string => !!id));
+  }, [executives]);
+
+  const memberStats = useMemo(() => {
+    // 병합된 계정 제외
+    const nonMerged = members.filter(m => !(m as any).mergedInto);
+    const activeMembers = nonMerged.filter(m => m.isActive !== false && m.role !== 'guest');
+    const regularMembers = activeMembers.filter(m => !executiveMemberIds.has(m.id));
+    return {
+      total: activeMembers.length,
+      active: activeMembers.length,
+      inactive: nonMerged.filter(m => m.isActive === false).length,
+      member: regularMembers.length,
+      guest: nonMerged.filter(m => m.role === 'guest' && m.isActive !== false).length,
+    };
+  }, [members, executiveMemberIds]);
 
   const approvalStats = {
     pending: pendingUsers.filter(u => u.status === 'pending').length,
@@ -382,7 +1041,11 @@ const MemberManagement = () => {
       case 'committee':
         return <Badge variant="info">운영위원</Badge>;
       case 'member':
-        return <Badge variant="success">일반회원</Badge>;
+        return <Badge variant="success">정회원</Badge>;
+      case 'guest':
+        return <Badge variant="warning">게스트</Badge>;
+      case 'admin':
+        return <Badge variant="success">정회원</Badge>;
       default:
         return <Badge variant="primary">회원</Badge>;
     }
@@ -404,686 +1067,900 @@ const MemberManagement = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Tabs */}
-      <div className="mb-8">
-        <div className="border-b border-slate-200">
-          <nav className="flex gap-8">
-            <button
-              onClick={() => setActiveTab('members')}
-              className={`py-4 px-1 border-b-2 font-bold text-lg transition-colors flex items-center gap-2 ${
-                activeTab === 'members'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              회원 관리
-              <Badge variant={activeTab === 'members' ? 'primary' : 'info'}>{memberStats.total}</Badge>
-            </button>
-            <button
-              onClick={() => setActiveTab('approval')}
-              className={`py-4 px-1 border-b-2 font-bold text-lg transition-colors flex items-center gap-2 ${
-                activeTab === 'approval'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <UserPlus className="w-5 h-5" />
-              가입 승인
-              {approvalStats.pending > 0 && (
-                <Badge variant={activeTab === 'approval' ? 'danger' : 'warning'}>{approvalStats.pending}</Badge>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('guestApplications')}
-              className={`py-4 px-1 border-b-2 font-bold text-lg transition-colors flex items-center gap-2 ${
-                activeTab === 'guestApplications'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <Mountain className="w-5 h-5" />
-              게스트 신청
-              {guestStats.pending > 0 && (
-                <Badge variant={activeTab === 'guestApplications' ? 'danger' : 'warning'}>{guestStats.pending}</Badge>
-              )}
-            </button>
-          </nav>
-        </div>
-      </div>
+      <Tabs
+        tabs={[
+          { key: 'members', label: '회원 관리', count: memberStats.total },
+          { key: 'approval', label: '가입 승인', count: (approvalStats.pending + guestStats.pending) > 0 ? (approvalStats.pending + guestStats.pending) : undefined },
+          { key: 'executives', label: '운영진 관리', count: executives.length },
+        ]}
+        activeTab={activeTab}
+        onChange={(key) => setActiveTab(key as typeof activeTab)}
+        className="mb-8"
+      />
 
       {/* Members Tab */}
       {activeTab === 'members' && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
-            <Card className="text-center hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">전체 회원</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.total}명</p>
-            </Card>
-
-            <Card className="text-center bg-emerald-50 border-emerald-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <UserCheck className="w-6 h-6 text-emerald-600" />
-              </div>
-              <p className="text-emerald-700 text-sm mb-1">활성 회원</p>
-              <p className="text-3xl font-bold text-emerald-900">{memberStats.active}명</p>
-            </Card>
-
-            <Card className="text-center bg-slate-50 border-slate-300 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <UserX className="w-6 h-6 text-slate-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">비활성 회원</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.inactive}명</p>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Shield className="w-6 h-6 text-red-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">회장단</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.chairman}명</p>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <UserCog className="w-6 h-6 text-blue-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">운영진</p>
-              <p className="text-3xl font-bold text-slate-900">{memberStats.executives}명</p>
-              <p className="text-xs text-slate-500 mt-1">회장단 {memberStats.chairman} · 운영위원 {memberStats.committee}</p>
-            </Card>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <StatCard icon={<Users className="w-8 h-8" />} label="전체 회원" value={memberStats.total} unit="명" iconColor="text-slate-600" />
+            <StatCard icon={<UserCheck className="w-8 h-8" />} label="정회원" value={memberStats.member} unit="명" iconColor="text-emerald-600" />
+            <StatCard icon={<UserPlus className="w-8 h-8" />} label="게스트" value={memberStats.guest} unit="명" iconColor="text-amber-600" />
+            <StatCard icon={<UserCog className="w-8 h-8" />} label="운영진" value={executives.length} unit="명" iconColor="text-purple-600" />
+            <StatCard icon={<UserX className="w-8 h-8" />} label="비활성" value={memberStats.inactive} unit="명" iconColor="text-slate-500" />
           </div>
 
           {/* Search and Filter */}
-          <div className="flex flex-col gap-4 mb-8">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+          <div className="space-y-6 mb-8">
+            {/* 검색 필드 - 개선된 디자인 */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-slate-400" />
+              </div>
               <input
                 type="text"
-                placeholder="이름, 이메일, 전화번호, 직업, 회사로 검색..."
+                placeholder="이름, 소속, 직책으로 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-12"
+                className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all shadow-sm hover:border-slate-300"
               />
             </div>
             
-            {/* Filters - 한 줄로 배치 */}
-            <div className="flex flex-wrap items-end gap-4">
-              {/* Role Filter */}
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">직급별</p>
+                <FilterGroup
+                  options={[
+                    { key: 'all', label: '전체' },
+                    { key: 'chairman', label: '회장단' },
+                    { key: 'committee', label: '운영위원' },
+                    { key: 'member', label: '정회원' },
+                    { key: 'guest', label: '게스트', count: memberStats.guest > 0 ? memberStats.guest : undefined },
+                  ]}
+                  selected={roleFilter}
+                  onChange={(key) => setRoleFilter(key as typeof roleFilter)}
+                  size="sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">활성화 상태</p>
+                <FilterGroup
+                  options={[
+                    { key: 'active', label: '활성', count: memberStats.active },
+                    { key: 'inactive', label: '비활성', count: memberStats.inactive },
+                  ]}
+                  selected={statusFilter}
+                  onChange={(key) => setStatusFilter(key as typeof statusFilter)}
+                  size="sm"
+                />
+              </div>
+            </div>
+          </div>
+
+      {/* Member List - 한줄 리스트 형태 */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {/* 테이블 헤더 (데스크톱) */}
+        <div className="hidden sm:grid sm:grid-cols-[40px_1fr_80px_50px_130px_90px_90px] gap-3 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <span className="text-center">#</span>
+          <span>이름</span>
+          <span>직급</span>
+          <span className="text-center">산행</span>
+          <span>소속</span>
+          <span>직책</span>
+          <span className="text-center">입회일</span>
+        </div>
+
+        {paginatedMembers.length > 0 ? (
+          <>
+            {paginatedMembers.map((member, index) => (
+              <div
+                key={member.id}
+                onClick={() => {
+                  setSelectedMember(member);
+                  setIsMemberDetailModalOpen(true);
+                }}
+                className={`cursor-pointer transition-colors border-b border-slate-100 last:border-b-0 ${
+                  member.isActive === false
+                    ? 'bg-slate-50/50 hover:bg-slate-100/50'
+                    : 'hover:bg-primary-50/50'
+                }`}
+              >
+                {/* 데스크톱 */}
+                <div className="hidden sm:grid sm:grid-cols-[40px_1fr_80px_50px_130px_90px_90px] gap-3 px-5 py-3.5 items-center">
+                  <span className="text-sm text-slate-400 text-center font-mono">
+                    {(currentPage - 1) * itemsPerPage + index + 1}
+                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`font-semibold truncate ${member.isActive === false ? 'text-slate-400' : 'text-slate-900'}`}>
+                      {member.name}
+                    </span>
+                  </div>
+                  <div>
+                    {member.isActive === false ? (
+                      <Badge variant="default">비활성</Badge>
+                    ) : (
+                      getRoleBadge(member.role)
+                    )}
+                  </div>
+                  <span className={`text-xs text-center font-semibold ${
+                    getHikingCount(member.id) > 0 ? 'text-blue-600' : 'text-slate-400'
+                  }`}>
+                    {getHikingCount(member.id) > 0 ? `${getHikingCount(member.id)}회` : '-'}
+                  </span>
+                  <span className={`text-sm truncate ${member.isActive === false ? 'text-slate-400' : 'text-slate-600'}`}>
+                    {member.company || '-'}
+                  </span>
+                  <span className={`text-sm truncate ${member.isActive === false ? 'text-slate-400' : 'text-slate-600'}`}>
+                    {member.position || member.occupation || '-'}
+                  </span>
+                  <span className={`text-xs text-center ${member.isActive === false ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {member.joinDate || '-'}
+                  </span>
+                </div>
+                {/* 모바일 */}
+                <div className="sm:hidden px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs text-slate-400 font-mono w-5 text-center flex-shrink-0">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold truncate ${member.isActive === false ? 'text-slate-400' : 'text-slate-900'}`}>
+                          {member.name}
+                        </span>
+                      </div>
+                      <span className={`text-xs ${member.isActive === false ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {member.company ? `${member.company}` : ''}{member.position ? ` · ${member.position}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {member.isActive === false ? (
+                      <Badge variant="default">비활성</Badge>
+                    ) : (
+                      getRoleBadge(member.role)
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="text-center py-16">
+            <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-lg text-slate-500">해당하는 회원이 없습니다.</p>
+          </div>
+        )}
+      </div>
+
+      {/* 페이지네이션 */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-slate-500">
+            전체 {filteredMembers.length}명 중 {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredMembers.length)}명
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:text-slate-300 disabled:cursor-not-allowed text-slate-600 hover:bg-slate-100"
+            >
+              이전
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => {
+                if (totalPages <= 7) return true;
+                if (page === 1 || page === totalPages) return true;
+                if (Math.abs(page - currentPage) <= 1) return true;
+                return false;
+              })
+              .map((page, idx, arr) => (
+                <span key={page}>
+                  {idx > 0 && arr[idx - 1] !== page - 1 && (
+                    <span className="px-1 text-slate-400">...</span>
+                  )}
+                  <button
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
+                      currentPage === page
+                        ? 'bg-primary-600 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                </span>
+              ))}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:text-slate-300 disabled:cursor-not-allowed text-slate-600 hover:bg-slate-100"
+            >
+              다음
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 회원 상세정보 모달 */}
+      {isMemberDetailModalOpen && selectedMember && (
+        <Modal
+          onClose={() => {
+            setIsMemberDetailModalOpen(false);
+            setSelectedMember(null);
+            setIsEditingMember(false);
+          }}
+          title="회원 상세정보"
+          maxWidth="max-w-lg"
+        >
+          <div className="p-6">
+            {/* 헤더 */}
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">직급별 필터</p>
-                <div className="flex gap-2 flex-wrap">
+                <h3 className="text-2xl font-bold text-slate-900">{selectedMember.name}</h3>
+                <p className="text-sm text-slate-500 mt-1">ID: {selectedMember.id.slice(0, 12)}...</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedMember.isActive === false ? (
+                  <Badge variant="default">비활성</Badge>
+                ) : (
+                  getRoleBadge(selectedMember.role)
+                )}
+                {!isEditingMember && (
                   <button
-                    onClick={() => setRoleFilter('all')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                      roleFilter === 'all'
-                        ? 'bg-primary-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                    onClick={() => {
+                      setIsEditingMember(true);
+                      setEditMemberForm({
+                        name: selectedMember.name || '',
+                        company: selectedMember.company || '',
+                        position: selectedMember.position || selectedMember.occupation || '',
+                        phoneNumber: selectedMember.phoneNumber || '',
+                      });
+                    }}
+                    className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                    title="정보 수정"
                   >
-                    전체
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isEditingMember ? (
+              /* 수정 모드 */
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 block">이름</label>
+                  <input
+                    type="text"
+                    value={editMemberForm.name}
+                    onChange={(e) => setEditMemberForm({ ...editMemberForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 block">연락처</label>
+                  <input
+                    type="text"
+                    value={editMemberForm.phoneNumber}
+                    onChange={(e) => setEditMemberForm({ ...editMemberForm, phoneNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 block">소속 (회사)</label>
+                  <input
+                    type="text"
+                    value={editMemberForm.company}
+                    onChange={(e) => setEditMemberForm({ ...editMemberForm, company: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    placeholder="회사명"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1 block">직책</label>
+                  <input
+                    type="text"
+                    value={editMemberForm.position}
+                    onChange={(e) => setEditMemberForm({ ...editMemberForm, position: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    placeholder="직책"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await updateMember(selectedMember.id, {
+                          name: editMemberForm.name,
+                          company: editMemberForm.company,
+                          position: editMemberForm.position,
+                          phoneNumber: editMemberForm.phoneNumber,
+                        });
+                        setSelectedMember({
+                          ...selectedMember,
+                          name: editMemberForm.name,
+                          company: editMemberForm.company,
+                          position: editMemberForm.position,
+                          phoneNumber: editMemberForm.phoneNumber,
+                        });
+                        setIsEditingMember(false);
+                        refreshMembers();
+                        alert('회원 정보가 수정되었습니다.');
+                      } catch (error) {
+                        console.error('회원 정보 수정 실패:', error);
+                        alert('회원 정보 수정에 실패했습니다.');
+                      }
+                    }}
+                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    저장
                   </button>
                   <button
-                    onClick={() => setRoleFilter('chairman')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                      roleFilter === 'chairman'
-                        ? 'bg-primary-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                    onClick={() => setIsEditingMember(false)}
+                    className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors flex items-center justify-center gap-2"
                   >
-                    회장단
-                  </button>
-                  <button
-                    onClick={() => setRoleFilter('committee')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                      roleFilter === 'committee'
-                        ? 'bg-primary-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    운영위원
-                  </button>
-                  <button
-                    onClick={() => setRoleFilter('member')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                      roleFilter === 'member'
-                        ? 'bg-primary-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    일반회원
+                    <X className="w-4 h-4" />
+                    취소
                   </button>
                 </div>
               </div>
-
-              {/* Status Filter */}
-              <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">활성화 상태</p>
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => setStatusFilter('all')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                      statusFilter === 'all'
-                        ? 'bg-primary-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    전체
-                  </button>
-                  <button
-                    onClick={() => setStatusFilter('active')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                      statusFilter === 'active'
-                        ? 'bg-emerald-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    활성 ({memberStats.active})
-                  </button>
-              <button
-                onClick={() => setStatusFilter('inactive')}
-                className={`px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
-                  statusFilter === 'inactive'
-                    ? 'bg-slate-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              비활성 ({memberStats.inactive})
-            </button>
-          </div>
-        </div>
-
-          {/* 운영진 동기화 버튼 */}
-          <div className="ml-auto">
-            <button
-              onClick={handleSyncExecutivesToMembers}
-              className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-            >
-              <UserCog className="w-5 h-5" />
-              운영진 동기화
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Member List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredMembers.length > 0 ? (
-              filteredMembers.map(member => (
-                <Card 
-                  key={member.id} 
-                  className={`hover:shadow-xl transition-all relative ${
-                    member.isActive !== false
-                      ? 'hover:border-primary-600' 
-                      : 'bg-slate-50 border-slate-300 opacity-75'
-                  }`}
-                >
-                  {/* 비활성화 상태 표시 */}
-                  {member.isActive === false && (
-                    <div className="absolute top-2 right-2">
-                      <Badge variant="default">비활성</Badge>
+            ) : (
+              /* 조회 모드 */
+              <>
+                <div className="space-y-4 mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">이메일</p>
+                      <p className="text-sm text-slate-900 font-medium">{selectedMember.email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">연락처</p>
+                      <p className="text-sm text-slate-900 font-medium">{selectedMember.phoneNumber || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">소속</p>
+                      <p className="text-sm text-slate-900 font-medium">{selectedMember.company || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">직책</p>
+                      <p className="text-sm text-slate-900 font-medium">{selectedMember.position || selectedMember.occupation || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">입회일</p>
+                      <p className="text-sm text-slate-900 font-medium">{selectedMember.joinDate || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">상태</p>
+                      <p className="text-sm font-medium">
+                        {selectedMember.isActive === false ? (
+                          <span className="text-slate-400">비활성</span>
+                        ) : (
+                          <span className="text-emerald-600">활성</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {/* 산행 참여 횟수 */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">산행 참여</p>
+                      <p className="text-sm font-medium">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          {getHikingCount(selectedMember.id)}회
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">역할</p>
+                      <p className="text-sm font-medium">{getRoleBadge(selectedMember.role)}</p>
+                    </div>
+                  </div>
+                  {selectedMember.bio && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">자기소개</p>
+                      <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg p-3">{selectedMember.bio}</p>
                     </div>
                   )}
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className={`text-xl font-bold ${member.isActive !== false ? 'text-slate-900' : 'text-slate-500'}`}>
-                      {member.name}
-                    </h3>
-                    {getRoleBadge(member.role)}
-                  </div>
-                  
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
-                      <Mail className="w-4 h-4" />
-                      <span>{member.email}</span>
-                    </div>
-                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
-                      <Phone className="w-4 h-4" />
-                      <span>{member.phoneNumber || '-'}</span>
-                    </div>
-                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
-                      <Briefcase className="w-4 h-4" />
-                      <span>{member.occupation || member.position || '-'}</span>
-                    </div>
-                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
-                      <Building2 className="w-4 h-4" />
-                      <span>{member.company || '-'}</span>
-                    </div>
-                    <div className={`flex items-center gap-2 ${member.isActive !== false ? 'text-slate-600' : 'text-slate-400'}`}>
-                      <Calendar className="w-4 h-4" />
-                      <span>입회: {member.joinDate || '-'}</span>
-                    </div>
-                  </div>
+                </div>
 
-                  {/* 활성화/비활성화 버튼 */}
+                {/* 게스트 → 정회원 승격 버튼 */}
+                {selectedMember.role === 'guest' && (
+                  <div className="pt-4 border-t border-slate-200 mb-3">
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`${selectedMember.name}님을 정회원으로 승격하시겠습니까?`)) return;
+                        try {
+                          await updateMember(selectedMember.id, { role: 'member' });
+                          setSelectedMember({ ...selectedMember, role: 'member' as any });
+                          refreshMembers();
+                          alert(`${selectedMember.name}님이 정회원으로 승격되었습니다.`);
+                        } catch (error) {
+                          console.error('정회원 승격 실패:', error);
+                          alert('정회원 승격에 실패했습니다.');
+                        }
+                      }}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      <UserCheck className="w-5 h-5" />
+                      정회원으로 승격
+                    </button>
+                  </div>
+                )}
+
+                {/* 활성화/비활성화 버튼 */}
+                <div className={`${selectedMember.role !== 'guest' ? 'pt-4 border-t border-slate-200' : ''}`}>
                   <button
-                    onClick={() => handleToggleMemberStatus(member.id)}
-                    className={`w-full py-2 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                      member.isActive !== false
-                        ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
-                        : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300'
+                    onClick={() => {
+                      handleToggleMemberStatus(selectedMember.id);
+                      setIsMemberDetailModalOpen(false);
+                      setSelectedMember(null);
+                    }}
+                    className={`w-full py-3 px-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 ${
+                      selectedMember.isActive !== false
+                        ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-2 border-slate-300'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
                     }`}
                   >
-                    <Power className="w-4 h-4" />
-                    {member.isActive !== false ? '비활성화' : '활성화'}
+                    <Power className="w-5 h-5" />
+                    {selectedMember.isActive !== false ? '비활성화' : '활성화'}
                   </button>
-                </Card>
-              ))
-            ) : (
-              <Card className="lg:col-span-3 text-center py-12">
-                <p className="text-xl text-slate-500">해당하는 회원이 없습니다.</p>
-              </Card>
+                </div>
+              </>
             )}
           </div>
+        </Modal>
+      )}
         </>
       )}
 
       {/* Approval Tab */}
       {activeTab === 'approval' && (
         <>
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="text-center hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <UserPlus className="w-6 h-6 text-slate-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">전체 신청</p>
-              <p className="text-3xl font-bold text-slate-900">{approvalStats.total}명</p>
-            </Card>
-
-            <Card className="text-center bg-yellow-50 border-yellow-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Users className="w-6 h-6 text-yellow-600" />
-              </div>
-              <p className="text-yellow-700 text-sm mb-1">승인대기</p>
-              <p className="text-3xl font-bold text-yellow-900">{approvalStats.pending}명</p>
-            </Card>
-
-            <Card className="text-center bg-green-50 border-green-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Check className="w-6 h-6 text-green-600" />
-              </div>
-              <p className="text-green-700 text-sm mb-1">승인완료</p>
-              <p className="text-3xl font-bold text-green-900">{approvalStats.approved}명</p>
-            </Card>
-
-            <Card className="text-center bg-red-50 border-red-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <X className="w-6 h-6 text-red-600" />
-              </div>
-              <p className="text-red-700 text-sm mb-1">거절됨</p>
-              <p className="text-3xl font-bold text-red-900">{approvalStats.rejected}명</p>
-            </Card>
+          {/* 통합 Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <StatCard icon={<UserPlus className="w-6 h-6 sm:w-8 sm:h-8" />} label="가입 대기" value={approvalStats.pending} unit="명" iconColor="text-amber-600" />
+            <StatCard icon={<Mountain className="w-6 h-6 sm:w-8 sm:h-8" />} label="게스트 대기" value={guestStats.pending} unit="명" iconColor="text-emerald-600" />
+            <StatCard icon={<Check className="w-6 h-6 sm:w-8 sm:h-8" />} label="승인완료" value={approvalStats.approved + guestStats.approved} unit="명" iconColor="text-blue-600" />
+            <StatCard icon={<Users className="w-6 h-6 sm:w-8 sm:h-8" />} label="전체 신청" value={approvalStats.total + guestStats.total} unit="명" iconColor="text-slate-600" />
           </div>
 
-          {/* Filter Tabs */}
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setApprovalFilter('all')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                approvalFilter === 'all'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              전체
-            </button>
-            <button
-              onClick={() => setApprovalFilter('pending')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                approvalFilter === 'pending'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              승인대기 ({approvalStats.pending})
-            </button>
-            <button
-              onClick={() => setApprovalFilter('approved')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                approvalFilter === 'approved'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              승인완료
-            </button>
-            <button
-              onClick={() => setApprovalFilter('rejected')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                approvalFilter === 'rejected'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              거절됨
-            </button>
-          </div>
+          {/* ===== 섹션 1: 회원 가입 신청 ===== */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <UserPlus className="w-5 h-5 text-amber-600" />
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">회원 가입 신청</h3>
+              {approvalStats.pending > 0 && (
+                <Badge variant="warning">{approvalStats.pending}건 대기</Badge>
+              )}
+            </div>
 
-          {/* Pending User List */}
-          <div className="space-y-4">
-            {isPendingLoading ? (
-              <Card className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-                <p className="text-slate-600">로딩 중...</p>
-              </Card>
-            ) : filteredPendingUsers.length > 0 ? (
-              filteredPendingUsers.map(user => (
-                <Card key={user.id} className="hover:shadow-lg transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold text-slate-900">{user.name}</h3>
-                        {getStatusBadge(user.status)}
+            {/* Filter */}
+            <FilterGroup
+              options={[
+                { key: 'all', label: '전체' },
+                { key: 'pending', label: '승인대기', count: approvalStats.pending },
+                { key: 'approved', label: '승인완료' },
+                { key: 'rejected', label: '거절됨' },
+              ]}
+              selected={approvalFilter}
+              onChange={(key) => setApprovalFilter(key as typeof approvalFilter)}
+              size="sm"
+              className="mb-3 sm:mb-4"
+            />
+
+            {/* Pending User List */}
+            <div className="space-y-3 sm:space-y-4">
+              {isPendingLoading ? (
+                <Card className="text-center py-8 sm:py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary-600 mx-auto mb-3 sm:mb-4"></div>
+                  <p className="text-sm sm:text-base text-slate-600">로딩 중...</p>
+                </Card>
+              ) : filteredPendingUsers.length > 0 ? (
+                filteredPendingUsers.map(user => {
+                  const hikingCount = getHikingCount(user.id);
+                  return (
+                  <Card key={user.id} className="hover:shadow-lg transition-all">
+                    {/* 상단: 이름 + 배지 */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-3">
+                      <h3 className="text-base sm:text-xl font-bold text-slate-900">{user.name}</h3>
+                      {getStatusBadge(user.status)}
+                      {hikingCount > 0 && (
+                        <Badge variant="info">
+                          <span className="flex items-center gap-1">
+                            <Mountain className="w-3 h-3" />
+                            산행 {hikingCount}회
+                          </span>
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* 정보 */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-3 text-xs sm:text-sm text-slate-600 mb-3 sm:mb-4">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{user.email}</span>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-4 h-4" />
-                          <span>{user.email}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4" />
-                          <span>{user.phoneNumber}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="w-4 h-4" />
-                          <span>{user.occupation}</span>
-                        </div>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+                        <span>{user.phoneNumber}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{user.occupation}</span>
                       </div>
                     </div>
-                    <div className="flex gap-2 ml-4">
+
+                    {/* 액션 버튼 */}
+                    <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
                       {user.status === 'pending' && (
                         <>
                           <button
                             onClick={() => handleApprove(user.id)}
-                            className="px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors font-semibold flex items-center gap-2"
+                            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5"
                           >
-                            <Check className="h-5 w-5" />
+                            <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             <span>승인</span>
                           </button>
                           <button
                             onClick={() => handleReject(user.id)}
-                            className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-semibold flex items-center gap-2"
+                            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-red-600 border border-red-300 rounded-xl text-xs sm:text-sm font-semibold hover:bg-red-50 hover:border-red-400 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5"
                           >
-                            <X className="h-5 w-5" />
+                            <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             <span>거절</span>
                           </button>
                         </>
                       )}
                       <button
                         onClick={() => handleViewDetail(user)}
-                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold flex items-center gap-2"
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-slate-700 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5 ml-auto"
                       >
-                        <Eye className="h-5 w-5" />
+                        <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         <span>상세보기</span>
                       </button>
                     </div>
-                  </div>
+                  </Card>
+                  );
+                })
+              ) : (
+                <Card className="text-center py-6 sm:py-8">
+                  <UserPlus className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-slate-300" />
+                  <p className="text-sm text-slate-500">해당하는 가입 신청이 없습니다.</p>
                 </Card>
-              ))
-            ) : (
-              <Card className="text-center py-12">
-                <p className="text-xl text-slate-500">해당하는 신청이 없습니다.</p>
-              </Card>
-            )}
+              )}
+            </div>
+          </div>
+
+          {/* ===== 섹션 2: 게스트 산행 신청 ===== */}
+          <div>
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <Mountain className="w-5 h-5 text-emerald-600" />
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">게스트 산행 신청</h3>
+              {guestStats.pending > 0 && (
+                <Badge variant="success">{guestStats.pending}건 대기</Badge>
+              )}
+            </div>
+
+            {/* Guest Filter */}
+            <FilterGroup
+              options={[
+                { key: 'all', label: '전체' },
+                { key: 'pending', label: '대기', count: guestStats.pending },
+                { key: 'approved', label: '승인' },
+                { key: 'rejected', label: '거절' },
+              ]}
+              selected={guestFilter}
+              onChange={(key) => setGuestFilter(key as typeof guestFilter)}
+              size="sm"
+              className="mb-3 sm:mb-4"
+            />
+
+            {/* Guest Application List */}
+            <div className="space-y-3 sm:space-y-4">
+              {isGuestLoading ? (
+                <Card className="text-center py-8 sm:py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-emerald-600 mx-auto mb-3 sm:mb-4"></div>
+                  <p className="text-sm sm:text-base text-slate-600">로딩 중...</p>
+                </Card>
+              ) : filteredGuestApplications.length > 0 ? (
+                filteredGuestApplications.map(app => {
+                  const event = getEventById(app.eventId);
+                  const hikingCount = app.userId ? getHikingCount(app.userId) : 0;
+                  return (
+                    <Card key={app.id} className="hover:shadow-lg transition-all">
+                      {/* 상단: 이름 + 배지 */}
+                      <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-3">
+                        <h3 className="text-base sm:text-xl font-bold text-slate-900">{app.name}</h3>
+                        <Badge variant="warning">게스트</Badge>
+                        {app.status === 'pending' && <Badge variant="warning">대기</Badge>}
+                        {app.status === 'approved' && <Badge variant="success">승인</Badge>}
+                        {app.status === 'rejected' && <Badge variant="danger">거절</Badge>}
+                        {hikingCount > 0 && (
+                          <Badge variant="info">
+                            <span className="flex items-center gap-1">
+                              <Mountain className="w-3 h-3" />
+                              산행 {hikingCount}회
+                            </span>
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* 정보 */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-3 text-xs sm:text-sm text-slate-600 mb-2 sm:mb-3">
+                        {app.email && (
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{app.email}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+                          <span>{app.phoneNumber || app.phone || '-'}</span>
+                        </div>
+                        {(app.company || app.position) && (
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{[app.company, app.position].filter(Boolean).join(' / ')}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 산행 정보 */}
+                      {event && (
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 mb-3 sm:mb-4 p-2 bg-slate-50 rounded-lg">
+                          <Mountain className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                          <span className="font-medium text-slate-700">{event.title}</span>
+                          <span>·</span>
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span>{formatDate(event.date)}</span>
+                        </div>
+                      )}
+                      {!event && app.eventTitle && (
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 mb-3 sm:mb-4 p-2 bg-slate-50 rounded-lg">
+                          <Mountain className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                          <span className="font-medium text-slate-700">{app.eventTitle}</span>
+                          {app.eventDate && (
+                            <>
+                              <span>·</span>
+                              <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              <span>{formatDate(app.eventDate)}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 신청일 */}
+                      <p className="text-[10px] sm:text-xs text-slate-400 mb-3">
+                        신청일: {formatDate(app.appliedAt)}
+                      </p>
+
+                      {/* 액션 버튼 */}
+                      <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+                        {app.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApproveGuest(app.id)}
+                              className="px-3 py-1.5 sm:px-4 sm:py-2 bg-emerald-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5"
+                            >
+                              <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <span>승인</span>
+                            </button>
+                            <button
+                              onClick={() => handleRejectGuest(app.id)}
+                              className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-red-600 border border-red-300 rounded-xl text-xs sm:text-sm font-semibold hover:bg-red-50 hover:border-red-400 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5"
+                            >
+                              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <span>거절</span>
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleViewGuestDetail(app)}
+                          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-slate-700 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5 ml-auto"
+                        >
+                          <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>상세보기</span>
+                        </button>
+                      </div>
+                    </Card>
+                  );
+                })
+              ) : (
+                <Card className="text-center py-6 sm:py-8">
+                  <Mountain className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-slate-300" />
+                  <p className="text-sm text-slate-500">해당하는 게스트 신청이 없습니다.</p>
+                </Card>
+              )}
+            </div>
           </div>
         </>
       )}
 
-      {/* Guest Applications Tab */}
-      {activeTab === 'guestApplications' && (
-        <>
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="text-center hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Mountain className="w-6 h-6 text-slate-600" />
-              </div>
-              <p className="text-slate-600 text-sm mb-1">전체 신청</p>
-              <p className="text-3xl font-bold text-slate-900">{guestStats.total}명</p>
-            </Card>
+      {/* Guest Application Detail Modal */}
+      {isGuestDetailModalOpen && selectedGuestApplication && (
+        <Modal
+          onClose={() => setIsGuestDetailModalOpen(false)}
+          title="게스트 신청 상세정보"
+          maxWidth="max-w-lg"
+        >
+          <div className="p-4 sm:p-6">
+            {/* 헤더 */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-5 sm:mb-6 pb-4 border-b border-slate-200">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900">{selectedGuestApplication.name}</h3>
+              <Badge variant="warning">게스트</Badge>
+              {selectedGuestApplication.status === 'pending' && <Badge variant="warning">대기</Badge>}
+              {selectedGuestApplication.status === 'approved' && <Badge variant="success">승인</Badge>}
+              {selectedGuestApplication.status === 'rejected' && <Badge variant="danger">거절</Badge>}
+            </div>
 
-            <Card className="text-center bg-yellow-50 border-yellow-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Users className="w-6 h-6 text-yellow-600" />
-              </div>
-              <p className="text-yellow-700 text-sm mb-1">승인대기</p>
-              <p className="text-3xl font-bold text-yellow-900">{guestStats.pending}명</p>
-            </Card>
-
-            <Card className="text-center bg-green-50 border-green-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <Check className="w-6 h-6 text-green-600" />
-              </div>
-              <p className="text-green-700 text-sm mb-1">승인완료</p>
-              <p className="text-3xl font-bold text-green-900">{guestStats.approved}명</p>
-            </Card>
-
-            <Card className="text-center bg-red-50 border-red-200 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-center mb-2">
-                <X className="w-6 h-6 text-red-600" />
-              </div>
-              <p className="text-red-700 text-sm mb-1">거절됨</p>
-              <p className="text-3xl font-bold text-red-900">{guestStats.rejected}명</p>
-            </Card>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setGuestFilter('all')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                guestFilter === 'all'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              전체
-            </button>
-            <button
-              onClick={() => setGuestFilter('pending')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                guestFilter === 'pending'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              승인대기 ({guestStats.pending})
-            </button>
-            <button
-              onClick={() => setGuestFilter('approved')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                guestFilter === 'approved'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              승인완료
-            </button>
-            <button
-              onClick={() => setGuestFilter('rejected')}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                guestFilter === 'rejected'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              거절됨
-            </button>
-          </div>
-
-          {/* Guest Application List */}
-          <div className="space-y-4">
-            {isGuestLoading ? (
-              <Card className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-                <p className="text-slate-600">로딩 중...</p>
-              </Card>
-            ) : filteredGuestApplications.length > 0 ? (
-              filteredGuestApplications.map(application => (
-                <Card key={application.id} className="hover:shadow-lg transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold text-slate-900">{application.name}</h3>
-                        <Badge variant={
-                          application.status === 'approved' ? 'success' :
-                          application.status === 'rejected' ? 'danger' : 'warning'
-                        }>
-                          {application.status === 'approved' ? '승인완료' :
-                           application.status === 'rejected' ? '거절됨' : '승인대기'}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <Mountain className="w-4 h-4" />
-                          <span>{application.eventTitle}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>산행일: {application.eventDate}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4" />
-                          <span>{application.phone}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      {application.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleApproveGuest(application.id)}
-                            className="px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors font-semibold flex items-center gap-2"
-                          >
-                            <Check className="h-5 w-5" />
-                            <span>승인</span>
-                          </button>
-                          <button
-                            onClick={() => handleRejectGuest(application.id)}
-                            className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-semibold flex items-center gap-2"
-                          >
-                            <X className="h-5 w-5" />
-                            <span>거절</span>
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => handleViewGuestDetail(application)}
-                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold flex items-center gap-2"
-                      >
-                        <Eye className="h-5 w-5" />
-                        <span>상세보기</span>
-                      </button>
-                    </div>
+            <div className="space-y-5 sm:space-y-6">
+              {/* 기본 정보 */}
+              <div>
+                <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                  기본 정보
+                </h4>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4">
+                  <div>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">이름</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedGuestApplication.name}</p>
                   </div>
-                </Card>
-              ))
-            ) : (
-              <Card className="text-center py-12">
-                <p className="text-xl text-slate-500">해당하는 신청이 없습니다.</p>
-              </Card>
-            )}
-          </div>
-
-          {/* Guest Detail Modal */}
-          {isGuestDetailModalOpen && selectedGuestApplication && (
-            <Modal
-              onClose={() => setIsGuestDetailModalOpen(false)}
-              title="게스트 신청 상세정보"
-              maxWidth="max-w-4xl"
-            >
-              <div className="p-6">
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold text-slate-900">{selectedGuestApplication.name}</h3>
-                    <Badge variant={
-                      selectedGuestApplication.status === 'approved' ? 'success' :
-                      selectedGuestApplication.status === 'rejected' ? 'danger' : 'warning'
-                    }>
-                      {selectedGuestApplication.status === 'approved' ? '승인완료' :
-                       selectedGuestApplication.status === 'rejected' ? '거절됨' : '승인대기'}
-                    </Badge>
+                  <div>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">이메일</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium truncate">{selectedGuestApplication.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">연락처</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedGuestApplication.phoneNumber || selectedGuestApplication.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">신청일</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{formatDate(selectedGuestApplication.appliedAt)}</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-6">
-                  {/* 신청 산행 정보 */}
-                  <div>
-                    <h4 className="text-lg font-bold text-slate-900 mb-3">신청 산행</h4>
-                    <Card className="bg-blue-50 border-blue-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Mountain className="w-5 h-5 text-blue-600" />
-                        <p className="font-bold text-slate-900">{selectedGuestApplication.eventTitle}</p>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Calendar className="w-4 h-4" />
-                        <span>{selectedGuestApplication.eventDate}</span>
-                      </div>
-                    </Card>
-                  </div>
-
-                  {/* 기본 정보 */}
-                  <div>
-                    <h4 className="text-lg font-bold text-slate-900 mb-3">기본 정보</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-slate-600 mb-1">이메일</p>
-                        <p className="text-slate-900 font-medium">{selectedGuestApplication.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-600 mb-1">전화번호</p>
-                        <p className="text-slate-900 font-medium">{selectedGuestApplication.phone}</p>
-                      </div>
-                      {selectedGuestApplication.referredBy && (
-                        <div className="md:col-span-2">
-                          <p className="text-sm text-slate-600 mb-1">추천인</p>
-                          <p className="text-slate-900 font-medium">{selectedGuestApplication.referredBy}</p>
-                        </div>
-                      )}
-                      <div className="md:col-span-2">
-                        <p className="text-sm text-slate-600 mb-1">신청일</p>
-                        <p className="text-slate-900 font-medium">{selectedGuestApplication.appliedAt}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 참여 이유 */}
-                  {selectedGuestApplication.reason && (
+              {/* 직업 정보 */}
+              {(selectedGuestApplication.company || selectedGuestApplication.position) && (
+                <div>
+                  <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                    직업 정보
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4">
                     <div>
-                      <h4 className="text-lg font-bold text-slate-900 mb-3">참여 이유</h4>
-                      <Card className="bg-slate-50">
-                        <p className="text-slate-700 whitespace-pre-wrap">{selectedGuestApplication.reason}</p>
-                      </Card>
+                      <p className="text-xs sm:text-sm text-slate-500 mb-0.5">소속</p>
+                      <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedGuestApplication.company || '-'}</p>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-xs sm:text-sm text-slate-500 mb-0.5">직책</p>
+                      <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedGuestApplication.position || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                  {/* Actions */}
-                  {selectedGuestApplication.status === 'pending' && (
-                    <div className="flex gap-4 pt-4">
-                      <button
-                        onClick={() => handleRejectGuest(selectedGuestApplication.id)}
-                        className="flex-1 px-6 py-3 bg-red-100 text-red-700 border-2 border-red-300 rounded-xl font-bold hover:bg-red-200 transition-all"
-                      >
-                        거절
-                      </button>
-                      <button
-                        onClick={() => handleApproveGuest(selectedGuestApplication.id)}
-                        className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all"
-                      >
-                        승인
-                      </button>
-                    </div>
-                  )}
+              {/* 신청 산행 정보 */}
+              <div>
+                <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                  <Mountain className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
+                  신청 산행
+                </h4>
+                <div className="bg-slate-50 rounded-xl p-3 sm:p-4">
+                  {(() => {
+                    const event = getEventById(selectedGuestApplication.eventId);
+                    return (
+                      <div className="space-y-2">
+                        <p className="text-sm sm:text-base font-bold text-slate-900">
+                          {event?.title || selectedGuestApplication.eventTitle || '-'}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{event?.date ? formatDate(event.date) : (selectedGuestApplication.eventDate ? formatDate(selectedGuestApplication.eventDate) : '-')}</span>
+                        </div>
+                        {event?.location && (
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                            <Mountain className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{event.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
-            </Modal>
-          )}
-        </>
+
+              {/* 산행 참여 이력 */}
+              {selectedGuestApplication.userId && (() => {
+                const history = getHikingHistory(selectedGuestApplication.userId);
+                return history.length > 0 ? (
+                  <div>
+                    <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                      산행 참여 이력
+                      <Badge variant="info">{history.length}회</Badge>
+                    </h4>
+                    <div className="space-y-2">
+                      {history.map((p, idx) => {
+                        const evt = getEventById(p.eventId);
+                        return (
+                          <div key={p.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                              <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                {history.length - idx}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-slate-900 text-xs sm:text-sm truncate">
+                                  {evt?.title || `산행 (${p.eventId.slice(0, 8)})`}
+                                </p>
+                                <p className="text-[10px] sm:text-xs text-slate-500">
+                                  {evt?.date ? formatDate(evt.date) : '-'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                              {p.isGuest && <Badge variant="warning">게스트</Badge>}
+                              {p.paymentStatus === 'completed' || p.paymentStatus === 'confirmed' ? (
+                                <Badge variant="success">입금</Badge>
+                              ) : (
+                                <Badge variant="default">미입금</Badge>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* 계정 연동 안내 */}
+              {selectedGuestApplication.userId && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="flex items-start gap-2.5">
+                    <Shield className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-blue-800">인증된 계정</p>
+                      <p className="text-[10px] sm:text-xs text-blue-600 mt-0.5">
+                        Firebase UID: {selectedGuestApplication.userId.slice(0, 16)}...
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-blue-600 mt-0.5">
+                        정회원 전환 시 산행 이력이 자동 연동됩니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 액션 버튼 */}
+              {selectedGuestApplication.status === 'pending' && (
+                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() => handleRejectGuest(selectedGuestApplication.id)}
+                    className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-red-600 border border-red-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-red-50 hover:border-red-400 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    거절
+                  </button>
+                  <button
+                    onClick={() => handleApproveGuest(selectedGuestApplication.id)}
+                    className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-emerald-600 text-white rounded-xl text-sm sm:text-base font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    승인
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Pending User Detail Modal */}
@@ -1093,101 +1970,175 @@ const MemberManagement = () => {
           title="가입 신청 상세정보"
           maxWidth="max-w-4xl"
         >
-          <div className="p-6">
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-bold text-slate-900">{selectedPendingUser.name}</h3>
-                {getStatusBadge(selectedPendingUser.status)}
-              </div>
+          <div className="p-4 sm:p-6">
+            {/* 헤더: 이름 + 상태 배지 */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-5 sm:mb-6 pb-4 border-b border-slate-200">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900">{selectedPendingUser.name}</h3>
+              {getStatusBadge(selectedPendingUser.status)}
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {/* 기본 정보 */}
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-3">기본 정보</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                  기본 정보
+                </h4>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4">
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">이름</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.name}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">이름</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedPendingUser.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">이메일</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.email}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">이메일</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium truncate">{selectedPendingUser.email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">전화번호</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.phoneNumber}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">전화번호</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedPendingUser.phoneNumber}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">성별</p>
-                    <p className="text-slate-900 font-medium">
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">성별</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">
                       {selectedPendingUser.gender === 'male' ? '남성' : selectedPendingUser.gender === 'female' ? '여성' : '정보 없음'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">출생연도</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.birthYear || '정보 없음'}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">출생연도</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedPendingUser.birthYear || '정보 없음'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">신청일</p>
-                    <p className="text-slate-900 font-medium">{formatDate(selectedPendingUser.appliedAt)}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">신청일</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{formatDate(selectedPendingUser.appliedAt)}</p>
                   </div>
                 </div>
               </div>
 
               {/* 직업 정보 */}
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-3">직업 정보</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                  직업 정보
+                </h4>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4">
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">소속</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.company}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">소속</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedPendingUser.company}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">직책</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.position}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">직책</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedPendingUser.position}</p>
                   </div>
                 </div>
               </div>
 
               {/* 산행 정보 */}
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-3">산행 정보</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                  <Mountain className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                  산행 정보
+                </h4>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4">
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">산행 능력</p>
-                    <p className="text-slate-900 font-medium">{getHikingLevelLabel(selectedPendingUser.hikingLevel)}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">산행 능력</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{getHikingLevelLabel(selectedPendingUser.hikingLevel)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-600 mb-1">추천인</p>
-                    <p className="text-slate-900 font-medium">{selectedPendingUser.referredBy || '최효준'}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mb-0.5">추천인</p>
+                    <p className="text-sm sm:text-base text-slate-900 font-medium">{selectedPendingUser.referredBy || '최효준'}</p>
                   </div>
                 </div>
               </div>
 
+              {/* 산행 참여 이력 */}
+              {(() => {
+                const history = getHikingHistory(selectedPendingUser.id);
+                return (
+                  <div>
+                    <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                      산행 참여 이력
+                      <Badge variant="info">{history.length}회</Badge>
+                    </h4>
+                    {history.length > 0 ? (
+                      <div className="space-y-2">
+                        {history.map((p, idx) => {
+                          const event = getEventById(p.eventId);
+                          return (
+                            <div key={p.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
+                              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs sm:text-sm font-bold flex-shrink-0">
+                                  {history.length - idx}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-slate-900 text-xs sm:text-sm truncate">
+                                    {event?.title || `산행 (${p.eventId.slice(0, 8)})`}
+                                  </p>
+                                  <p className="text-[10px] sm:text-xs text-slate-500">
+                                    {event?.date ? formatDate(event.date) : (p.createdAt ? formatDate(p.createdAt) : '-')}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
+                                {p.isGuest && <Badge variant="warning">게스트</Badge>}
+                                <Badge variant={
+                                  p.status === 'confirmed' || p.status === 'attending' ? 'success' :
+                                  p.status === 'pending' ? 'warning' : 'default'
+                                }>
+                                  {p.status === 'confirmed' || p.status === 'attending' ? '참석' :
+                                   p.status === 'pending' ? '대기' : p.status}
+                                </Badge>
+                                {p.paymentStatus === 'completed' || p.paymentStatus === 'confirmed' ? (
+                                  <Badge variant="success">입금완료</Badge>
+                                ) : p.paymentStatus === 'pending' ? (
+                                  <Badge variant="default">미입금</Badge>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 text-center py-5 sm:py-6 rounded-xl border border-slate-200">
+                        <Mountain className="w-7 h-7 sm:w-8 sm:h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-slate-500 text-xs sm:text-sm">아직 산행 참여 이력이 없습니다.</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* 신청 메시지 */}
               {selectedPendingUser.applicationMessage && (
                 <div>
-                  <h4 className="text-lg font-bold text-slate-900 mb-3">신청 메시지</h4>
-                  <Card className="bg-slate-50">
-                    <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{selectedPendingUser.applicationMessage}</p>
-                  </Card>
+                  <h4 className="text-sm sm:text-lg font-bold text-slate-900 mb-2 sm:mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+                    신청 메시지
+                  </h4>
+                  <div className="bg-slate-50 rounded-xl p-3 sm:p-4 border border-slate-200">
+                    <p 
+                      className="text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedPendingUser.applicationMessage) }}
+                    />
+                  </div>
                 </div>
               )}
 
               {/* Actions */}
               {selectedPendingUser.status === 'pending' && (
-                <div className="flex gap-4 pt-4 border-t border-slate-200">
+                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-slate-200">
                   <button
                     onClick={() => handleReject(selectedPendingUser.id)}
-                    className="flex-1 px-6 py-3 bg-red-100 text-red-700 border-2 border-red-300 rounded-xl font-bold hover:bg-red-200 transition-all"
+                    className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-red-600 border border-red-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-red-50 hover:border-red-400 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2"
                   >
+                    <X className="w-4 h-4" />
                     거절
                   </button>
                   <button
                     onClick={() => handleApprove(selectedPendingUser.id)}
-                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all"
+                    className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-emerald-600 text-white rounded-xl text-sm sm:text-base font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2"
                   >
+                    <Check className="w-4 h-4" />
                     승인완료
                   </button>
                 </div>
@@ -1197,10 +2148,276 @@ const MemberManagement = () => {
         </Modal>
       )}
 
-      {/* Password Verification Modal */}
-      {isPasswordModalOpen && (
+      {/* Executives Tab */}
+      {activeTab === 'executives' && (
+        <>
+          {/* 중요 안내 */}
+          <div className="mb-8 p-5 bg-warning-50 border-2 border-warning-200 rounded-xl">
+            <div className="flex items-start gap-3">
+              <Shield className="w-6 h-6 text-warning-700 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-warning-900 mb-2 text-lg">중요 안내</h3>
+                <p className="text-warning-800 leading-relaxed">
+                  운영진 정보의 추가, 수정, 삭제는 <strong>회장의 승인이 필요</strong>합니다. 
+                  변경 사항 저장 시 본인 인증(Google/SMS/비밀번호)이 진행됩니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 운영진 목록 상단 */}
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-sm text-slate-600">총 {executivesWithMemberBio.length}명</p>
+            <button
+              onClick={() => setIsAddingExecutive(true)}
+              className="px-4 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              추가
+            </button>
+          </div>
+
+          {isExecutivesLoading ? (
+            <Card className="mb-8">
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="text-slate-600 mt-4">운영진 정보를 불러오는 중...</p>
+              </div>
+            </Card>
+          ) : executivesWithMemberBio.length === 0 ? (
+            <Card className="mb-8">
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-xl text-slate-500">등록된 운영진이 없습니다.</p>
+              </div>
+            </Card>
+          ) : (
+            <>
+              {/* 회장단 섹션 */}
+              {executivesWithMemberBio.filter(e => e.category === 'chairman').length > 0 && (
+                <Card className="mb-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant="danger">회장단</Badge>
+                    <span className="text-sm text-slate-500">
+                      {executivesWithMemberBio.filter(e => e.category === 'chairman').length}명
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sortByPosition(executivesWithMemberBio, 'chairman')
+                      .map(exec => renderExecutiveCard(exec))}
+                  </div>
+                </Card>
+              )}
+
+              {/* 운영위원회 섹션 */}
+              {executivesWithMemberBio.filter(e => e.category === 'committee').length > 0 && (
+                <Card className="mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant="info">운영위원회</Badge>
+                    <span className="text-sm text-slate-500">
+                      {executivesWithMemberBio.filter(e => e.category === 'committee').length}명
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sortByPosition(executivesWithMemberBio, 'committee')
+                      .map(exec => renderExecutiveCard(exec))}
+                  </div>
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* 새 운영진 추가 모달 */}
+          {isAddingExecutive && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <Card className="max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">
+                  새 운영진 추가
+                </h3>
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      회원 검색
+                    </label>
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={executiveSearchQuery}
+                          onChange={(e) => {
+                            setExecutiveSearchQuery(e.target.value);
+                            setShowExecutiveSearchResults(true);
+                          }}
+                          onFocus={() => setShowExecutiveSearchResults(true)}
+                          className="w-full pl-11 pr-10 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          placeholder="회원 이름, 직급, 회사 검색..."
+                        />
+                        {executiveSearchQuery && (
+                          <button
+                            onClick={() => resetExecutiveSearch(true)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {showExecutiveSearchResults && executiveSearchQuery && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {getFilteredMembersForExecutive(executiveSearchQuery).length > 0 ? (
+                            getFilteredMembersForExecutive(executiveSearchQuery).map((member) => (
+                              <button
+                                key={member.id}
+                                onClick={() => handleMemberSelectNewExecutive(member)}
+                                className="w-full px-4 py-3 text-left hover:bg-primary-50 transition-colors border-b border-slate-100 last:border-b-0"
+                              >
+                                <p className="font-medium text-slate-900">{member.name}</p>
+                                <p className="text-sm text-slate-600">
+                                  {member.company} {member.position}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-1">{member.phoneNumber}</p>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-4 py-3 text-center text-slate-500">
+                              검색 결과가 없습니다.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      회원 DB에서 검색하여 선택하세요. 선택 시 정보가 자동으로 입력됩니다.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      구분
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="category"
+                          value="chairman"
+                          checked={newExecutive.category === 'chairman'}
+                          onChange={(e) => setNewExecutive({ ...newExecutive, category: e.target.value as 'chairman' | 'committee' })}
+                          className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-slate-700">회장단</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="category"
+                          value="committee"
+                          checked={newExecutive.category === 'committee'}
+                          onChange={(e) => setNewExecutive({ ...newExecutive, category: e.target.value as 'chairman' | 'committee' })}
+                          className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-slate-700">운영위원회</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      직책
+                    </label>
+                    <input
+                      type="text"
+                      value={newExecutive.position}
+                      onChange={(e) =>
+                        setNewExecutive({ ...newExecutive, position: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="예: 회장, 부위원장, 재무"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        임기 시작
+                      </label>
+                      <input
+                        type="month"
+                        value={newExecutive.startTerm}
+                        onChange={(e) =>
+                          setNewExecutive({ ...newExecutive, startTerm: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        임기 종료
+                      </label>
+                      <input
+                        type="month"
+                        value={newExecutive.endTerm}
+                        onChange={(e) =>
+                          setNewExecutive({ ...newExecutive, endTerm: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
+                  {newExecutive.memberId && (
+                    <div className="p-3 bg-primary-50 border border-primary-200 rounded-lg">
+                      <p className="text-sm font-medium text-primary-900 mb-1">선택된 회원 정보</p>
+                      <div className="text-xs text-primary-700 space-y-1">
+                        <p>이름: {newExecutive.name}</p>
+                        <p>연락처: {newExecutive.phoneNumber}</p>
+                        {newExecutive.email && <p>이메일: {newExecutive.email}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleAddNewExecutive}
+                    disabled={!newExecutive.memberId || !newExecutive.position || !newExecutive.startTerm || !newExecutive.endTerm}
+                    className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    추가
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsAddingExecutive(false);
+                      setNewExecutive({
+                        memberId: undefined,
+                        name: '',
+                        position: '',
+                        phoneNumber: '',
+                        email: '',
+                        category: 'chairman',
+                        company: '',
+                        startTerm: '',
+                        endTerm: '',
+                        bio: '',
+                      });
+                      setExecutiveSearchQuery('');
+                      setShowExecutiveSearchResults(false);
+                    }}
+                    className="flex-1 px-4 py-2 bg-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-400 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    취소
+                  </button>
+                </div>
+              </Card>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 관리자 재인증 모달 (인증 방식별 분기) */}
+      {isVerifyModalOpen && (
         <Modal
-          onClose={handlePasswordCancel}
+          onClose={handleVerifyCancel}
           maxWidth="max-w-md"
         >
           <div className="p-6 text-center">
@@ -1208,47 +2425,193 @@ const MemberManagement = () => {
               <Shield className="w-8 h-8 text-slate-900" />
             </div>
             
-            <h3 className="text-xl font-bold text-slate-900 mb-2">관리자 비밀번호 확인</h3>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">관리자 본인 인증</h3>
             <p className="text-slate-600 mb-6">
-              중요한 작업을 수행하기 위해 비밀번호를 입력해주세요
+              중요한 작업을 수행하기 위해 본인 인증이 필요합니다
             </p>
-            
-            <div className="text-left mb-6">
-              <label className="block text-slate-700 font-semibold mb-2">
-                비밀번호
-              </label>
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handlePasswordConfirm();
-                  }
-                }}
-                className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
-                placeholder="현재 로그인한 계정의 비밀번호"
-                autoFocus
-              />
-              <p className="text-xs text-slate-500 mt-2">
-                {user?.email}
-              </p>
-            </div>
+
+            {/* 이메일/비밀번호 인증 */}
+            {verifyProvider === 'email' && (
+              <div className="text-left mb-6">
+                <label className="block text-slate-700 font-semibold mb-2">
+                  비밀번호
+                </label>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !isVerifying) {
+                      handlePasswordConfirm();
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-base"
+                  placeholder="현재 로그인한 계정의 비밀번호"
+                  autoFocus
+                  disabled={isVerifying}
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  {user?.email}
+                </p>
+              </div>
+            )}
+
+            {/* 휴대폰 SMS 인증 */}
+            {verifyProvider === 'phone' && (
+              <div className="text-left mb-6">
+                {!phoneCodeSent ? (
+                  <div>
+                    <p className="text-sm text-slate-600 mb-3">
+                      등록된 휴대폰 번호로 인증코드를 전송합니다.
+                    </p>
+                    <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 mb-4">
+                      <Phone className="w-5 h-5 text-slate-500" />
+                      <span className="text-slate-700 font-medium">{auth.currentUser?.phoneNumber || '번호 없음'}</span>
+                    </div>
+                    <div id="reauth-recaptcha-container"></div>
+                    <button
+                      onClick={handleSendPhoneCode}
+                      disabled={isSendingCode}
+                      className="w-full py-3 rounded-lg font-bold text-base bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    >
+                      {isSendingCode ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                          전송 중...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="w-5 h-5" />
+                          인증코드 전송
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-2">
+                      인증코드 입력
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={phoneCodeInput}
+                      onChange={(e) => setPhoneCodeInput(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isVerifying) {
+                          handleVerifyPhoneCode();
+                        }
+                      }}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-slate-300 focus:border-slate-500 focus:ring-4 focus:ring-slate-200 outline-none transition-all text-xl text-center tracking-[0.3em]"
+                      placeholder="6자리 인증코드"
+                      maxLength={6}
+                      autoFocus
+                      disabled={isVerifying}
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      {auth.currentUser?.phoneNumber}(으)로 전송된 코드를 입력하세요
+                    </p>
+                    <button
+                      onClick={() => { setPhoneCodeSent(false); setPhoneCodeInput(''); cleanupReauthSession(); }}
+                      className="text-sm text-primary-600 hover:text-primary-700 mt-2 font-medium"
+                    >
+                      인증코드 다시 받기
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Google 인증 (팝업이 닫혔을 때 폴백) */}
+            {verifyProvider === 'google' && (
+              <div className="text-left mb-6">
+                <p className="text-sm text-slate-600 mb-4">
+                  Google 계정으로 재인증합니다. 버튼을 클릭하면 Google 로그인 팝업이 표시됩니다.
+                </p>
+                <button
+                  onClick={() => verifyAction && handleGoogleReauth(verifyAction)}
+                  disabled={isVerifying}
+                  className="w-full py-3 rounded-lg font-bold text-base bg-white border-2 border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
+                >
+                  {isVerifying ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-slate-600 border-t-transparent"></div>
+                      인증 중...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                      </svg>
+                      Google 계정으로 인증
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* 알 수 없는 인증 방식 */}
+            {verifyProvider === 'unknown' && (
+              <div className="text-left mb-6">
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    인증 제공자를 확인할 수 없습니다. 로그아웃 후 다시 로그인해주세요.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
-                onClick={handlePasswordCancel}
+                onClick={handleVerifyCancel}
                 className="flex-1 py-3 rounded-lg font-bold text-base text-slate-700 border-2 border-slate-300 hover:bg-slate-50 transition-all"
+                disabled={isVerifying}
               >
                 취소
               </button>
-              <button
-                onClick={handlePasswordConfirm}
-                className="flex-1 py-3 rounded-lg font-bold text-base bg-slate-900 text-white hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-              >
-                <Shield className="w-5 h-5" />
-                확인
-              </button>
+              {/* 이메일/비밀번호: 확인 버튼 */}
+              {verifyProvider === 'email' && (
+                <button
+                  onClick={handlePasswordConfirm}
+                  disabled={isVerifying || !passwordInput}
+                  className="flex-1 py-3 rounded-lg font-bold text-base bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                >
+                  {isVerifying ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      확인 중...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-5 h-5" />
+                      확인
+                    </>
+                  )}
+                </button>
+              )}
+              {/* SMS: 인증코드 확인 버튼 */}
+              {verifyProvider === 'phone' && phoneCodeSent && (
+                <button
+                  onClick={handleVerifyPhoneCode}
+                  disabled={isVerifying || phoneCodeInput.length < 6}
+                  className="flex-1 py-3 rounded-lg font-bold text-base bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                >
+                  {isVerifying ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      확인 중...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-5 h-5" />
+                      인증 확인
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </Modal>

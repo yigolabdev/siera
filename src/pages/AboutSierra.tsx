@@ -1,21 +1,107 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Mountain, Users, Calendar, Award, Globe, TrendingUp, ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LandingNavbar } from './Landing/LandingNavbar';
 import { LandingFooter } from './Landing/LandingFooter';
 import { FadeIn } from '../components/ui/FadeIn';
+import SEOHead from '../components/SEOHead';
+import { getDocuments } from '../lib/firebase/firestore';
+
+// 해외 산행 리스트 데이터
+const OVERSEAS_HIKES: { year: string; location: string; scheduled?: boolean }[] = [
+  { year: '2007', location: '중국 황산' },
+  { year: '2008', location: '일본 고베 롯고산' },
+  { year: '2009', location: '중국 태산' },
+  { year: '2010', location: '일본 금강산 (곤고산)' },
+  { year: '2011', location: '중국 안탕산' },
+  { year: '2012', location: '말레이시아 키나발루' },
+  { year: '2013', location: '일본 구주산' },
+  { year: '2014', location: '몽골 장백산' },
+  { year: '2015', location: '일본 아오모리' },
+  { year: '2016', location: '대만 르웨탄' },
+  { year: '2017', location: '호주 그레이트오션로드' },
+  { year: '2018', location: '홍콩 맥리호스' },
+  { year: '2019', location: '일본 북알프스' },
+  { year: '2023', location: '베트남 판시판' },
+  { year: '2024', location: '대만 초령고도/무얼차후산' },
+  { year: '2025', location: '일본 홋카이도 대설산' },
+  { year: '2026', location: '중국 칭다오 노산', scheduled: true },
+];
+
+// 정기산행 기준 데이터: 특정 시점의 완료 회차를 기준으로, 이후 매월 +1씩 자동 증가
+// 2026년 2월 기준 229회 완료
+const REGULAR_HIKE_BASE = {
+  count: 229,           // 기준 시점의 완료 회차
+  year: 2026,           // 기준 연도
+  month: 2,             // 기준 월 (1-12)
+};
+
+const FOUNDING_YEAR = 2005;
+
+/**
+ * 현재 날짜 기준 정기산행 누적 회차 계산
+ * 기준 시점부터 경과한 월 수만큼 추가
+ */
+const getRegularHikeCount = (): number => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+
+  const monthsPassed =
+    (currentYear - REGULAR_HIKE_BASE.year) * 12 +
+    (currentMonth - REGULAR_HIKE_BASE.month);
+
+  return REGULAR_HIKE_BASE.count + Math.max(0, monthsPassed);
+};
 
 const AboutSierra = () => {
   const navigate = useNavigate();
   const [showOverseasModal, setShowOverseasModal] = useState(false);
+  const [activeMemberCount, setActiveMemberCount] = useState<number | null>(null);
 
-  // 페이지 로드 시 맨 위로 스크롤
+  // 정기산행 누적 회차 (기준값 + 경과 월 수)
+  const regularHikeCount = useMemo(() => getRegularHikeCount(), []);
+
+  // 해외산행 완료 횟수 (예정 제외)
+  const overseasHikeCount = useMemo(
+    () => OVERSEAS_HIKES.filter(h => !h.scheduled).length,
+    []
+  );
+
+  // 전통의 역사 (현재 연도 - 창립 연도)
+  const now = new Date();
+  const yearsOfHistory = now.getFullYear() - FOUNDING_YEAR;
+  const referenceDate = `${now.getFullYear()}년 ${now.getMonth() + 1}월 기준`;
+
+  // 페이지 로드 시 맨 위로 스크롤 + 실제 데이터 로드
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    const fetchStats = async () => {
+      try {
+        // 활동 회원 수 조회
+        const membersResult = await getDocuments<{ id: string; isActive?: boolean; isApproved?: boolean }>('members');
+        if (membersResult.success && membersResult.data) {
+          const activeCount = membersResult.data.filter(
+            m => m.isActive !== false && m.isApproved !== false
+          ).length;
+          setActiveMemberCount(activeCount);
+        }
+      } catch (error) {
+        console.error('통계 데이터 로드 실패:', error);
+      }
+    };
+
+    fetchStats();
   }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 selection:bg-slate-100 selection:text-slate-900">
+      <SEOHead
+        title="시애라 소개"
+        description="시애라(詩愛羅) - 시(詩)와 사랑(愛)이 가득한 네트워크(羅). 2005년 창립, 산업계·학계·공공기관 리더들로 구성된 21년 전통의 프리미엄 등산 커뮤니티."
+        path="/about"
+      />
       {/* Navbar */}
       <LandingNavbar />
 
@@ -32,7 +118,7 @@ const AboutSierra = () => {
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20 text-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pt-20 sm:pt-32 pb-20 text-center">
           <FadeIn>
             <button
               onClick={() => navigate('/')}
@@ -100,15 +186,15 @@ const AboutSierra = () => {
             </p>
           </FadeIn>
 
-          <div className="grid md:grid-cols-4 gap-8 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 items-stretch">
             <FadeIn delay={100}>
               <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
                 <Calendar className="w-12 h-12 mb-6 text-emerald-400" />
-                <div className="text-6xl font-bold mb-3">228</div>
+                <div className="text-6xl font-bold mb-3">{regularHikeCount}</div>
                 <div className="text-white text-xl font-medium mb-2">정기산행</div>
                 <div className="text-slate-400 text-sm">월 1회 국내 정기 산행</div>
                 <div className="mt-auto pt-4 border-t border-slate-700 text-sm text-slate-400">
-                  2026년 1월 기준
+                  {referenceDate}
                 </div>
               </div>
             </FadeIn>
@@ -116,12 +202,12 @@ const AboutSierra = () => {
             <FadeIn delay={200}>
               <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
                 <Globe className="w-12 h-12 mb-6 text-emerald-400" />
-                <div className="text-6xl font-bold mb-3">16</div>
+                <div className="text-6xl font-bold mb-3">{overseasHikeCount}</div>
                 <div className="text-white text-xl font-medium mb-2">해외산행</div>
                 <div className="text-slate-400 text-sm mb-4">연 1회 해외 산행</div>
                 <div className="mt-auto">
                   <div className="mb-4 pt-4 border-t border-slate-700 text-sm text-slate-400">
-                    2026년 1월 기준
+                    {referenceDate}
                   </div>
                   <button
                     onClick={() => setShowOverseasModal(true)}
@@ -136,11 +222,13 @@ const AboutSierra = () => {
             <FadeIn delay={300}>
               <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
                 <Users className="w-12 h-12 mb-6 text-emerald-400" />
-                <div className="text-6xl font-bold mb-3">99</div>
+                <div className="text-6xl font-bold mb-3">
+                  {activeMemberCount !== null ? activeMemberCount : <span className="animate-pulse text-slate-500">···</span>}
+                </div>
                 <div className="text-white text-xl font-medium mb-2">정회원</div>
                 <div className="text-slate-400 text-sm">활동 회원</div>
                 <div className="mt-auto pt-4 border-t border-slate-700 text-sm text-slate-400">
-                  2026년 1월 기준
+                  {referenceDate}
                 </div>
               </div>
             </FadeIn>
@@ -148,11 +236,11 @@ const AboutSierra = () => {
             <FadeIn delay={400}>
               <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-10 text-white hover:border-slate-600 transition-all duration-300 h-full flex flex-col">
                 <Award className="w-12 h-12 mb-6 text-emerald-400" />
-                <div className="text-6xl font-bold mb-3">21</div>
+                <div className="text-6xl font-bold mb-3">{yearsOfHistory}</div>
                 <div className="text-white text-xl font-medium mb-2">전통의 역사</div>
                 <div className="text-slate-400 text-sm">변함없는 가치</div>
                 <div className="mt-auto pt-4 border-t border-slate-700 text-sm text-slate-400">
-                  2005년 ~ 현재
+                  {FOUNDING_YEAR}년 ~ 현재
                 </div>
               </div>
             </FadeIn>
@@ -172,7 +260,7 @@ const AboutSierra = () => {
             </p>
           </FadeIn>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             <FadeIn delay={100}>
               <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 hover:border-slate-600 transition-all duration-300">
                 <div className="flex items-center justify-center w-16 h-16 rounded-full bg-slate-700/50 text-white text-2xl font-bold mb-6">
@@ -423,25 +511,7 @@ const AboutSierra = () => {
             {/* 모달 컨텐츠 */}
             <div className="p-6">
               <div className="space-y-3">
-                {[
-                  { year: '2007', location: '중국 황산' },
-                  { year: '2008', location: '일본 고베 롯고산' },
-                  { year: '2009', location: '중국 태산' },
-                  { year: '2010', location: '일본 금강산 (곤고산)' },
-                  { year: '2011', location: '중국 안탕산' },
-                  { year: '2012', location: '말레이시아 키나발루' },
-                  { year: '2013', location: '일본 구주산' },
-                  { year: '2014', location: '몽골 장백산' },
-                  { year: '2015', location: '일본 아오모리' },
-                  { year: '2016', location: '대만 르웨탄' },
-                  { year: '2017', location: '호주 그레이트오션로드' },
-                  { year: '2018', location: '홍콩 맥리호스' },
-                  { year: '2019', location: '일본 북알프스' },
-                  { year: '2023', location: '베트남 판시판' },
-                  { year: '2024', location: '대만 초령고도/무얼차후산' },
-                  { year: '2025', location: '일본 홋카이도 대설산' },
-                  { year: '2026', location: '중국 칭다오 노산', scheduled: true },
-                ].map((item, index) => (
+                {OVERSEAS_HIKES.map((item, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition-colors border border-slate-700/50"

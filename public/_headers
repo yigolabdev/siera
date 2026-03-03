@@ -1,0 +1,42 @@
+# Cloudflare Pages 커스텀 헤더 (Firebase Hosting headers와 동일)
+
+# 이미지 파일 - 1년 캐싱
+/assets/*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.jpeg
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.png
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.gif
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.svg
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.webp
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.ico
+  Cache-Control: public, max-age=31536000, immutable
+
+# JS/CSS 파일 - 1년 캐싱 (Vite 해시 포함)
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# 폰트 파일 - 1년 캐싱
+/assets/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# OG 이미지 - 1일 캐싱
+/og-image.png
+  Cache-Control: public, max-age=86400
+
+# robots.txt - 1일 캐싱
+/robots.txt
+  Cache-Control: public, max-age=86400
+
+# sitemap - 1일 캐싱
+/sitemap.xml
+  Cache-Control: public, max-age=86400
+  Content-Type: application/xml

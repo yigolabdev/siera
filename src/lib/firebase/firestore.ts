@@ -18,232 +18,159 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 
-/**
- * 문서 생성 (자동 ID)
- */
-export const createDocument = async <T>(collectionName: string, data: T) => {
+// ==================== 타입 정의 ====================
+
+interface FirestoreResult<T = undefined> {
+  success: boolean;
+  error?: string;
+  id?: string;
+  data?: T;
+}
+
+interface QueryFilter {
+  field: string;
+  operator: WhereFilterOp;
+  value: unknown;
+}
+
+/** 에러에서 메시지 추출 */
+const extractErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'Unknown error';
+
+// ==================== CRUD 함수 ====================
+
+/** 문서 생성 (자동 ID) */
+export const createDocument = async <T extends object>(
+  collectionName: string,
+  data: T,
+): Promise<FirestoreResult> => {
   try {
     const docRef = await addDoc(collection(db, collectionName), {
       ...data,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    
-    return {
-      success: true,
-      id: docRef.id,
-    };
-  } catch (error: any) {
-    console.error('Create document error:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    return { success: false, error: extractErrorMessage(error) };
   }
 };
 
-/**
- * 문서 생성 (커스텀 ID)
- */
-export const setDocument = async <T>(
+/** 문서 생성/덮어쓰기 (커스텀 ID) */
+export const setDocument = async <T extends object>(
   collectionName: string,
   docId: string,
   data: T,
-  merge = false
-) => {
+  merge = false,
+): Promise<FirestoreResult> => {
   try {
     await setDoc(
       doc(db, collectionName, docId),
-      {
-        ...data,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
-      { merge }
+      { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() },
+      { merge },
     );
-    
-    return {
-      success: true,
-      id: docId,
-    };
-  } catch (error: any) {
-    console.error('Set document error:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
+    return { success: true, id: docId };
+  } catch (error) {
+    return { success: false, error: extractErrorMessage(error) };
   }
 };
 
-/**
- * 문서 읽기
- */
-export const getDocument = async <T>(collectionName: string, docId: string) => {
+/** 단일 문서 읽기 */
+export const getDocument = async <T>(
+  collectionName: string,
+  docId: string,
+): Promise<FirestoreResult<T>> => {
   try {
-    const docRef = doc(db, collectionName, docId);
-    const docSnap = await getDoc(docRef);
-    
+    const docSnap = await getDoc(doc(db, collectionName, docId));
     if (docSnap.exists()) {
-      return {
-        success: true,
-        data: { id: docSnap.id, ...docSnap.data() } as T,
-      };
-    } else {
-      return {
-        success: false,
-        error: 'Document not found',
-      };
+      return { success: true, data: { id: docSnap.id, ...docSnap.data() } as T };
     }
-  } catch (error: any) {
-    console.error('Get document error:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
+    return { success: false, error: 'Document not found' };
+  } catch (error) {
+    return { success: false, error: extractErrorMessage(error) };
   }
 };
 
-/**
- * 컬렉션의 모든 문서 읽기
- */
+/** 컬렉션의 문서 목록 읽기 */
 export const getDocuments = async <T>(
   collectionName: string,
-  constraints?: QueryConstraint[]
-) => {
+  constraints?: QueryConstraint[],
+): Promise<FirestoreResult<T[]>> => {
   try {
     const collectionRef = collection(db, collectionName);
     const q = constraints ? query(collectionRef, ...constraints) : collectionRef;
-    const querySnapshot = await getDocs(q);
-    
+    const snapshot = await getDocs(q);
+
     const documents: T[] = [];
-    querySnapshot.forEach((doc) => {
-      documents.push({ id: doc.id, ...doc.data() } as T);
+    snapshot.forEach((docSnap) => {
+      documents.push({ id: docSnap.id, ...docSnap.data() } as T);
     });
-    
-    return {
-      success: true,
-      data: documents,
-    };
-  } catch (error: any) {
-    console.error('Get documents error:', error);
-    return {
-      success: false,
-      error: error.message,
-      data: [],
-    };
+    return { success: true, data: documents };
+  } catch (error) {
+    return { success: false, error: extractErrorMessage(error), data: [] };
   }
 };
 
-/**
- * 문서 업데이트
- */
-export const updateDocument = async <T>(
+/** 문서 업데이트 (부분) */
+export const updateDocument = async <T extends object>(
   collectionName: string,
   docId: string,
-  data: Partial<T>
-) => {
+  data: Partial<T>,
+): Promise<FirestoreResult> => {
   try {
-    const docRef = doc(db, collectionName, docId);
-    await updateDoc(docRef, {
+    await updateDoc(doc(db, collectionName, docId), {
       ...data,
       updatedAt: serverTimestamp(),
     });
-    
-    return {
-      success: true,
-    };
-  } catch (error: any) {
-    console.error('Update document error:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: extractErrorMessage(error) };
   }
 };
 
-/**
- * 문서 삭제
- */
-export const deleteDocument = async (collectionName: string, docId: string) => {
+/** 문서 삭제 */
+export const deleteDocument = async (
+  collectionName: string,
+  docId: string,
+): Promise<FirestoreResult> => {
   try {
     await deleteDoc(doc(db, collectionName, docId));
-    return {
-      success: true,
-    };
-  } catch (error: any) {
-    console.error('Delete document error:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: extractErrorMessage(error) };
   }
 };
 
-/**
- * 조건부 쿼리
- */
+/** 조건부 쿼리 */
 export const queryDocuments = async <T>(
   collectionName: string,
-  filters: Array<{
-    field: string;
-    operator: WhereFilterOp;
-    value: any;
-  }>,
+  filters: QueryFilter[],
   orderByField?: string,
   orderDirection: 'asc' | 'desc' = 'desc',
-  limitCount?: number
-) => {
+  limitCount?: number,
+): Promise<FirestoreResult<T[]>> => {
   try {
     const collectionRef = collection(db, collectionName);
-    const constraints: QueryConstraint[] = [];
-    
-    // where 조건 추가
-    filters.forEach((filter) => {
-      constraints.push(where(filter.field, filter.operator, filter.value));
-    });
-    
-    // orderBy 추가
-    if (orderByField) {
-      constraints.push(orderBy(orderByField, orderDirection));
-    }
-    
-    // limit 추가
-    if (limitCount) {
-      constraints.push(limit(limitCount));
-    }
-    
-    const q = query(collectionRef, ...constraints);
-    const querySnapshot = await getDocs(q);
-    
+    const constraints: QueryConstraint[] = filters.map(f =>
+      where(f.field, f.operator, f.value),
+    );
+
+    if (orderByField) constraints.push(orderBy(orderByField, orderDirection));
+    if (limitCount) constraints.push(limit(limitCount));
+
+    const snapshot = await getDocs(query(collectionRef, ...constraints));
+
     const documents: T[] = [];
-    querySnapshot.forEach((doc) => {
-      documents.push({ id: doc.id, ...doc.data() } as T);
+    snapshot.forEach((docSnap) => {
+      documents.push({ id: docSnap.id, ...docSnap.data() } as T);
     });
-    
-    return {
-      success: true,
-      data: documents,
-    };
-  } catch (error: any) {
-    console.error('Query documents error:', error);
-    return {
-      success: false,
-      error: error.message,
-      data: [],
-    };
+    return { success: true, data: documents };
+  } catch (error) {
+    return { success: false, error: extractErrorMessage(error), data: [] };
   }
 };
 
-/**
- * Timestamp를 Date로 변환
- */
-export const timestampToDate = (timestamp: Timestamp): Date => {
-  return timestamp.toDate();
-};
+// ==================== Timestamp 유틸리티 ====================
 
-/**
- * Date를 Timestamp로 변환
- */
-export const dateToTimestamp = (date: Date): Timestamp => {
-  return Timestamp.fromDate(date);
-};
+export const timestampToDate = (timestamp: Timestamp): Date => timestamp.toDate();
+export const dateToTimestamp = (date: Date): Timestamp => Timestamp.fromDate(date);

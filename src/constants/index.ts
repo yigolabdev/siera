@@ -1,6 +1,11 @@
 // 애플리케이션 전역 상수
 
 /**
+ * 슈퍼 관리자 이메일 목록 (운영진에 포함되지 않지만 모든 관리 권한 보유)
+ */
+export const SUPER_ADMIN_EMAILS: readonly string[] = ['choi@yigolab.com'];
+
+/**
  * 페이지네이션 설정
  */
 export const PAGINATION = {
@@ -209,6 +214,10 @@ export const TIMING = {
   DEBOUNCE_INPUT: 500,
   THROTTLE_SCROLL: 100,
   THROTTLE_RESIZE: 200,
+  /** 인증 초기화 안전 타임아웃 (ms) - onAuthStateChanged가 완료되지 않을 때 강제 로딩 해제 */
+  AUTH_INIT_TIMEOUT: 10_000,
+  /** 페이지 로딩 안전 타임아웃 (ms) - Firestore 데이터 로딩이 지연될 때 강제 렌더링 */
+  PAGE_LOADING_TIMEOUT: 8_000,
 } as const;
 
 /**

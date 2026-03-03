@@ -4,6 +4,7 @@ import { ArrowLeft, FileText } from 'lucide-react';
 import { LandingNavbar } from './Landing/LandingNavbar';
 import { LandingFooter } from './Landing/LandingFooter';
 import { FadeIn } from '../components/ui/FadeIn';
+import SEOHead from '../components/SEOHead';
 
 const Terms = () => {
   const navigate = useNavigate();
@@ -14,6 +15,11 @@ const Terms = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEOHead
+        title="이용약관"
+        description="시애라(Sierra) 등산 커뮤니티 서비스 이용약관."
+        path="/terms"
+      />
       <LandingNavbar />
       
       <div className="max-w-4xl mx-auto px-6 py-16">

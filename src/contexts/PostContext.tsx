@@ -2,8 +2,9 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { useAuth } from './AuthContextEnhanced';
-import { Post, Comment } from '../types';  // ✅ types/index.ts에서 import
+import { Post, Comment } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
+import { sanitizeText } from '../utils/sanitize';
 
 interface PostContextType {
   posts: Post[];
@@ -20,6 +21,7 @@ interface PostContextType {
   incrementPostViews: (postId: string) => Promise<void>;
   getPostComments: (postId: string) => Comment[];
   refreshPosts: () => Promise<void>;
+  _activate: () => void;
 }
 
 const PostContext = createContext<PostContextType | undefined>(undefined);
@@ -32,14 +34,16 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
+
   // Firebase에서 게시글 데이터 로드 - user가 로드된 후에만 실행
   // Firebase에서 게시글 및 댓글 로드 (useCallback으로 최적화)
   const loadPosts = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log('🔄 [PostContext] posts 데이터 로드 시작');
 
       const result = await getDocuments<Post>('posts');
       if (result.success && result.data) {
@@ -48,9 +52,7 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setPosts(sortedPosts);
-        console.log('✅ Firebase에서 게시글 데이터 로드:', sortedPosts.length, '개');
       } else {
-        console.log('ℹ️ Firebase에서 로드된 게시글 데이터가 없습니다.');
         setPosts([]);
       }
     } catch (error: unknown) {
@@ -67,12 +69,9 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
 
   const loadComments = useCallback(async () => {
     try {
-      console.log('🔄 [PostContext] comments 데이터 로드 시작');
-      
       const result = await getDocuments<Comment>('comments');
       if (result.success && result.data) {
         setComments(result.data);
-        console.log('✅ Firebase에서 댓글 데이터 로드:', result.data.length, '개');
       } else {
         setComments([]);
       }
@@ -86,14 +85,9 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (!_activated) return;
+
     const initializeData = async () => {
-      console.log('🔄 [PostContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!firebaseUser,
-        email: firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
-      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
       if (firebaseUser || !hasLoadedOnce) {
         await loadPosts();
         await loadComments();
@@ -101,11 +95,10 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     
-    // Auth 로딩이 완료된 후에만 실행
     if (!authLoading) {
       initializeData();
     }
-  }, [firebaseUser, authLoading, loadPosts, loadComments]);
+  }, [_activated, firebaseUser, authLoading, loadPosts, loadComments]);
 
   // 게시글 추가
   const addPost = useCallback(async (
@@ -118,9 +111,11 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
     try {
       const postId = `post_${Date.now()}`;
       const now = new Date().toISOString();
-      
+
       const newPost: Post = {
         ...postData,
+        title: sanitizeText(postData.title),
+        content: sanitizeText(postData.content),
         id: postId,
         views: 0,
         comments: 0,
@@ -133,7 +128,6 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       const result = await setDocument('posts', postId, newPost);
       if (result.success) {
         setPosts(prev => [newPost, ...prev]);
-        console.log('✅ 게시글 추가 완료:', postId);
       } else {
         throw new Error(result.error || '게시글 추가 실패');
       }
@@ -148,6 +142,8 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updatedData = {
         ...updates,
+        ...(updates.title !== undefined && { title: sanitizeText(updates.title) }),
+        ...(updates.content !== undefined && { content: sanitizeText(updates.content) }),
         updatedAt: new Date().toISOString(),
       };
 
@@ -156,7 +152,6 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
         setPosts(prev => prev.map(p => 
           p.id === postId ? { ...p, ...updatedData } : p
         ));
-        console.log('✅ 게시글 수정 완료:', postId);
       } else {
         throw new Error(result.error || '게시글 수정 실패');
       }
@@ -179,7 +174,6 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       if (result.success) {
         setPosts(prev => prev.filter(p => p.id !== postId));
         setComments(prev => prev.filter(c => c.postId !== postId));
-        console.log('✅ 게시글 삭제 완료:', postId);
       } else {
         throw new Error(result.error || '게시글 삭제 실패');
       }
@@ -187,7 +181,7 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { postId });
       throw err;
     }
-  }, [comments]);
+  }, [comments, posts]);
 
   // 게시글 좋아요 토글
   const togglePostLike = useCallback(async (postId: string, userId: string) => {
@@ -232,12 +226,6 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       throw new Error('로그인이 필요합니다.');
     }
 
-    console.log('💬 댓글 작성 시작:', {
-      postId: commentData.postId,
-      author: commentData.author,
-      authorId: commentData.authorId,
-    });
-
     try {
       const commentId = `comment_${Date.now()}`;
       const now = new Date().toISOString();
@@ -248,7 +236,7 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
         postId: commentData.postId,
         author: commentData.author,
         authorId: commentData.authorId,
-        content: commentData.content,
+        content: sanitizeText(commentData.content),
         date: commentData.date,
         likes: 0,
         likedBy: [],
@@ -258,11 +246,6 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
         ...(commentData.parentId && { parentId: commentData.parentId }),
       };
 
-      console.log('📤 Firestore에 댓글 저장 시도:', {
-        commentId,
-        data: newComment,
-      });
-
       const result = await setDocument('comments', commentId, newComment);
       
       if (!result.success) {
@@ -270,19 +253,19 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(result.error || '댓글 저장에 실패했습니다.');
       }
       
-      console.log('✅ Firestore 댓글 저장 성공');
-      
       setComments(prev => [...prev, newComment]);
       
-      // 게시글의 댓글 수 업데이트
-      const post = posts.find(p => p.id === commentData.postId);
-      if (post) {
-        await updatePost(commentData.postId, {
-          comments: post.comments + 1,
-        });
-      }
-      
-      console.log('✅ 댓글 추가 완료:', commentId);
+      // 게시글의 댓글 수 업데이트 (실패해도 댓글 자체는 저장됨)
+      try {
+        const post = posts.find(p => p.id === commentData.postId);
+        if (post) {
+          await updatePost(commentData.postId, {
+            comments: post.comments + 1,
+            });
+          }
+        } catch (countErr) {
+          // 댓글 수 업데이트 실패 (댓글은 정상 저장됨)
+        }
     } catch (err: any) {
       console.error('❌ 댓글 작성 에러:', err);
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { 
@@ -303,15 +286,17 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
       if (result.success) {
         setComments(prev => prev.filter(c => c.id !== commentId));
         
-        // 게시글의 댓글 수 업데이트
-        const post = posts.find(p => p.id === comment.postId);
-        if (post) {
-          await updatePost(comment.postId, {
-            comments: Math.max(0, post.comments - 1),
-          });
+        // 게시글의 댓글 수 업데이트 (실패해도 댓글 삭제는 완료)
+        try {
+          const post = posts.find(p => p.id === comment.postId);
+          if (post) {
+            await updatePost(comment.postId, {
+              comments: Math.max(0, post.comments - 1),
+            });
+          }
+        } catch (countErr) {
+          // 댓글 수 업데이트 실패 (댓글 삭제는 정상 처리됨)
         }
-        
-        console.log('✅ 댓글 삭제 완료:', commentId);
       } else {
         throw new Error(result.error || '댓글 삭제 실패');
       }
@@ -375,6 +360,7 @@ export const PostProvider = ({ children }: { children: ReactNode }) => {
     incrementPostViews,
     getPostComments,
     refreshPosts,
+    _activate,
   };
 
   return (
@@ -389,6 +375,7 @@ export const usePosts = () => {
   if (context === undefined) {
     throw new Error('usePosts must be used within a PostProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };
 

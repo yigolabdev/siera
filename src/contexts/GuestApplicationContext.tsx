@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
+import { getDocuments, setDocument, updateDocument, deleteDocument, queryDocuments } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { GuestApplication } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
 import { useAuth } from './AuthContextEnhanced';
+import { sanitizeText } from '../utils/sanitize';
 
 interface GuestApplicationContextType {
   guestApplications: GuestApplication[];
@@ -15,6 +16,7 @@ interface GuestApplicationContextType {
   refreshGuestApplications: () => Promise<void>;
   getApplicationsByStatus: (status: GuestApplication['status']) => GuestApplication[];
   getApplicationsByEvent: (eventId: string) => GuestApplication[];
+  _activate: () => void;
 }
 
 const GuestApplicationContext = createContext<GuestApplicationContextType | undefined>(undefined);
@@ -24,6 +26,10 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
   
   // 🔥 AuthContext 사용
   const auth = useAuth();
@@ -61,6 +67,7 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
 
   // Firebase에서 게스트 신청 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
+    if (!_activated) return;
     const initializeData = async () => {
       console.log('🔄 [GuestApplicationContext] 데이터 로드 시작, 인증 상태:', {
         isAuthenticated: !!auth.firebaseUser,
@@ -79,15 +86,33 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
     if (!auth.isLoading) {
       initializeData();
     }
-  }, [auth.firebaseUser, auth.isLoading, loadApplications]);
+  }, [_activated, auth.firebaseUser, auth.isLoading, loadApplications]);
 
   // 게스트 신청 추가
   const addGuestApplication = async (
     applicationData: Omit<GuestApplication, 'id' | 'appliedAt' | 'status'>
   ) => {
     try {
+      // 필수 필드 검증 및 기본값 설정
+      if (!applicationData.name || applicationData.name.trim() === '') {
+        throw new Error('이름은 필수 입력 항목입니다.');
+      }
+      if (!applicationData.phoneNumber || applicationData.phoneNumber.trim() === '') {
+        throw new Error('전화번호는 필수 입력 항목입니다.');
+      }
+      if (!applicationData.eventId) {
+        throw new Error('이벤트 ID가 필요합니다.');
+      }
+
       const newApplication: Omit<GuestApplication, 'id'> = {
         ...applicationData,
+        name: sanitizeText(applicationData.name.trim()),
+        email: sanitizeText(applicationData.email.trim()),
+        phoneNumber: sanitizeText(applicationData.phoneNumber.trim()),
+        company: sanitizeText(applicationData.company?.trim() || ''),
+        position: sanitizeText(applicationData.position?.trim() || ''),
+        eventTitle: sanitizeText(applicationData.eventTitle || ''),
+        eventDate: applicationData.eventDate || '',
         appliedAt: new Date().toISOString(),
         status: 'pending',
       };
@@ -111,9 +136,10 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ 게스트 신청 추가 실패:', message);
+      console.error('❌ 게스트 신청 추가 실패:', message, error);
       logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
         context: 'GuestApplicationContext.addGuestApplication',
+        applicationData,
       });
       throw error;
     }
@@ -140,29 +166,59 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
         throw new Error(result.error || '게스트 신청 승인 실패');
       }
 
-      // 3. participations 컬렉션에 참가자 추가
-      const participationId = `participation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // 3. participations: 기존 participation이 있으면 유지, 없으면 새로 생성 (입금 전이므로 pending)
+      const realUserId = application.userId || applicationId;
       const now = new Date().toISOString();
       
-      const participationData = {
-        id: participationId,
-        eventId: application.eventId,
-        userId: applicationId, // 게스트는 applicationId를 userId로 사용
-        userName: application.name,
-        userEmail: application.email,
-        isGuest: true, // 게스트 표시
-        status: 'confirmed',
-        registeredAt: now,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      console.log('📤 participations 추가:', participationData);
-
-      const participationResult = await setDocument('participations', participationId, participationData);
+      const existingParts = await queryDocuments<any>('participations', [
+        { field: 'eventId', operator: '==', value: application.eventId },
+        { field: 'userId', operator: '==', value: realUserId },
+      ]);
       
-      if (!participationResult.success) {
-        throw new Error('참가자 등록 실패');
+      let participationId: string;
+      
+      if (existingParts.success && existingParts.data && existingParts.data.length > 0) {
+        const existing = existingParts.data[0];
+        participationId = existing.id;
+        // 기존 participation이 이미 있으면 isGuest만 마킹 (status는 payment 상태에 따라 관리)
+        if (existing.status === 'cancelled') {
+          await updateDocument('participations', participationId, {
+            status: 'pending',
+            isGuest: true,
+            updatedAt: now,
+          });
+        } else {
+          await updateDocument('participations', participationId, {
+            isGuest: true,
+            updatedAt: now,
+          });
+        }
+        console.log('📤 기존 participation 유지 (status: ' + existing.status + '):', participationId);
+      } else {
+        participationId = `participation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const participationData = {
+          id: participationId,
+          eventId: application.eventId,
+          userId: realUserId,
+          userName: application.name,
+          userEmail: application.email || '',
+          userPhone: application.phoneNumber || application.phone || '',
+          userCompany: application.company || '',
+          userPosition: application.position || '',
+          isGuest: true,
+          status: 'pending',
+          registeredAt: now,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        const participationResult = await setDocument('participations', participationId, participationData);
+        
+        if (!participationResult.success) {
+          throw new Error('참가자 등록 실패');
+        }
+        console.log('📤 새 participation 생성:', participationId);
       }
 
       // 4. 로컬 상태 업데이트
@@ -255,6 +311,7 @@ export const GuestApplicationProvider = ({ children }: { children: ReactNode }) 
     refreshGuestApplications,
     getApplicationsByStatus,
     getApplicationsByEvent,
+    _activate,
   };
 
   return (
@@ -269,5 +326,6 @@ export const useGuestApplications = () => {
   if (!context) {
     throw new Error('useGuestApplications must be used within GuestApplicationProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };

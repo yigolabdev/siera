@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getDocuments, setDocument, updateDocument, deleteDocument } from '../lib/firebase/firestore';
 import { PendingUser } from '../types';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
@@ -13,6 +13,7 @@ interface PendingUserContextType {
   rejectPendingUser: (userId: string, reason?: string) => Promise<void>;
   refreshPendingUsers: () => Promise<void>;
   getPendingUsersByStatus: (status: PendingUser['status']) => PendingUser[];
+  _activate: () => void;
 }
 
 const PendingUserContext = createContext<PendingUserContextType | undefined>(undefined);
@@ -22,19 +23,18 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
   
   // 🔥 AuthContext 사용
   const auth = useAuth();
 
   // Firebase에서 가입 대기 사용자 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
+    if (!_activated) return;
     const initializeData = async () => {
-      console.log('🔄 [PendingUserContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
       // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
       if (auth.firebaseUser || !hasLoadedOnce) {
         await loadPendingUsers();
@@ -46,14 +46,12 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
     if (!auth.isLoading) {
       initializeData();
     }
-  }, [auth.firebaseUser, auth.isLoading]);
+  }, [_activated, auth.firebaseUser, auth.isLoading]);
 
   const loadPendingUsers = async () => {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log('🔄 [PendingUserContext] pendingUsers 데이터 로드 시작');
 
       const result = await getDocuments<PendingUser>('pendingUsers');
       if (result.success && result.data) {
@@ -62,9 +60,7 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
           new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
         );
         setPendingUsers(sortedUsers);
-        console.log('✅ Firebase에서 가입 대기자 데이터 로드:', sortedUsers.length, '명');
       } else {
-        console.log('ℹ️ Firebase에서 로드된 가입 대기자 데이터가 없습니다.');
         setPendingUsers([]);
       }
     } catch (err: any) {
@@ -81,17 +77,13 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
   // 가입 승인
   const approvePendingUser = async (userId: string) => {
     try {
-      console.log('🚀 가입 승인 처리 시작:', userId);
-      
       // 1. pendingUser 정보 가져오기
       const pendingUser = pendingUsers.find(u => u.id === userId);
       if (!pendingUser) {
         throw new Error('가입 대기자를 찾을 수 없습니다.');
       }
       
-      console.log('📋 가입 대기자 정보:', pendingUser);
-      
-      // 2. members 컬렉션에 추가
+      // 2. members 컬렉션에 정회원으로 추가
       const memberData = {
         id: pendingUser.id,
         name: pendingUser.name,
@@ -104,17 +96,17 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
         bio: pendingUser.applicationMessage || '',
         role: 'member' as const,
         isApproved: true,
+        isActive: true,
         isAuthenticated: true,
         joinDate: new Date().toISOString().split('T')[0],
         attendanceRate: 0,
-        profileImage: null,
+        profileImage: pendingUser.profileImage || null,
+        authProvider: pendingUser.authProvider || '',
         referredBy: pendingUser.referredBy,
         hikingLevel: pendingUser.hikingLevel,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
-      console.log('📤 members 컬렉션에 추가 시도:', memberData);
       
       const memberResult = await setDocument('members', userId, memberData);
       
@@ -123,31 +115,16 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(memberResult.error || 'members 컬렉션 추가 실패');
       }
       
-      console.log('✅ members 컬렉션 추가 성공');
-      
-      // 3. pendingUsers 상태 업데이트
-      const updateResult = await updateDocument('pendingUsers', userId, {
-        status: 'approved',
-        approvedAt: new Date().toISOString(),
-      });
+      // 3. pendingUsers 문서 삭제 (승인 완료 후 혼란 방지)
+      const deleteResult = await deleteDocument('pendingUsers', userId);
 
-      if (!updateResult.success) {
-        console.error('❌ pendingUsers 상태 업데이트 실패:', updateResult.error);
-        throw new Error(updateResult.error || 'pendingUsers 상태 업데이트 실패');
+      if (!deleteResult.success) {
+        // 삭제 실패해도 members에 추가는 완료됨 - 경고만 출력
+        console.warn('⚠️ pendingUsers 문서 삭제 실패 (정회원 등록은 완료됨):', deleteResult.error);
       }
-      
-      console.log('✅ pendingUsers 상태 업데이트 성공');
 
-      // 4. 로컬 상태 업데이트
-      setPendingUsers(prev =>
-        prev.map(user =>
-          user.id === userId
-            ? { ...user, status: 'approved' as const }
-            : user
-        )
-      );
-      
-      console.log('✅ 가입 승인 완료:', userId);
+      // 4. 로컬 상태 업데이트 (목록에서 제거)
+      setPendingUsers(prev => prev.filter(user => user.id !== userId));
     } catch (err: any) {
       console.error('❌ 가입 승인 실패:', err.message);
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
@@ -161,8 +138,6 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
   // 가입 거절
   const rejectPendingUser = async (userId: string, reason?: string) => {
     try {
-      console.log('❌ 가입 거절 처리:', userId);
-      
       // Firebase에서 상태 업데이트
       const result = await updateDocument('pendingUsers', userId, {
         status: 'rejected',
@@ -179,8 +154,6 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
               : user
           )
         );
-        
-        console.log('✅ 가입 거절 완료:', userId);
       } else {
         throw new Error(result.error || '가입 거절 실패');
       }
@@ -212,6 +185,7 @@ export const PendingUserProvider = ({ children }: { children: ReactNode }) => {
     rejectPendingUser,
     refreshPendingUsers,
     getPendingUsersByStatus,
+    _activate,
   };
 
   return (
@@ -226,5 +200,6 @@ export const usePendingUsers = () => {
   if (!context) {
     throw new Error('usePendingUsers must be used within PendingUserProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };

@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    @apply overflow-x-hidden;
+  }
+  
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased;
   }
@@ -77,5 +81,35 @@
   
   .animate-spin-slow {
     animation: spin-slow 3s linear infinite;
+  }
+
+  /* 갤러리 이미지 페이드인 애니메이션 */
+  @keyframes gallery-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-in.fade-in {
+    animation: gallery-fade-in 400ms ease-out both;
+  }
+
+  /* 스켈레톤 라운드 상속 */
+  .rounded-inherit {
+    border-radius: inherit;
+  }
+
+  /* 스크롤바 숨기기 (갤러리 필터) */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

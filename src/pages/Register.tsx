@@ -1,487 +1,390 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Smartphone, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContextEnhanced';
-import { formatPhoneNumberInput, removePhoneNumberHyphens } from '../utils/format';
+import SEOHead from '../components/SEOHead';
+import Modal from '../components/ui/Modal';
+import { isInAppBrowser, openInExternalBrowser, isKakaoTalkBrowser } from '../utils/browserDetect';
+import { cleanupRecaptcha } from '../lib/firebase/auth';
+import { GoogleIcon, KakaoIcon } from '../components/icons/SocialIcons';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    passwordConfirm: '',
-    phoneNumber: '',
-    gender: '',
-    birthYear: '',
-    company: '',
-    position: '',
-    referredBy: '',
-    hikingLevel: '',
-    applicationMessage: '',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { loginWithGoogle, initPhoneAuth, sendPhoneCode, verifyPhoneCode, firebaseUser, user, isLoading, googleRedirectResult, clearGoogleRedirectResult } = useAuth();
+  const [isGoogleLoggingIn, setIsGoogleLoggingIn] = useState(false);
+  const [isInApp, setIsInApp] = useState(false);
+  
+  // SMS 인증 상태
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [smsSent, setSmsSent] = useState(false);
+  const [isSendingSms, setIsSendingSms] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [smsError, setSmsError] = useState('');
+  const [smsSuccess, setSmsSuccess] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const recaptchaInitialized = useRef(false);
+
+  // 이미 Firebase Auth로 인증된 상태면 바로 적절한 페이지로 이동 (계정 재선택 방지)
+  useEffect(() => {
+    if (isLoading) return;
+    if (firebaseUser && !user) {
+      navigate('/complete-profile', { replace: true });
+    } else if (firebaseUser && user && !user.isApproved) {
+      navigate('/home', { replace: true });
+    } else if (firebaseUser && user?.isApproved) {
+      navigate('/home/events', { replace: true });
+    }
+  }, [firebaseUser, user, isLoading, navigate]);
+
+  // Google redirect 결과 처리 (모바일)
+  useEffect(() => {
+    if (!googleRedirectResult) return;
+    clearGoogleRedirectResult();
+    if (googleRedirectResult.success) {
+      if (googleRedirectResult.isPendingUser) {
+        navigate('/home', { replace: true });
+      } else if (googleRedirectResult.needsProfile || googleRedirectResult.isNewUser) {
+        navigate('/complete-profile', { replace: true });
+      } else {
+        navigate('/home/events', { replace: true });
+      }
+    }
+  }, [googleRedirectResult, clearGoogleRedirectResult, navigate]);
 
   // 페이지 로드 시 맨 위로 스크롤
   useEffect(() => {
     window.scrollTo(0, 0);
+    setIsInApp(isInAppBrowser());
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  // 카운트다운
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // SMS 모달 reCAPTCHA 초기화
+  useEffect(() => {
+    if (showSmsModal && !recaptchaInitialized.current) {
+      const timer = setTimeout(() => {
+        initPhoneAuth('reg-sms-send-button');
+        recaptchaInitialized.current = true;
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    if (!showSmsModal) {
+      recaptchaInitialized.current = false;
+      cleanupRecaptcha();
+    }
+  }, [showSmsModal, initPhoneAuth]);
+
+  const handleGoogleSignup = async () => {
+    if (isGoogleLoggingIn) return;
     
-    // 전화번호 필드인 경우 자동 포맷팅 적용
-    const formattedValue = name === 'phoneNumber' ? formatPhoneNumberInput(value) : value;
-    
-    setFormData({
-      ...formData,
-      [name]: formattedValue,
-    });
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: '',
-      });
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = '이름을 입력해주세요.';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = '이메일을 입력해주세요.';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = '올바른 이메일 형식이 아닙니다.';
-    }
-
-    if (!formData.password) {
-      newErrors.password = '비밀번호를 입력해주세요.';
-    } else if (formData.password.length < 6) {
-      newErrors.password = '비밀번호는 최소 6자 이상이어야 합니다.';
-    }
-
-    if (!formData.passwordConfirm) {
-      newErrors.passwordConfirm = '비밀번호 확인을 입력해주세요.';
-    } else if (formData.password !== formData.passwordConfirm) {
-      newErrors.passwordConfirm = '비밀번호가 일치하지 않습니다.';
-    }
-
-    if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = '전화번호를 입력해주세요.';
-    } else if (!/^\d{3}-\d{3,4}-\d{4}$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = '올바른 전화번호 형식이 아닙니다. (예: 010-1234-5678)';
-    }
-
-    if (!formData.gender) {
-      newErrors.gender = '성별을 선택해주세요.';
-    }
-
-    if (!formData.birthYear.trim()) {
-      newErrors.birthYear = '출생연도를 입력해주세요.';
-    } else if (!/^\d{4}$/.test(formData.birthYear)) {
-      newErrors.birthYear = '올바른 연도를 입력해주세요. (예: 1990)';
-    }
-
-    if (!formData.company.trim()) {
-      newErrors.company = '소속을 입력해주세요.';
-    }
-
-    if (!formData.position.trim()) {
-      newErrors.position = '직책을 입력해주세요.';
-    }
-
-    if (!formData.hikingLevel) {
-      newErrors.hikingLevel = '산행능력을 선택해주세요.';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 이미 제출 중이면 중복 실행 방지
-    if (isSubmitting) return;
-
-    if (!validateForm()) {
+    if (isInApp) {
+      openInExternalBrowser();
       return;
     }
-
-    setIsSubmitting(true);
+    
+    setIsGoogleLoggingIn(true);
     try {
-      console.log('📝 회원가입 폼 제출:', {
-        name: formData.name,
-        email: formData.email,
-      });
-
-      const result = await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        phoneNumber: removePhoneNumberHyphens(formData.phoneNumber), // 하이픈 제거 후 저장
-        gender: formData.gender,
-        birthYear: formData.birthYear,
-        company: formData.company,
-        position: formData.position,
-        referredBy: formData.referredBy,
-        hikingLevel: formData.hikingLevel,
-        applicationMessage: formData.applicationMessage,
-      });
-
+      const result = await loginWithGoogle();
+      
       if (result.success) {
-        console.log('✅ 회원가입 성공');
-        alert(
-          '입회 신청이 완료되었습니다!\n\n' +
-          '정기산행에 2회 게스트로 참여하신 후,\n' +
-          '운영위원회 승인을 거쳐 가입이 완료됩니다.\n' +
-          '승인 완료 시 이메일로 안내드립니다.'
-        );
-        navigate('/');
-      } else {
-        console.error('❌ 회원가입 실패:', result.message);
-        alert(result.message || '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+        if (result.isPendingUser) {
+          navigate('/home');
+        } else if (result.isNewUser || result.needsProfile) {
+          navigate('/complete-profile');
+        } else {
+          navigate('/home/events');
+        }
+      } else if (result.message && !result.message.includes('취소')) {
+        alert(result.message || 'Google 회원가입에 실패했습니다.');
       }
     } catch (error: any) {
-      console.error('❌ 회원가입 오류:', error);
-      alert(`회원가입 중 오류가 발생했습니다.\n\n${error.message || '다시 시도해주세요.'}`);
+      console.error('Google 회원가입 오류:', error);
+      alert('Google 회원가입 중 오류가 발생했습니다.\n휴대폰 인증을 이용해주세요.');
     } finally {
-      setIsSubmitting(false);
+      setIsGoogleLoggingIn(false);
     }
+  };
+
+  const formatPhoneInput = (value: string) => {
+    const numbers = value.replace(/[^0-9]/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 7) return numbers.slice(0, 3) + '-' + numbers.slice(3);
+    return numbers.slice(0, 3) + '-' + numbers.slice(3, 7) + '-' + numbers.slice(7, 11);
+  };
+
+  const handleSendSms = async () => {
+    if (isSendingSms || countdown > 0) return;
+    const cleanNumber = phoneNumber.replace(/[-\s]/g, '');
+    if (cleanNumber.length < 10) { setSmsError('올바른 전화번호를 입력해주세요.'); return; }
+    setIsSendingSms(true); setSmsError(''); setSmsSuccess('');
+    try {
+      if (smsSent) {
+        initPhoneAuth('reg-sms-send-button');
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      const result = await sendPhoneCode(cleanNumber);
+      if (result.success) { setSmsSent(true); setCountdown(180); setSmsSuccess('인증코드가 전송되었습니다.'); }
+      else setSmsError(result.error || 'SMS 전송에 실패했습니다.');
+    } catch { setSmsError('SMS 전송 중 오류가 발생했습니다.'); }
+    finally { setIsSendingSms(false); }
+  };
+
+  const handleVerifyCode = async () => {
+    if (isVerifying || verificationCode.length !== 6) return;
+    setIsVerifying(true); setSmsError(''); setSmsSuccess('');
+    try {
+      const result = await verifyPhoneCode(verificationCode);
+      if (result.success) {
+        if (result.matchedMember) {
+          setSmsSuccess(`${result.matchedMember.name}님, 환영합니다! 기존 회원으로 로그인되었습니다.`);
+          setTimeout(() => { setShowSmsModal(false); navigate('/home/events'); }, 2500);
+        } else if (result.isPendingUser) {
+          setSmsSuccess('인증이 완료되었습니다. 승인 대기 중입니다.');
+          setTimeout(() => { setShowSmsModal(false); navigate('/home'); }, 2500);
+        } else if (result.needsProfile || result.isNewUser) {
+          setSmsSuccess('인증이 완료되었습니다! 프로필을 작성해주세요.');
+          setTimeout(() => { setShowSmsModal(false); navigate('/complete-profile'); }, 2500);
+        } else {
+          setSmsSuccess('로그인되었습니다!');
+          setTimeout(() => { setShowSmsModal(false); navigate('/home/events'); }, 2000);
+        }
+      } else { setSmsError(result.message || '인증에 실패했습니다.'); }
+    } catch { setSmsError('인증 확인 중 오류가 발생했습니다.'); }
+    finally { setIsVerifying(false); }
+  };
+
+  const handleCloseSmsModal = () => {
+    setShowSmsModal(false); setPhoneNumber(''); setVerificationCode('');
+    setSmsSent(false); setSmsError(''); setSmsSuccess(''); setCountdown(0);
+    cleanupRecaptcha(); recaptchaInitialized.current = false;
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            홈으로 돌아가기
-          </Link>
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-white mb-2">입회 신청</h1>
-            <p className="text-lg text-slate-400">
-              시애라 클럽에 오신 것을 환영합니다
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <SEOHead
+        title="입회신청"
+        description="시애라 등산 커뮤니티 입회 신청 페이지. Google 간편 로그인으로 빠르게 가입하고, 게스트 산행 2회 참석 후 정회원이 될 수 있습니다."
+        path="/register"
+      />
+      <div className="max-w-md w-full">
+        {/* 뒤로 가기 버튼 */}
+        <Link
+          to="/"
+          className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-8 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          메인으로 돌아가기
+        </Link>
+
+        {/* 헤더 */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
+            시애라 클럽 가입
+          </h1>
+          <p className="text-slate-600 text-lg">
+            간편하게 회원가입하고 시애라 클럽에 참여하세요
+          </p>
+        </div>
+
+        {/* 회원가입 카드 */}
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8">
+          <h2 className="text-xl font-bold text-slate-900 text-center mb-6">
+            간편 회원가입
+          </h2>
+
+          {isInApp && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800 text-center">
+                {isKakaoTalkBrowser() ? '카카오톡' : '인앱'} 브라우저에서 접속 중입니다.
+                <br />
+                <strong>휴대폰 인증</strong>을 이용해주세요.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Google 회원가입 버튼 (우선 표시) */}
+            <button
+              type="button"
+              onClick={handleGoogleSignup}
+              disabled={isGoogleLoggingIn}
+              className="w-full bg-white text-slate-700 py-4 rounded-lg font-semibold text-base hover:bg-slate-50 transition-all flex items-center justify-center gap-3 border-2 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+            >
+              {isGoogleLoggingIn ? (
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  처리 중...
+                </>
+              ) : isInApp ? (
+                <>
+                  <GoogleIcon size={24} />
+                  <span>외부 브라우저에서 Google 가입</span>
+                </>
+              ) : (
+                <>
+                  <GoogleIcon size={24} />
+                  <span>Google로 회원가입</span>
+                </>
+              )}
+            </button>
+
+            {/* SMS 인증 버튼 */}
+            <button
+              type="button"
+              onClick={() => setShowSmsModal(true)}
+              disabled={isGoogleLoggingIn}
+              className="w-full bg-emerald-600 text-white py-4 rounded-lg font-bold text-base hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Smartphone className="w-6 h-6" />
+              <span>휴대폰 번호로 가입</span>
+            </button>
+          </div>
+
+          {/* 안내 메시지 */}
+          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-900 leading-relaxed">
+              <span className="font-semibold">정회원 가입 프로세스:</span>
+              <br />
+              1. 휴대폰 번호 또는 Google 계정으로 간편 가입
+              <br />
+              2. 추가 정보 입력 (이름, 연락처 등)
+              <br />
+              3. 게스트로 산행 2회 참석
+              <br />
+              4. 관리자 승인 후 정회원 전환
+            </p>
+          </div>
+          <div className="mt-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+            <p className="text-sm text-emerald-800 leading-relaxed">
+              <span className="font-semibold">게스트 산행 안내:</span>
+              <br />
+              입회 신청 후 바로 게스트로 산행에 참여하실 수 있습니다.
+              <br />
+              게스트 산행 2회 참석 후 정회원으로 승인됩니다.
+            </p>
+          </div>
+
+          {/* 이미 회원인 경우 */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600">
+              이미 회원이신가요?{' '}
+              <Link
+                to="/"
+                className="text-slate-900 font-semibold hover:text-slate-700 transition-colors"
+              >
+                로그인하기
+              </Link>
             </p>
           </div>
         </div>
 
-        {/* Notice */}
-        <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-semibold mb-1 text-white">가입 절차 안내</p>
-              <p className="text-white">입회를 희망하는 분은 정기산행에 2회 게스트로 참여하신 후, 운영위원회의 승인을 거쳐서 회원가입이 완료됩니다.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Form Card */}
-        <div className="bg-slate-900/80 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-slate-800 shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Info */}
-            <div>
-              <h3 className="text-xl font-bold text-white mb-4 pb-3 border-b border-slate-700">
-                기본 정보
-              </h3>
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    이름 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.name ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="홍길동"
-                  />
-                  {errors.name && (
-                    <p className="mt-2 text-sm text-red-400">{errors.name}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    이메일 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.email ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="example@email.com"
-                  />
-                  {errors.email && (
-                    <p className="mt-2 text-sm text-red-400">{errors.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    비밀번호 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.password ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="최소 6자 이상"
-                  />
-                  {errors.password && (
-                    <p className="mt-2 text-sm text-red-400">{errors.password}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    비밀번호 확인 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    name="passwordConfirm"
-                    value={formData.passwordConfirm}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.passwordConfirm ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="비밀번호를 다시 입력하세요"
-                  />
-                  {errors.passwordConfirm && (
-                    <p className="mt-2 text-sm text-red-400">{errors.passwordConfirm}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    전화번호 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.phoneNumber ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="010-1234-5678"
-                  />
-                  {errors.phoneNumber && (
-                    <p className="mt-2 text-sm text-red-400">{errors.phoneNumber}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    성별 <span className="text-red-400">*</span>
-                  </label>
-                  <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.gender ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all cursor-pointer`}
-                  >
-                    <option value="">성별을 선택해주세요</option>
-                    <option value="male">남성</option>
-                    <option value="female">여성</option>
-                  </select>
-                  {errors.gender && (
-                    <p className="mt-2 text-sm text-red-400">{errors.gender}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    출생연도 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="birthYear"
-                    value={formData.birthYear}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.birthYear ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="1990"
-                    maxLength={4}
-                  />
-                  {errors.birthYear && (
-                    <p className="mt-2 text-sm text-red-400">{errors.birthYear}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Professional Info */}
-            <div className="pt-6 border-t border-slate-700">
-              <h3 className="text-xl font-bold text-white mb-4 pb-3 border-b border-slate-700">
-                직업 정보
-              </h3>
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    소속 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.company ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="○○그룹"
-                  />
-                  {errors.company && (
-                    <p className="mt-2 text-sm text-red-400">{errors.company}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    직책 <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="position"
-                    value={formData.position}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.position ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="예: 대표이사, 전무, 부장 등"
-                  />
-                  {errors.position && (
-                    <p className="mt-2 text-sm text-red-400">{errors.position}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Hiking Info */}
-            <div className="pt-6 border-t border-slate-700">
-              <h3 className="text-xl font-bold text-white mb-4 pb-3 border-b border-slate-700">
-                산행 정보
-              </h3>
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    산행능력 <span className="text-red-400">*</span>
-                  </label>
-                  <select
-                    name="hikingLevel"
-                    value={formData.hikingLevel}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.hikingLevel ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all cursor-pointer`}
-                  >
-                    <option value="">산행능력을 선택해주세요</option>
-                    <option value="beginner">초급 - 둘레길, 낮은 산 (2~3시간)</option>
-                    <option value="intermediate">중급 - 일반 산행 (4~5시간)</option>
-                    <option value="advanced">상급 - 장시간 산행 (6시간 이상)</option>
-                  </select>
-                  {errors.hikingLevel && (
-                    <p className="mt-2 text-sm text-red-400">{errors.hikingLevel}</p>
-                  )}
-                  <p className="mt-2 text-sm text-slate-400">
-                    본인의 체력 수준에 맞는 산행능력을 선택해주세요
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    추천인
-                  </label>
-                  <input
-                    type="text"
-                    name="referredBy"
-                    value={formData.referredBy}
-                    onChange={handleChange}
-                    className={`w-full px-5 py-4 rounded-xl border-2 ${
-                      errors.referredBy ? 'border-red-500' : 'border-slate-700'
-                    } bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all`}
-                    placeholder="시애라 회원의 이름을 입력해주세요 (선택)"
-                  />
-                  {errors.referredBy && (
-                    <p className="mt-2 text-sm text-red-400">{errors.referredBy}</p>
-                  )}
-                  <p className="mt-2 text-sm text-slate-400">
-                    시애라 회원의 추천이 있으면 더욱 좋습니다 (선택사항)
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-white font-semibold mb-2 text-sm">
-                    입회신청 문구
-                  </label>
-                  <textarea
-                    name="applicationMessage"
-                    value={formData.applicationMessage}
-                    onChange={handleChange}
-                    rows={5}
-                    className="w-full px-5 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all resize-none"
-                    placeholder="시애라 클럽에 가입하고 싶은 이유나 자기소개를 자유롭게 작성해주세요."
-                  />
-                  <p className="mt-2 text-sm text-slate-400">
-                    선택사항입니다. 입회 심사에 도움이 됩니다.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-6">
-              <Link
-                to="/"
-                className="flex-1 px-6 py-4 bg-slate-800 text-white rounded-xl font-bold text-center hover:bg-slate-700 transition-all border border-slate-700"
-              >
-                취소
-              </Link>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-6 py-4 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-emerald-500"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    처리 중...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-5 h-5" />
-                    가입 신청하기
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+        {/* 하단 안내 */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-slate-500">
+            회원가입 시{' '}
+            <Link to="/terms" className="text-slate-700 hover:text-slate-900 underline">
+              이용약관
+            </Link>
+            {' '}및{' '}
+            <Link to="/privacy" className="text-slate-700 hover:text-slate-900 underline">
+              개인정보처리방침
+            </Link>
+            에 동의하게 됩니다.
+          </p>
         </div>
       </div>
+
+      {/* SMS 인증 모달 */}
+      {showSmsModal && (
+        <Modal onClose={handleCloseSmsModal} maxWidth="max-w-md">
+          <div className="p-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Smartphone className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">휴대폰 인증</h3>
+              <p className="text-sm text-slate-500 mt-1">휴대폰 번호로 간편하게 가입하세요</p>
+            </div>
+
+            {!smsSent ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">휴대폰 번호</label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => { setPhoneNumber(formatPhoneInput(e.target.value)); setSmsError(''); }}
+                    placeholder="010-1234-5678"
+                    className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest"
+                    maxLength={13}
+                    autoFocus
+                  />
+                </div>
+                {smsError && <p className="text-sm text-red-500 text-center">{smsError}</p>}
+                <button
+                  id="reg-sms-send-button"
+                  type="button"
+                  onClick={handleSendSms}
+                  disabled={isSendingSms || phoneNumber.replace(/[-\s]/g, '').length < 10}
+                  className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSendingSms ? (<><Loader2 className="w-5 h-5 animate-spin" />전송 중...</>) : (<><ArrowRight className="w-5 h-5" />인증코드 받기</>)}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                  <p className="text-sm text-emerald-700"><strong>{phoneNumber}</strong>으로 인증코드를 전송했습니다</p>
+                  {countdown > 0 && <p className="text-xs text-emerald-600 mt-1">남은 시간: {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">인증코드 6자리</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={verificationCode}
+                    onChange={(e) => { setVerificationCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6)); setSmsError(''); }}
+                    placeholder="000000"
+                    className="w-full px-4 py-3 text-2xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-[0.5em] font-mono"
+                    maxLength={6}
+                    autoFocus
+                  />
+                </div>
+                {smsError && <p className="text-sm text-red-500 text-center">{smsError}</p>}
+                {smsSuccess && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center animate-in fade-in">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <CheckCircle className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <p className="text-sm font-semibold text-emerald-800">{smsSuccess}</p>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleVerifyCode}
+                  disabled={isVerifying || verificationCode.length !== 6}
+                  className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isVerifying ? (<><Loader2 className="w-5 h-5 animate-spin" />확인 중...</>) : (<><CheckCircle className="w-5 h-5" />인증 확인</>)}
+                </button>
+                <div className="flex items-center justify-between text-sm">
+                  <button type="button" onClick={() => { setSmsSent(false); setVerificationCode(''); setSmsError(''); setSmsSuccess(''); recaptchaInitialized.current = false; cleanupRecaptcha(); setTimeout(() => { initPhoneAuth('reg-sms-send-button'); recaptchaInitialized.current = true; }, 500); }} className="text-slate-500 hover:text-slate-700 underline">번호 다시 입력</button>
+                  <button type="button" onClick={() => { recaptchaInitialized.current = false; cleanupRecaptcha(); setTimeout(() => { initPhoneAuth('reg-sms-send-button'); recaptchaInitialized.current = true; setTimeout(() => handleSendSms(), 500); }, 500); }} disabled={countdown > 0} className="text-emerald-600 hover:text-emerald-700 underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed">
+                    {countdown > 0 ? `재전송 (${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')})` : '인증코드 재전송'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

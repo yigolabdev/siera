@@ -1,14 +1,17 @@
-import { useState } from 'react';
-import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { BookOpen, Plus, Edit, Trash2, Eye, Save, X, Calendar, FileText } from 'lucide-react';
 import { usePoems, Poem } from '../../contexts/PoemContext';
+import { usePosts } from '../../contexts/PostContext';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 
 const PoemManagement = () => {
   const { poems, currentPoem, addPoem, updatePoem, deletePoem } = usePoems();
+  const { posts } = usePosts();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isSelectPostModalOpen, setIsSelectPostModalOpen] = useState(false);
   const [editingPoem, setEditingPoem] = useState<Poem | null>(null);
   const [previewPoem, setPreviewPoem] = useState<Poem | null>(null);
   
@@ -18,6 +21,13 @@ const PoemManagement = () => {
     content: '',
     month: '',
   });
+
+  // 관악아(시) 게시글만 필터링
+  const gwanakPosts = useMemo(() => {
+    return posts
+      .filter(post => post.category === 'poem')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [posts]);
 
   const handleOpenModal = (poem?: Poem) => {
     if (poem) {
@@ -53,26 +63,50 @@ const PoemManagement = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title || !formData.author || !formData.content || !formData.month) {
       alert('모든 필드를 입력해주세요.');
       return;
     }
 
-    if (editingPoem) {
-      updatePoem(editingPoem.id, formData);
-      alert('시가 수정되었습니다.');
-    } else {
-      addPoem(formData);
-      alert('시가 등록되었습니다.');
+    try {
+      if (editingPoem) {
+        await updatePoem(editingPoem.id, formData);
+        alert('시가 수정되었습니다.');
+      } else {
+        await addPoem(formData);
+        alert('시가 등록되었습니다.');
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error('시 저장 실패:', error);
+      alert('시 저장에 실패했습니다. 다시 시도해주세요.');
     }
-    handleCloseModal();
   };
 
-  const handleDelete = (id: string) => {
+  const handleSelectPost = (post: any) => {
+    setFormData({
+      title: post.title,
+      author: post.author,
+      content: post.content,
+      month: formData.month, // 월은 유지
+    });
+    setIsSelectPostModalOpen(false);
+  };
+
+  const handleOpenSelectPostModal = () => {
+    setIsSelectPostModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
     if (confirm('정말 삭제하시겠습니까?')) {
-      deletePoem(id);
-      alert('시가 삭제되었습니다.');
+      try {
+        await deletePoem(id);
+        alert('시가 삭제되었습니다.');
+      } catch (error) {
+        console.error('시 삭제 실패:', error);
+        alert('시 삭제에 실패했습니다.');
+      }
     }
   };
 
@@ -86,18 +120,12 @@ const PoemManagement = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">이달의 시 관리</h1>
-          <p className="text-xl text-slate-600">
-            매달 산행 안내서에 실릴 시를 관리합니다.
-          </p>
-        </div>
+      <div className="flex justify-end mb-6">
         <button
           onClick={() => handleOpenModal()}
-          className="px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center gap-2 text-sm"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           새 시 등록
         </button>
       </div>
@@ -268,6 +296,22 @@ const PoemManagement = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   내용 <span className="text-red-500">*</span>
                 </label>
+                
+                {/* 게시판에서 선택 버튼 */}
+                <div className="mb-3">
+                  <button
+                    type="button"
+                    onClick={handleOpenSelectPostModal}
+                    className="px-4 py-2 bg-slate-600 text-white rounded-lg font-medium hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    게시판에서 선택하기
+                  </button>
+                  <p className="text-xs text-slate-500 mt-1">
+                    * 관악아 게시판에 등록된 시를 선택할 수 있습니다
+                  </p>
+                </div>
+
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -328,6 +372,52 @@ const PoemManagement = () => {
                 className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition-colors"
               >
                 닫기
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 게시판 선택 모달 */}
+      {isSelectPostModalOpen && (
+        <Modal onClose={() => setIsSelectPostModalOpen(false)} maxWidth="max-w-4xl">
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">
+              관악아 게시글 선택
+            </h2>
+            
+            {gwanakPosts.length > 0 ? (
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {gwanakPosts.map((post) => (
+                  <button
+                    key={post.id}
+                    onClick={() => handleSelectPost(post)}
+                    className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-lg transition-all text-left"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-bold text-slate-900">{post.title}</h3>
+                      <Badge variant="default">
+                        {new Date(post.createdAt).toLocaleDateString('ko-KR')}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-2">작성자: {post.author}</p>
+                    <p className="text-sm text-slate-500 line-clamp-3">{post.content}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-500">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                <p>관악아 게시판에 등록된 시가 없습니다.</p>
+              </div>
+            )}
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setIsSelectPostModalOpen(false)}
+                className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition-colors"
+              >
+                취소
               </button>
             </div>
           </div>

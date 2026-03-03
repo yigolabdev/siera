@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
-import { getDocuments, setDocument, updateDocument } from '../lib/firebase/firestore';
+import { getDocuments, setDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { RulesData, RulesAmendment } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
@@ -11,7 +11,9 @@ interface RulesContextType {
   error: string | null;
   updateRules: (content: string, version: string, effectiveDate: string) => Promise<void>;
   addAmendment: (amendment: RulesAmendment) => Promise<void>;
+  saveRulesWithAmendment: (content: string, version: string, effectiveDate: string, amendment: RulesAmendment) => Promise<void>;
   refreshRules: () => Promise<void>;
+  _activate: () => void;
 }
 
 const RulesContext = createContext<RulesContextType | undefined>(undefined);
@@ -171,6 +173,10 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
   
   // 🔥 AuthContext 사용
   const auth = useAuth();
@@ -207,6 +213,7 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase에서 회칙 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
+    if (!_activated) return;
     const initializeData = async () => {
       console.log('🔄 [RulesContext] 데이터 로드 시작, 인증 상태:', {
         isAuthenticated: !!auth.firebaseUser,
@@ -225,7 +232,7 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
     if (!auth.isLoading) {
       initializeData();
     }
-  }, [auth.firebaseUser, auth.isLoading, loadRules]);
+  }, [_activated, auth.firebaseUser, auth.isLoading, loadRules]);
 
   const updateRules = useCallback(async (content: string, version: string, effectiveDate: string) => {
     try {
@@ -237,7 +244,8 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
         updatedAt: new Date().toISOString(),
       };
 
-      const result = await updateDocument('rules', RULES_DOC_ID, updatedData);
+      // setDocument with merge=true: 문서가 없으면 생성, 있으면 업데이트
+      const result = await setDocument('rules', RULES_DOC_ID, updatedData, true);
       
       if (result.success) {
         setRulesData(updatedData);
@@ -264,7 +272,8 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
         updatedAt: new Date().toISOString(),
       };
 
-      const result = await updateDocument('rules', RULES_DOC_ID, updatedData);
+      // setDocument with merge=true: 문서가 없으면 생성, 있으면 업데이트
+      const result = await setDocument('rules', RULES_DOC_ID, updatedData, true);
       
       if (result.success) {
         setRulesData(updatedData);
@@ -283,6 +292,42 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [rulesData]);
 
+  // 회칙 내용 + 개정 이력을 한 번에 저장 (덮어쓰기 방지)
+  const saveRulesWithAmendment = useCallback(async (
+    content: string,
+    version: string,
+    effectiveDate: string,
+    amendment: RulesAmendment
+  ) => {
+    try {
+      const updatedData: RulesData = {
+        ...rulesData,
+        content,
+        version,
+        effectiveDate,
+        amendments: [...rulesData.amendments, amendment],
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = await setDocument('rules', RULES_DOC_ID, updatedData, true);
+      
+      if (result.success) {
+        setRulesData(updatedData);
+        console.log('✅ 회칙 개정 저장 완료:', version);
+      } else {
+        throw new Error(result.error || '회칙 개정 저장 실패');
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ 회칙 개정 저장 실패:', message);
+      logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, {
+        context: 'RulesContext.saveRulesWithAmendment',
+        version,
+      });
+      throw error;
+    }
+  }, [rulesData]);
+
   const refreshRules = useCallback(async () => {
     await loadRules();
   }, [loadRules]);
@@ -294,9 +339,11 @@ export const RulesProvider = ({ children }: { children: ReactNode }) => {
       error,
       updateRules,
       addAmendment,
+      saveRulesWithAmendment,
       refreshRules,
+      _activate,
     }),
-    [rulesData, isLoading, error, updateRules, addAmendment, refreshRules]
+    [rulesData, isLoading, error, updateRules, addAmendment, saveRulesWithAmendment, refreshRules, _activate]
   );
 
   return (
@@ -311,5 +358,6 @@ export const useRules = () => {
   if (context === undefined) {
     throw new Error('useRules must be used within a RulesProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };

@@ -45,14 +45,14 @@ service firebase.storage {
     // profiles/{userId}/{fileName}
     // ========================================
     match /profiles/{userId}/{fileName} {
-      // 읽기: 인증되고 승인된 회원만
-      allow read: if isAuthenticated() && isApproved();
-      
+      // 읽기: 인증된 사용자
+      allow read: if isAuthenticated();
+
       // 업로드: 본인만, 이미지 파일, 10MB 이하
-      allow write: if isOwner(userId) && 
-                     isImage() && 
+      allow write: if isOwner(userId) &&
+                     isImage() &&
                      isValidSize();
-      
+
       // 삭제: 본인만
       allow delete: if isOwner(userId);
     }
@@ -62,15 +62,19 @@ service firebase.storage {
     // gallery/{eventId}/{fileName}
     // ========================================
     match /gallery/{eventId}/{fileName} {
-      // 읽기: 인증된 회원이면 가능
       allow read: if isAuthenticated();
-      
-      // 업로드: 인증된 회원, 이미지 파일, 10MB 이하
       allow write, create: if isAuthenticated() && 
                      isImage() && 
                      isValidSize();
-      
-      // 삭제: 관리자만
+      allow delete: if isAdmin();
+    }
+
+    // 갤러리 썸네일/중간 크기 (gallery/{eventId}/thumb|medium/{fileName})
+    match /gallery/{eventId}/{sizeDir}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write, create: if isAuthenticated() && 
+                     isImage() && 
+                     isValidSize();
       allow delete: if isAdmin();
     }
     
@@ -79,14 +83,31 @@ service firebase.storage {
     // events/{eventId}/{fileName}
     // ========================================
     match /events/{eventId}/{fileName} {
-      // 읽기: 인증되고 승인된 회원만
-      allow read: if isAuthenticated() && isApproved();
+      // 읽기: 인증된 사용자 (게스트도 볼 수 있도록)
+      allow read: if isAuthenticated();
       
       // 업로드, 삭제: 관리자만, 이미지 파일, 10MB 이하
       allow write: if isAdmin() && 
                      isImage() && 
                      isValidSize();
       
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // 이벤트 답사 사진
+    // events/{eventId}/survey/{fileName}
+    // ========================================
+    match /events/{eventId}/survey/{fileName} {
+      // 읽기: 인증된 사용자 (게스트도 볼 수 있도록)
+      allow read: if isAuthenticated();
+      
+      // 업로드: 관리자만, 이미지 파일, 10MB 이하
+      allow write: if isAdmin() && 
+                     isImage() && 
+                     isValidSize();
+      
+      // 삭제: 관리자만
       allow delete: if isAdmin();
     }
     
@@ -112,12 +133,11 @@ service firebase.storage {
     match /posts/{postId}/{fileName} {
       // 읽기: 인증되고 승인된 회원만
       allow read: if isAuthenticated() && isApproved();
-      
-      // 업로드: 승인된 회원, 5MB 이하
-      allow write: if isAuthenticated() && 
-                     isApproved() &&
-                     request.resource.size <= 5 * 1024 * 1024;
-      
+
+      // 업로드: 관리자만, 10MB 이하
+      allow write: if isAdmin() &&
+                     request.resource.size <= 10 * 1024 * 1024;
+
       // 삭제: 관리자만
       allow delete: if isAdmin();
     }

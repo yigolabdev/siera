@@ -35,13 +35,13 @@ const Modal = ({
       >
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between p-6 border-b">
-            {title && <h3 className="text-2xl font-bold text-gray-900">{title}</h3>}
+            {title && <h3 className="text-2xl font-bold text-slate-900">{title}</h3>}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X className="h-6 w-6 text-gray-600" />
+                <X className="h-6 w-6 text-slate-600" />
               </button>
             )}
           </div>

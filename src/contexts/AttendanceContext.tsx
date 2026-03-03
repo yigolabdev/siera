@@ -19,6 +19,7 @@ interface AttendanceContextType {
   getAllAttendanceStats: () => AttendanceStats[];
   markAttendance: (eventId: string, userId: string, userName: string, status: AttendanceRecord['attendanceStatus']) => Promise<void>;
   refreshAttendances: () => Promise<void>;
+  _activate: () => void;
 }
 
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
@@ -28,6 +29,10 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
   
   // 🔥 AuthContext 사용
   const auth = useAuth();
@@ -37,16 +42,12 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
       
-      console.log('🔄 [AttendanceContext] attendances 데이터 로드 시작');
-      
       const result = await getDocuments<AttendanceRecord>('attendances');
       
       if (result.success && result.data) {
         setAttendances(result.data);
-        console.log('✅ Firebase에서 출석 데이터 로드:', result.data.length, '개');
       } else {
         setAttendances([]);
-        console.log('ℹ️ Firebase에서 로드된 출석 데이터가 없습니다.');
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -63,13 +64,8 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase 초기 데이터 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
+    if (!_activated) return;
     const initializeData = async () => {
-      console.log('🔄 [AttendanceContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
       // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
       if (auth.firebaseUser || !hasLoadedOnce) {
         await loadAttendances();
@@ -81,7 +77,7 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
     if (!auth.isLoading) {
       initializeData();
     }
-  }, [auth.firebaseUser, auth.isLoading, loadAttendances]);
+  }, [_activated, auth.firebaseUser, auth.isLoading, loadAttendances]);
 
   const addAttendance = useCallback(async (attendanceData: Omit<AttendanceRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -98,7 +94,6 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
       const result = await setDocument('attendances', id, attendance);
       if (result.success) {
         setAttendances(prev => [...prev, attendance]);
-        console.log('✅ 출석 기록 추가 성공:', id);
       } else {
         throw new Error(result.error || '출석 기록 추가 실패');
       }
@@ -121,7 +116,6 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
         setAttendances(prev => prev.map(attendance => 
           attendance.id === id ? { ...attendance, ...updateData } : attendance
         ));
-        console.log('✅ 출석 기록 수정 성공:', id);
       } else {
         throw new Error(result.error || '출석 기록 수정 실패');
       }
@@ -137,7 +131,6 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
       const result = await deleteDocument('attendances', id);
       if (result.success) {
         setAttendances(prev => prev.filter(attendance => attendance.id !== id));
-        console.log('✅ 출석 기록 삭제 성공:', id);
       } else {
         throw new Error(result.error || '출석 기록 삭제 실패');
       }
@@ -177,7 +170,6 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
           recordedBy: userId, // 기록한 관리자 ID (현재는 본인)
         });
       }
-      console.log('✅ 출석 체크 완료:', { eventId, userId, status });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logError(error, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId, userId });
@@ -249,6 +241,7 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
     getAllAttendanceStats,
     markAttendance,
     refreshAttendances,
+    _activate,
   }), [
     attendances,
     isLoading,
@@ -263,6 +256,7 @@ export const AttendanceProvider = ({ children }: { children: ReactNode }) => {
     getAllAttendanceStats,
     markAttendance,
     refreshAttendances,
+    _activate,
   ]);
 
   return <AttendanceContext.Provider value={value}>{children}</AttendanceContext.Provider>;
@@ -273,5 +267,6 @@ export const useAttendances = () => {
   if (context === undefined) {
     throw new Error('useAttendances must be used within an AttendanceProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };

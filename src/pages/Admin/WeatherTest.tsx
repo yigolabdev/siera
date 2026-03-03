@@ -112,13 +112,6 @@ const WeatherTest = () => {
             <ArrowLeft className="w-5 h-5" />
             관리자 대시보드로 돌아가기
           </Link>
-          <div className="flex items-center gap-3 mb-2">
-            <Cloud className="w-8 h-8 text-blue-600" />
-            <h1 className="text-3xl font-bold text-slate-900">날씨 API 테스트</h1>
-          </div>
-          <p className="text-slate-600">
-            기상청 API 연동 상태를 확인하고 실제 데이터를 테스트할 수 있습니다.
-          </p>
         </div>
 
         {/* API 정보 */}

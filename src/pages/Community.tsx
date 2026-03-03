@@ -1,6 +1,8 @@
 import { MessageSquare, ThumbsUp, Eye, Calendar, Search, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import StatCard from '../components/ui/StatCard';
+import FilterGroup from '../components/ui/FilterGroup';
 
 const Community = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,92 +96,39 @@ const Community = () => {
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">커뮤니티</h1>
-          <p className="text-xl text-gray-600">
-            회원들과 자유롭게 소통하는 공간입니다.
-          </p>
-        </div>
-        <button className="btn-primary flex items-center space-x-2">
-          <Plus className="h-5 w-5" />
-          <span>글쓰기</span>
+      <div className="flex justify-end mb-6">
+        <button className="px-5 py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors flex items-center gap-2 text-sm">
+          <Plus className="h-4 w-4" />
+          글쓰기
         </button>
       </div>
       
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <MessageSquare className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-gray-500 text-sm font-medium">전체 게시글</p>
-              <p className="text-2xl font-bold text-gray-900">{posts.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <Eye className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-gray-500 text-sm font-medium">총 조회수</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {posts.reduce((sum, post) => sum + post.views, 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <ThumbsUp className="h-8 w-8 text-purple-600" />
-            <div>
-              <p className="text-gray-500 text-sm font-medium">총 좋아요</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {posts.reduce((sum, post) => sum + post.likes, 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <MessageSquare className="h-8 w-8 text-orange-600" />
-            <div>
-              <p className="text-gray-500 text-sm font-medium">총 댓글</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {posts.reduce((sum, post) => sum + post.comments, 0)}
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard icon={<MessageSquare className="w-8 h-8" />} label="전체 게시글" value={posts.length} iconColor="text-blue-600" />
+        <StatCard icon={<Eye className="w-8 h-8" />} label="총 조회수" value={posts.reduce((sum, post) => sum + post.views, 0)} iconColor="text-emerald-600" />
+        <StatCard icon={<ThumbsUp className="w-8 h-8" />} label="총 좋아요" value={posts.reduce((sum, post) => sum + post.likes, 0)} iconColor="text-purple-600" />
+        <StatCard icon={<MessageSquare className="w-8 h-8" />} label="총 댓글" value={posts.reduce((sum, post) => sum + post.comments, 0)} iconColor="text-orange-600" />
       </div>
       
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex-grow relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
           <input
             type="text"
             placeholder="게시글 검색..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
+            className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
           />
         </div>
-        <div className="flex gap-2">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
-                selectedCategory === category.id
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
+        <FilterGroup
+          options={categories.map(c => ({ key: c.id, label: c.name }))}
+          selected={selectedCategory}
+          onChange={setSelectedCategory}
+          size="sm"
+        />
       </div>
       
       {/* Posts List */}
@@ -194,10 +143,10 @@ const Community = () => {
               <div className="flex-grow">
                 <div className="flex items-center space-x-2 mb-2">
                   {getCategoryBadge(post.category)}
-                  <h3 className="text-xl font-bold text-gray-900">{post.title}</h3>
+                  <h3 className="text-xl font-bold text-slate-900">{post.title}</h3>
                 </div>
-                <p className="text-gray-600 mb-3 text-base">{post.content}</p>
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <p className="text-slate-600 mb-3 text-base">{post.content}</p>
+                <div className="flex items-center space-x-4 text-sm text-slate-500">
                   <span className="font-medium">{post.author}</span>
                   <span className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
@@ -224,8 +173,8 @@ const Community = () => {
       
       {filteredPosts.length === 0 && (
         <div className="text-center py-12">
-          <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-xl text-gray-500">검색 결과가 없습니다.</p>
+          <MessageSquare className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+          <p className="text-xl text-slate-500">검색 결과가 없습니다.</p>
         </div>
       )}
     </div>

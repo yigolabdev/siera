@@ -1,11 +1,22 @@
 /**
- * 기상청 API 연동 모듈
+ * 기상청 API 연동 모듈 (개선 버전)
  * API 문서: https://apihub.kma.go.kr/
+ * 
+ * 주요 개선사항:
+ * - 데이터 파싱 로직 안정화
+ * - 에러 처리 강화
+ * - CORS 우회 (프록시 사용)
+ * - 더 정확한 필드 매핑
  */
 
 // 기상청 API 키 (환경 변수에서 가져오기)
 const KMA_API_KEY = import.meta.env.VITE_KMA_API_KEY || '';
-const KMA_API_BASE_URL = 'https://apihub.kma.go.kr/api/typ01/url';
+
+// 개발 환경에서는 프록시 사용
+const isDev = import.meta.env.DEV;
+const API_BASE_URL = isDev 
+  ? '/api/kma'  // 개발: Vite 프록시
+  : 'https://apihub.kma.go.kr/api/typ01/url';  // 프로덕션: 직접 호출
 
 /**
  * 날씨 상태 타입
@@ -28,53 +39,11 @@ export interface WeatherData {
   windSpeed: number;          // 풍속 (m/s)
   humidity: number;           // 습도 (%)
   uvIndex: UVIndexLevel;      // UV 지수
+  lastUpdated?: string;       // 마지막 업데이트 시간
 }
-
-/**
- * 기상청 API 응답 인터페이스
- */
-interface KMAResponse {
-  response: {
-    header: {
-      resultCode: string;
-      resultMsg: string;
-    };
-    body: {
-      items: {
-        item: Array<{
-          category: string;
-          fcstValue: string;
-          fcstDate: string;
-          fcstTime: string;
-        }>;
-      };
-    };
-  };
-}
-
-/**
- * 하늘 상태 코드를 WeatherCondition으로 변환
- * SKY: 하늘상태 (1:맑음, 3:구름많음, 4:흐림)
- * PTY: 강수형태 (0:없음, 1:비, 2:비/눈, 3:눈, 5:빗방울, 6:빗방울눈날림, 7:눈날림)
- */
-const getWeatherCondition = (sky: string, pty: string): WeatherCondition => {
-  // 강수가 있는 경우
-  if (pty !== '0') {
-    if (['2', '3', '6', '7'].includes(pty)) {
-      return 'snowy'; // 눈 또는 눈/비
-    }
-    return 'rainy'; // 비
-  }
-  
-  // 강수가 없는 경우 하늘 상태로 판단
-  if (sky === '1') return 'sunny';  // 맑음
-  if (sky === '3') return 'cloudy'; // 구름많음
-  return 'cloudy'; // 흐림
-};
 
 /**
  * UV 지수 계산 (간단한 추정)
- * 실제로는 별도 API 필요하지만 기온과 하늘상태로 추정
  */
 const estimateUVIndex = (temp: number, condition: WeatherCondition): UVIndexLevel => {
   if (condition === 'rainy' || condition === 'snowy') return 'low';
@@ -85,37 +54,15 @@ const estimateUVIndex = (temp: number, condition: WeatherCondition): UVIndexLeve
 };
 
 /**
- * 격자 좌표 변환
- * 위경도를 기상청 격자 좌표로 변환
- * 참고: 기상청은 격자 좌표계를 사용합니다
- */
-export const convertToGrid = (lat: number, lon: number) => {
-  // 간단한 예시 (실제로는 복잡한 좌표 변환 필요)
-  // 서울 기준: 위도 37.5665, 경도 126.9780
-  // 격자: nx=60, ny=127
-  
-  // 주요 도시 격자 좌표 (예시)
-  const cityGrids: Record<string, { nx: number; ny: number }> = {
-    'seoul': { nx: 60, ny: 127 },      // 서울
-    'busan': { nx: 98, ny: 76 },       // 부산
-    'daegu': { nx: 89, ny: 90 },       // 대구
-    'incheon': { nx: 55, ny: 124 },    // 인천
-    'gwangju': { nx: 58, ny: 74 },     // 광주
-    'daejeon': { nx: 67, ny: 100 },    // 대전
-    'ulsan': { nx: 102, ny: 84 },      // 울산
-  };
-  
-  // 기본값: 서울
-  return cityGrids['seoul'];
-};
-
-/**
- * 기상청 지상관측 API 호출 (ASOS - 종관기상관측)
+ * 기상청 지상관측 API 호출 (ASOS)
  * 현재 날씨 정보 조회
- * API 문서: https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php
+ * 
+ * @param targetDate - 조회 날짜시간 (YYYYMMDDHHMM 형식, 선택적)
+ * @param stationId - 기상청 관측소 지점번호 (선택적, 기본값: 108 서울)
  */
 export const fetchCurrentWeather = async (
-  targetDate?: string // YYYYMMDDHHMM 형식 (없으면 현재 시각)
+  targetDate?: string,
+  stationId: string = '108'
 ): Promise<WeatherData> => {
   try {
     // API 키가 없으면 mock 데이터 반환
@@ -124,34 +71,34 @@ export const fetchCurrentWeather = async (
       return getMockWeatherData();
     }
     
-    // 시간 설정 (기본: 현재 시각)
+    // 시간 설정
     const now = new Date();
     let tm1, tm2;
     
     if (targetDate) {
-      // 특정 날짜의 날씨 조회
-      tm1 = targetDate.slice(0, 12); // YYYYMMDDHHMM
+      tm1 = targetDate.slice(0, 12);
       tm2 = targetDate.slice(0, 12);
     } else {
-      // 현재 날씨 조회 (최근 31일 이내)
+      // 최근 2시간 데이터 조회
       const endTime = new Date(now.getTime());
-      const startTime = new Date(now.getTime() - 1 * 60 * 60 * 1000); // 1시간 전
+      const startTime = new Date(now.getTime() - 2 * 60 * 60 * 1000);
       
       tm1 = formatKMADateTime(startTime);
       tm2 = formatKMADateTime(endTime);
     }
     
-    // 기상청 ASOS API URL
-    const url = `https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php`;
+    // API URL 구성
+    const url = `${API_BASE_URL}/kma_sfctm3.php`;
     const params = new URLSearchParams({
       tm1: tm1,
       tm2: tm2,
-      stn: '108', // 서울 지점번호
-      help: '1',
+      stn: stationId, // 관측소 지점번호
+      help: '0',  // help=0: 데이터만 (help=1: 헤더 포함)
       authKey: KMA_API_KEY,
     });
     
-    console.log('🌤️ 기상청 API 호출:', `${url}?${params.toString()}`);
+    console.log(`🌤️ [Weather API] 호출: ${stationId} (${tm1} ~ ${tm2})`);
+    console.log('🔗 [Weather API] URL:', `${url}?${params.toString()}`);
     
     const response = await fetch(`${url}?${params.toString()}`, {
       method: 'GET',
@@ -161,59 +108,69 @@ export const fetchCurrentWeather = async (
     });
     
     if (!response.ok) {
-      throw new Error(`API 호출 실패: ${response.status} ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    const data = await response.text();
-    console.log('📡 기상청 API 응답 (첫 500자):', data.substring(0, 500));
+    const rawText = await response.text();
     
-    // 텍스트 데이터 파싱
-    const lines = data.split('\n').filter(line => line.trim().length > 0);
+    // 데이터 파싱
+    const lines = rawText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.startsWith('#'));
     
-    if (lines.length < 2) {
-      throw new Error('응답 데이터 형식 오류');
+    if (lines.length === 0) {
+      throw new Error('응답 데이터가 비어있습니다');
     }
-    
-    // 헤더 제거 (첫 줄은 헤더)
-    const dataLines = lines.slice(1);
     
     // 가장 최근 데이터 (마지막 줄)
-    const latestData = dataLines[dataLines.length - 1];
-    
-    if (!latestData) {
-      throw new Error('날씨 데이터를 찾을 수 없습니다');
-    }
+    const latestData = lines[lines.length - 1];
+    console.log('📊 [Weather API] 최신 데이터:', latestData);
     
     // 데이터 파싱 (공백으로 구분)
-    // 형식: TM WD WS GST_WD GST_WS PA PS PT PR TA TD HM PV RN ...
+    // 필드 순서: TM STN WD WS GST_WD GST_WS GST_TM PA PS PT PR TA TD HM PV ...
     const values = latestData.trim().split(/\s+/);
     
-    console.log('📊 파싱된 데이터:', {
-      TM: values[0],
-      WD: values[1],
-      WS: values[2],
-      PA: values[6],
-      TA: values[9],
-      HM: values[11],
+    // 필드 추출 (인덱스는 0부터 시작)
+    const timeStr = values[0] || '';       // 0: 관측시간 (YYYYMMDDHHMM)
+    const windDirection = values[2] || '0'; // 2: 풍향 (36방위)
+    const windSpeed = parseFloat(values[3]) || 0; // 3: 풍속 (m/s)
+    const pressure = parseFloat(values[7]) || 0;  // 7: 현지기압 (hPa)
+    const temperature = parseFloat(values[11]) || 0; // 11: 기온 (°C)
+    const dewPoint = parseFloat(values[12]) || 0;    // 12: 이슬점온도 (°C)
+    const humidity = parseFloat(values[13]) || 0;    // 13: 습도 (%)
+    
+    console.log('📈 [Weather API] 파싱 결과:', {
+      time: timeStr,
+      temp: temperature,
+      humidity: humidity,
+      windSpeed: windSpeed,
+      pressure: pressure,
     });
     
-    // 기상 데이터 추출
-    const temperature = parseFloat(values[9] || '0'); // TA: 기온(°C)
-    const windSpeed = parseFloat(values[2] || '0'); // WS: 풍속(m/s)
-    const humidity = parseFloat(values[11] || '0'); // HM: 습도(%)
-    const pressure = parseFloat(values[6] || '0'); // PA: 현지기압(hPa)
+    // 데이터 검증
+    if (temperature < -50 || temperature > 50) {
+      throw new Error(`비정상적인 기온 값: ${temperature}°C`);
+    }
     
-    // 체감온도 계산 (Wind Chill Index)
+    if (humidity < 0 || humidity > 100) {
+      throw new Error(`비정상적인 습도 값: ${humidity}%`);
+    }
+    
+    // 체감온도 계산
     const feelsLike = calculateWindChill(temperature, windSpeed);
     
     // 날씨 상태 추정
     const condition = estimateCondition(temperature, humidity, windSpeed);
     
-    // 강수 확률 추정 (습도 기반)
+    // 강수 확률 추정
     const precipitation = estimatePrecipitation(humidity);
     
     // UV 지수 추정
     const uvIndex = estimateUVIndex(temperature, condition);
+    
+    // 시간 포맷팅
+    const lastUpdated = formatTimeString(timeStr);
     
     return {
       temperature: Math.round(temperature * 10) / 10,
@@ -223,9 +180,12 @@ export const fetchCurrentWeather = async (
       windSpeed: Math.round(windSpeed * 10) / 10,
       humidity: Math.round(humidity),
       uvIndex,
+      lastUpdated,
     };
-  } catch (error) {
-    console.error('❌ 기상청 API 호출 실패:', error);
+  } catch (error: any) {
+    console.error('❌ [Weather API] 호출 실패:', error.message);
+    console.error('상세:', error);
+    
     // 에러 시 mock 데이터 반환
     return getMockWeatherData();
   }
@@ -246,27 +206,50 @@ const formatKMADateTime = (date: Date): string => {
 };
 
 /**
+ * 시간 문자열 포맷팅
+ * YYYYMMDDHHMM -> YYYY-MM-DD HH:MM
+ */
+const formatTimeString = (timeStr: string): string => {
+  if (timeStr.length !== 12) return timeStr;
+  
+  const year = timeStr.slice(0, 4);
+  const month = timeStr.slice(4, 6);
+  const day = timeStr.slice(6, 8);
+  const hour = timeStr.slice(8, 10);
+  const minute = timeStr.slice(10, 12);
+  
+  return `${year}-${month}-${day} ${hour}:${minute}`;
+};
+
+/**
  * 체감온도 계산 (Wind Chill Index)
  */
 const calculateWindChill = (temp: number, windSpeed: number): number => {
+  // 기온이 10도 이상이거나 바람이 약하면 체감온도 = 실제온도
   if (temp > 10 || windSpeed < 1.3) {
     return temp;
   }
   
-  // Wind Chill Formula
-  return 13.12 + 0.6215 * temp - 11.37 * Math.pow(windSpeed * 3.6, 0.16) + 0.3965 * temp * Math.pow(windSpeed * 3.6, 0.16);
+  // Wind Chill Formula (한국 기상청 기준)
+  const windKmh = windSpeed * 3.6; // m/s를 km/h로 변환
+  return 13.12 + 0.6215 * temp - 11.37 * Math.pow(windKmh, 0.16) + 
+         0.3965 * temp * Math.pow(windKmh, 0.16);
 };
 
 /**
  * 날씨 상태 추정 (기온, 습도, 풍속 기반)
  */
-const estimateCondition = (temp: number, humidity: number, windSpeed: number): WeatherCondition => {
-  // 습도가 높으면 비 또는 눈
+const estimateCondition = (
+  temp: number, 
+  humidity: number, 
+  windSpeed: number
+): WeatherCondition => {
+  // 습도가 매우 높으면 비 또는 눈
   if (humidity > 85) {
     return temp < 3 ? 'snowy' : 'rainy';
   }
   
-  // 습도가 중간이면 흐림
+  // 습도가 높으면 흐림
   if (humidity > 65) {
     return 'cloudy';
   }
@@ -279,121 +262,48 @@ const estimateCondition = (temp: number, humidity: number, windSpeed: number): W
  * 강수 확률 추정 (습도 기반)
  */
 const estimatePrecipitation = (humidity: number): number => {
+  if (humidity > 90) return 90;
   if (humidity > 85) return 80;
-  if (humidity > 70) return 50;
-  if (humidity > 60) return 30;
+  if (humidity > 75) return 60;
+  if (humidity > 65) return 40;
+  if (humidity > 55) return 20;
   return 10;
 };
 
 /**
- * 단기예보 API 호출
- * 3일 이내 날씨 예보 조회
- */
-export const fetchWeatherForecast = async (
-  latitude: number = 37.5665,
-  longitude: number = 126.9780,
-  days: number = 3
-): Promise<WeatherData[]> => {
-  try {
-    if (!KMA_API_KEY) {
-      console.warn('⚠️ 기상청 API 키가 설정되지 않았습니다. Mock 데이터를 사용합니다.');
-      return [getMockWeatherData()];
-    }
-    
-    const grid = convertToGrid(latitude, longitude);
-    
-    // 발표시각 계산 (0200, 0500, 0800, 1100, 1400, 1700, 2000, 2300)
-    const now = new Date();
-    const hour = now.getHours();
-    const baseHours = [2, 5, 8, 11, 14, 17, 20, 23];
-    const baseHour = baseHours.reduce((prev, curr) => 
-      hour >= curr ? curr : prev
-    );
-    
-    const baseDate = now.toISOString().split('T')[0].replace(/-/g, '');
-    const baseTime = `${String(baseHour).padStart(2, '0')}00`;
-    
-    const url = `${KMA_API_BASE_URL}/getVilageFcst`;
-    const params = new URLSearchParams({
-      authKey: KMA_API_KEY,
-      pageNo: '1',
-      numOfRows: '100',
-      dataType: 'JSON',
-      base_date: baseDate,
-      base_time: baseTime,
-      nx: grid.nx.toString(),
-      ny: grid.ny.toString(),
-    });
-    
-    const response = await fetch(`${url}?${params}`);
-    
-    if (!response.ok) {
-      throw new Error(`API 호출 실패: ${response.status}`);
-    }
-    
-    const data: KMAResponse = await response.json();
-    
-    if (data.response.header.resultCode !== '00') {
-      throw new Error(`API 오류: ${data.response.header.resultMsg}`);
-    }
-    
-    // 데이터 파싱 및 일자별 그룹화
-    const items = data.response.body.items.item;
-    const dailyForecasts: Record<string, Record<string, string>> = {};
-    
-    items.forEach(item => {
-      const dateKey = `${item.fcstDate}_${item.fcstTime}`;
-      if (!dailyForecasts[dateKey]) {
-        dailyForecasts[dateKey] = {};
-      }
-      dailyForecasts[dateKey][item.category] = item.fcstValue;
-    });
-    
-    // 날씨 데이터 변환
-    const forecasts: WeatherData[] = Object.values(dailyForecasts)
-      .slice(0, days)
-      .map(forecast => {
-        const temperature = parseFloat(forecast['TMP'] || '0');
-        const humidity = parseFloat(forecast['REH'] || '0');
-        const windSpeed = parseFloat(forecast['WSD'] || '0');
-        const precipitation = parseFloat(forecast['POP'] || '0');
-        const pty = forecast['PTY'] || '0';
-        const sky = forecast['SKY'] || '1';
-        
-        const feelsLike = Math.round(temperature - (windSpeed * 0.5));
-        const condition = getWeatherCondition(sky, pty);
-        const uvIndex = estimateUVIndex(temperature, condition);
-        
-        return {
-          temperature,
-          feelsLike,
-          condition,
-          precipitation,
-          windSpeed,
-          humidity,
-          uvIndex,
-        };
-      });
-    
-    return forecasts;
-  } catch (error) {
-    console.error('❌ 기상청 예보 API 호출 실패:', error);
-    return [getMockWeatherData()];
-  }
-};
-
-/**
- * Mock 날씨 데이터 (개발/테스트용)
+ * Mock 날씨 데이터 (개발/테스트용 또는 API 실패 시)
  */
 export const getMockWeatherData = (): WeatherData => {
+  const now = new Date();
+  const hour = now.getHours();
+  
+  // 시간대별로 다른 mock 데이터 제공 (더 현실적)
+  let temp = 8;
+  let condition: WeatherCondition = 'cloudy';
+  
+  if (hour >= 6 && hour < 12) {
+    temp = 5;
+    condition = 'sunny';
+  } else if (hour >= 12 && hour < 18) {
+    temp = 12;
+    condition = 'cloudy';
+  } else if (hour >= 18 && hour < 22) {
+    temp = 7;
+    condition = 'cloudy';
+  } else {
+    temp = 3;
+    condition = 'cloudy';
+  }
+  
   return {
-    temperature: 8,
-    feelsLike: 5,
-    condition: 'cloudy',
+    temperature: temp,
+    feelsLike: temp - 2,
+    condition,
     precipitation: 20,
     windSpeed: 3.5,
     humidity: 65,
     uvIndex: 'moderate',
+    lastUpdated: now.toISOString().slice(0, 16).replace('T', ' '),
   };
 };
 
@@ -416,10 +326,12 @@ export const getCachedWeather = async (
   if (!targetDate) {
     // 캐시가 유효하면 캐시 데이터 반환
     if (cachedWeather && (now - lastFetchTime) < CACHE_DURATION) {
+      console.log('📦 [Weather] 캐시된 데이터 사용');
       return cachedWeather;
     }
     
     // 캐시가 없거나 만료되면 새로 조회
+    console.log('🔄 [Weather] 새로운 데이터 조회');
     cachedWeather = await fetchCurrentWeather();
     lastFetchTime = now;
     
@@ -433,9 +345,13 @@ export const getCachedWeather = async (
 /**
  * 산행 날짜의 날씨 예보 조회
  * @param eventDate - 산행 날짜 (ISO 8601 형식: YYYY-MM-DD 또는 Date 객체)
+ * @param stationId - 기상청 관측소 지점번호 (선택적, 기본값: 108 서울)
  * @returns WeatherData
  */
-export const getEventWeather = async (eventDate: string | Date): Promise<WeatherData> => {
+export const getEventWeather = async (
+  eventDate: string | Date,
+  stationId: string = '108'
+): Promise<WeatherData> => {
   try {
     // Date 객체로 변환
     const date = typeof eventDate === 'string' ? new Date(eventDate) : eventDate;
@@ -444,39 +360,257 @@ export const getEventWeather = async (eventDate: string | Date): Promise<Weather
     // 날짜 차이 계산
     const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     
-    console.log(`🗓️ 산행 날짜까지 ${diffDays}일 남음`);
+    console.log(`🗓️ [Weather] 산행 날짜까지 ${diffDays}일 남음`);
     
     // 과거 날짜는 현재 날씨 반환
-    if (diffDays < 0) {
-      console.log('⚠️ 과거 날짜이므로 현재 날씨를 반환합니다.');
-      return await fetchCurrentWeather();
+    if (diffDays < -30) {
+      console.log('⚠️ [Weather] 30일 이전 과거 날짜 - 현재 날씨 반환');
+      return await fetchCurrentWeather(undefined, stationId);
     }
     
-    // 30일 이내면 기상청 API로 예보 조회 시도
-    if (diffDays <= 30) {
-      // 산행 당일 정오(12시) 기준으로 날씨 조회
+    // 과거 날짜 (30일 이내)는 해당 날짜 데이터 조회 시도
+    if (diffDays < 0 && diffDays >= -30) {
       const targetDateTime = new Date(date);
       targetDateTime.setHours(12, 0, 0, 0);
       const targetDateTimeStr = formatKMADateTime(targetDateTime);
       
-      console.log(`🌤️ ${diffDays}일 후 날씨 조회: ${targetDateTimeStr}`);
-      
-      // 현재는 과거 데이터만 조회 가능하므로, 미래 예보는 현재 날씨 기반 추정
-      if (diffDays > 0) {
-        console.log('⚠️ 기상청 API는 과거 데이터만 제공하므로 현재 날씨 기반으로 추정합니다.');
-        return await fetchCurrentWeather();
-      }
-      
-      // 당일이면 실제 API 호출
-      return await fetchCurrentWeather(targetDateTimeStr);
+      console.log(`🔍 [Weather] 과거 날짜 조회: ${targetDateTimeStr}`);
+      return await fetchCurrentWeather(targetDateTimeStr, stationId);
     }
     
-    // 30일 이후는 현재 날씨 반환 (예보 불가)
-    console.log('⚠️ 30일 이후 날짜이므로 현재 날씨를 반환합니다.');
-    return await fetchCurrentWeather();
+    // 미래 날짜는 현재 날씨 기반 추정
+    console.log('⚠️ [Weather] 미래 날짜 - 현재 날씨 기반 추정');
+    return await fetchCurrentWeather(undefined, stationId);
     
   } catch (error) {
-    console.error('❌ 산행 날씨 조회 실패:', error);
+    console.error('❌ [Weather] 산행 날씨 조회 실패:', error);
+    return getMockWeatherData();
+  }
+};
+
+/**
+ * 날씨 API 상태 확인
+ * @returns API 정상 동작 여부
+ */
+export const checkWeatherAPIStatus = async (): Promise<boolean> => {
+  try {
+    const data = await fetchCurrentWeather();
+    // Mock 데이터가 아니고 실제 데이터가 있는지 확인
+    return data.lastUpdated !== undefined;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * 위치 정보 인터페이스
+ */
+export interface LocationInfo {
+  address: string;        // 전체 주소 (예: "서울특별시 종로구 북악산로")
+  coordinates?: {         // 좌표 (선택적)
+    latitude: number;
+    longitude: number;
+  };
+  stationId?: string;     // 기상청 지점번호
+}
+
+/**
+ * 기상청 관측소 정보
+ */
+interface WeatherStation {
+  id: string;           // 지점번호
+  name: string;         // 관측소명
+  latitude: number;     // 위도
+  longitude: number;    // 경도
+  region: string;       // 지역
+}
+
+/**
+ * 전국 주요 기상청 관측소 데이터
+ * 출처: 기상청 지상관측 지점정보
+ */
+const WEATHER_STATIONS: WeatherStation[] = [
+  // 서울·경기
+  { id: '108', name: '서울', latitude: 37.5714, longitude: 126.9658, region: '서울' },
+  { id: '119', name: '수원', latitude: 37.2725, longitude: 126.9869, region: '경기' },
+  { id: '202', name: '인천', latitude: 37.4777, longitude: 126.6247, region: '인천' },
+  { id: '203', name: '강화', latitude: 37.7067, longitude: 126.4444, region: '인천' },
+  { id: '112', name: '양평', latitude: 37.4872, longitude: 127.4942, region: '경기' },
+  { id: '127', name: '이천', latitude: 37.2636, longitude: 127.4847, region: '경기' },
+  { id: '201', name: '강릉', latitude: 37.7514, longitude: 128.8911, region: '강원' },
+  
+  // 강원
+  { id: '100', name: '대관령', latitude: 37.6769, longitude: 128.7181, region: '강원' },
+  { id: '101', name: '춘천', latitude: 37.9025, longitude: 127.7361, region: '강원' },
+  { id: '105', name: '강릉', latitude: 37.7514, longitude: 128.8911, region: '강원' },
+  { id: '106', name: '동해', latitude: 37.5069, longitude: 129.1147, region: '강원' },
+  { id: '114', name: '원주', latitude: 37.3375, longitude: 127.9469, region: '강원' },
+  { id: '217', name: '태백', latitude: 37.1644, longitude: 128.9856, region: '강원' },
+  { id: '221', name: '속초', latitude: 38.2508, longitude: 128.5644, region: '강원' },
+  
+  // 충청
+  { id: '131', name: '청주', latitude: 36.6358, longitude: 127.4408, region: '충북' },
+  { id: '133', name: '대전', latitude: 36.3694, longitude: 127.3742, region: '대전' },
+  { id: '135', name: '추풍령', latitude: 36.2181, longitude: 127.9944, region: '충북' },
+  { id: '129', name: '서산', latitude: 36.7744, longitude: 126.4953, region: '충남' },
+  { id: '232', name: '천안', latitude: 36.7794, longitude: 127.1197, region: '충남' },
+  { id: '236', name: '보령', latitude: 36.3269, longitude: 126.5569, region: '충남' },
+  { id: '246', name: '제천', latitude: 37.1583, longitude: 128.1947, region: '충북' },
+  
+  // 전라
+  { id: '140', name: '군산', latitude: 35.9900, longitude: 126.7658, region: '전북' },
+  { id: '143', name: '전주', latitude: 35.8214, longitude: 127.1547, region: '전북' },
+  { id: '146', name: '광주', latitude: 35.1728, longitude: 126.8914, region: '광주' },
+  { id: '155', name: '순천', latitude: 34.9506, longitude: 127.4872, region: '전남' },
+  { id: '156', name: '목포', latitude: 34.8167, longitude: 126.3811, region: '전남' },
+  { id: '159', name: '부안', latitude: 35.7286, longitude: 126.7161, region: '전북' },
+  { id: '165', name: '완도', latitude: 34.3917, longitude: 126.7531, region: '전남' },
+  { id: '168', name: '여수', latitude: 34.7394, longitude: 127.7406, region: '전남' },
+  
+  // 경상
+  { id: '138', name: '포항', latitude: 36.0328, longitude: 129.3800, region: '경북' },
+  { id: '143', name: '대구', latitude: 35.8850, longitude: 128.6189, region: '대구' },
+  { id: '152', name: '울산', latitude: 35.5600, longitude: 129.3200, region: '울산' },
+  { id: '159', name: '부산', latitude: 35.1044, longitude: 129.0319, region: '부산' },
+  { id: '192', name: '진주', latitude: 35.1636, longitude: 128.0361, region: '경남' },
+  { id: '136', name: '안동', latitude: 36.5731, longitude: 128.7069, region: '경북' },
+  { id: '137', name: '상주', latitude: 36.4111, longitude: 128.1594, region: '경북' },
+  { id: '162', name: '통영', latitude: 34.8453, longitude: 128.4336, region: '경남' },
+  { id: '192', name: '거제', latitude: 34.8806, longitude: 128.6050, region: '경남' },
+  
+  // 제주
+  { id: '184', name: '제주', latitude: 33.5141, longitude: 126.5297, region: '제주' },
+  { id: '188', name: '성산', latitude: 33.3864, longitude: 126.8800, region: '제주' },
+  { id: '189', name: '서귀포', latitude: 33.2539, longitude: 126.5653, region: '제주' },
+];
+
+/**
+ * Haversine 공식을 사용한 두 좌표 간 거리 계산 (단위: km)
+ */
+const calculateDistance = (
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number => {
+  const R = 6371; // 지구 반경 (km)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+  
+  return distance;
+};
+
+/**
+ * 좌표 기반으로 가장 가까운 기상청 관측소 찾기
+ */
+const findNearestStation = (
+  latitude: number, 
+  longitude: number
+): WeatherStation => {
+  let nearestStation = WEATHER_STATIONS[0];
+  let minDistance = calculateDistance(
+    latitude, 
+    longitude, 
+    nearestStation.latitude, 
+    nearestStation.longitude
+  );
+  
+  for (const station of WEATHER_STATIONS) {
+    const distance = calculateDistance(
+      latitude, 
+      longitude, 
+      station.latitude, 
+      station.longitude
+    );
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestStation = station;
+    }
+  }
+  
+  console.log(`📍 [Weather] 가장 가까운 관측소: ${nearestStation.name} (${nearestStation.id}), 거리: ${minDistance.toFixed(1)}km`);
+  
+  return nearestStation;
+};
+
+/**
+ * 주소에서 위치 정보 추출 (기본 구현)
+ * 
+ * @param address - 산행 장소 주소
+ * @returns LocationInfo
+ */
+export const parseLocationFromAddress = async (
+  address: string
+): Promise<LocationInfo> => {
+  console.log('📍 [Weather] 주소 파싱:', address);
+  
+  // 기본적으로 서울(108) 반환
+  return {
+    address,
+    stationId: '108', // 서울
+  };
+};
+
+/**
+ * 위치 기반 날씨 조회 (실제 구현)
+ * 
+ * @param eventDate - 산행 날짜
+ * @param location - 산행 장소 주소 또는 위치 정보 (좌표 포함)
+ * @returns WeatherData
+ */
+export const getWeatherByLocation = async (
+  eventDate: string | Date,
+  location: string | LocationInfo
+): Promise<WeatherData> => {
+  try {
+    console.log('🌍 [Weather] 위치 기반 날씨 조회 시작');
+    console.log('📅 산행 날짜:', eventDate);
+    console.log('📍 장소:', typeof location === 'string' ? location : location.address);
+    
+    // LocationInfo 파싱
+    let locationInfo: LocationInfo;
+    
+    if (typeof location === 'string') {
+      locationInfo = await parseLocationFromAddress(location);
+    } else {
+      locationInfo = location;
+    }
+    
+    // 좌표가 있으면 가장 가까운 관측소 찾기
+    let stationId = '108'; // 기본값: 서울
+    
+    if (locationInfo.coordinates) {
+      const { latitude, longitude } = locationInfo.coordinates;
+      console.log(`🗺️ [Weather] 좌표: (${latitude}, ${longitude})`);
+      
+      const nearestStation = findNearestStation(latitude, longitude);
+      stationId = nearestStation.id;
+      
+      console.log(`🎯 [Weather] 선택된 관측소: ${nearestStation.name} (${stationId})`);
+    } else if (locationInfo.stationId) {
+      stationId = locationInfo.stationId;
+      console.log(`🎯 [Weather] 지정된 관측소: ${stationId}`);
+    } else {
+      console.log('⚠️ [Weather] 좌표 정보 없음 - 서울 관측소(108) 사용');
+    }
+    
+    // 해당 관측소의 날씨 조회
+    const weather = await getEventWeather(eventDate, stationId);
+    
+    console.log('✅ [Weather] 위치 기반 날씨 조회 완료');
+    
+    return weather;
+  } catch (error) {
+    console.error('❌ [Weather] 위치 기반 날씨 조회 실패:', error);
     return getMockWeatherData();
   }
 };

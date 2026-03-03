@@ -4,6 +4,7 @@ import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { Notice } from '../types';
 import { waitForFirebase } from '../lib/firebase/config';
 import { useAuth } from './AuthContextEnhanced';
+import { sanitizeText } from '../utils/sanitize';
 
 interface NoticeContextType {
   notices: Notice[];
@@ -14,6 +15,7 @@ interface NoticeContextType {
   deleteNotice: (id: string) => Promise<void>;
   togglePin: (id: string) => Promise<void>;
   refreshNotices: () => Promise<void>;
+  _activate: () => void;
 }
 
 const NoticeContext = createContext<NoticeContextType | undefined>(undefined);
@@ -23,6 +25,10 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
   
   // 🔥 AuthContext 사용
   const auth = useAuth();
@@ -32,8 +38,6 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
 
-      console.log('🔄 [NoticeContext] notices 데이터 로드 시작');
-
       const result = await getDocuments<Notice>('notices');
       if (result.success && result.data) {
         // 날짜 기준 내림차순 정렬 (최신순)
@@ -41,9 +45,7 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         setNotices(sortedNotices);
-        console.log('✅ Firebase에서 공지사항 로드:', sortedNotices.length, '개');
       } else {
-        console.log('ℹ️ Firebase에서 로드된 공지사항이 없습니다.');
         setNotices([]);
       }
     } catch (error: unknown) {
@@ -60,13 +62,8 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
 
   // Firebase에서 공지사항 로드 - 로그인 상태 변경 시 재로드
   useEffect(() => {
+    if (!_activated) return;
     const initializeData = async () => {
-      console.log('🔄 [NoticeContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
       // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
       if (auth.firebaseUser || !hasLoadedOnce) {
         await loadNotices();
@@ -78,13 +75,15 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
     if (!auth.isLoading) {
       initializeData();
     }
-  }, [auth.firebaseUser, auth.isLoading, loadNotices]);
+  }, [_activated, auth.firebaseUser, auth.isLoading, loadNotices]);
 
   const addNotice = useCallback(async (noticeData: Omit<Notice, 'id' | 'date' | 'createdAt' | 'updatedAt'>) => {
     try {
       const now = new Date().toISOString();
       const newNotice: Omit<Notice, 'id'> = {
         ...noticeData,
+        title: sanitizeText(noticeData.title),
+        content: sanitizeText(noticeData.content),
         date: now.split('T')[0],
         createdAt: now,
         updatedAt: now,
@@ -95,7 +94,6 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       
       if (result.success) {
         setNotices(prev => [{ ...newNotice, id: docId }, ...prev]);
-        console.log('✅ 공지사항 추가 성공:', docId);
       } else {
         throw new Error(result.error || '공지사항 추가 실패');
       }
@@ -110,6 +108,8 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updates = {
         ...noticeData,
+        title: sanitizeText(noticeData.title),
+        content: sanitizeText(noticeData.content),
         updatedAt: new Date().toISOString(),
       };
 
@@ -119,7 +119,6 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
         setNotices(prev => prev.map(n =>
           n.id === id ? { ...n, ...updates } : n
         ));
-        console.log('✅ 공지사항 수정 성공:', id);
       } else {
         throw new Error(result.error || '공지사항 수정 실패');
       }
@@ -136,7 +135,6 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       
       if (result.success) {
         setNotices(prev => prev.filter(n => n.id !== id));
-        console.log('✅ 공지사항 삭제 성공:', id);
       } else {
         throw new Error(result.error || '공지사항 삭제 실패');
       }
@@ -163,7 +161,6 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
         setNotices(prev => prev.map(n =>
           n.id === id ? { ...n, ...updates } : n
         ));
-        console.log('✅ 공지사항 고정 토글 성공:', id);
       } else {
         throw new Error(result.error || '공지사항 고정 토글 실패');
       }
@@ -188,8 +185,9 @@ export const NoticeProvider = ({ children }: { children: ReactNode }) => {
       deleteNotice,
       togglePin,
       refreshNotices,
+      _activate,
     }),
-    [notices, isLoading, error, addNotice, updateNotice, deleteNotice, togglePin, refreshNotices]
+    [notices, isLoading, error, addNotice, updateNotice, deleteNotice, togglePin, refreshNotices, _activate]
   );
 
   return (
@@ -204,6 +202,7 @@ export const useNotices = () => {
   if (context === undefined) {
     throw new Error('useNotices must be used within a NoticeProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };
 

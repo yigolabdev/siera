@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "sierra-be167"
+  },
+  "targets": {},
+  "etags": {
+    "sierra-be167": {
+      "extensionInstances": {
+        "storage-resize-images": "7efef0f3b7c2549635d5aede8498e19ea1b5ccfad3de2df61c240a643f57d4ba"
+      }
+    }
   }
 }

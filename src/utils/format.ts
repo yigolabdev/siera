@@ -35,13 +35,41 @@ export const formatCurrency = (amount: number | string): string => {
 };
 
 /**
- * 전화번호 포맷팅
+ * 전화번호 포맷팅 (표시용)
+ * 010-1234-5678, 02-123-4567, 031-1234-5678 등 다양한 형식 지원
  */
 export const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return '';
+  
+  // 숫자만 추출
   const cleaned = phone.replace(/\D/g, '');
+  
+  // 11자리: 010-1234-5678
   if (cleaned.length === 11) {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7)}`;
   }
+  
+  // 10자리: 02-1234-5678 또는 031-123-4567
+  if (cleaned.length === 10) {
+    // 02로 시작하는 경우
+    if (cleaned.startsWith('02')) {
+      return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    }
+    // 지역번호 3자리
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  
+  // 9자리: 02-123-4567
+  if (cleaned.length === 9 && cleaned.startsWith('02')) {
+    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 5)}-${cleaned.slice(5)}`;
+  }
+  
+  // 8자리: 1234-5678 (지역번호 없음)
+  if (cleaned.length === 8) {
+    return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
+  }
+  
+  // 기타: 원본 반환
   return phone;
 };
 
@@ -121,11 +149,16 @@ export const getDDayText = (targetDate: string): string => {
 };
 
 /**
- * 산행 신청 마감일 계산 (출발일 기준 10일 전)
+ * 산행 신청 마감일 계산
+ * - applicationDeadline이 설정되어 있으면 해당 값을 사용
+ * - 없으면 출발일 기준 7일 전 23:59 기본값 적용
  */
-export const calculateApplicationDeadline = (eventDate: string): Date => {
+export const calculateApplicationDeadline = (eventDate: string, applicationDeadline?: string): Date => {
+  if (applicationDeadline) {
+    return new Date(applicationDeadline);
+  }
   const deadline = new Date(eventDate);
-  deadline.setDate(deadline.getDate() - 10);
+  deadline.setDate(deadline.getDate() - 7);
   deadline.setHours(23, 59, 59, 999); // 마감일 23:59:59까지
   return deadline;
 };
@@ -133,8 +166,8 @@ export const calculateApplicationDeadline = (eventDate: string): Date => {
 /**
  * 산행 신청 마감 여부 확인
  */
-export const isApplicationClosed = (eventDate: string): boolean => {
-  const deadline = calculateApplicationDeadline(eventDate);
+export const isApplicationClosed = (eventDate: string, applicationDeadline?: string): boolean => {
+  const deadline = calculateApplicationDeadline(eventDate, applicationDeadline);
   const now = new Date();
   return now > deadline;
 };
@@ -142,28 +175,35 @@ export const isApplicationClosed = (eventDate: string): boolean => {
 /**
  * 산행 신청 마감까지 남은 일수
  */
-export const getDaysUntilDeadline = (eventDate: string): number => {
-  const deadline = calculateApplicationDeadline(eventDate);
+export const getDaysUntilDeadline = (eventDate: string, applicationDeadline?: string): number => {
+  const deadline = calculateApplicationDeadline(eventDate, applicationDeadline);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  deadline.setHours(0, 0, 0, 0);
+  const deadlineDay = new Date(deadline);
+  deadlineDay.setHours(0, 0, 0, 0);
   
-  const diffTime = deadline.getTime() - today.getTime();
+  const diffTime = deadlineDay.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   return diffDays;
 };
 
 /**
- * 산행 신청 마감일 포맷팅
+ * 산행 신청 마감일시 포맷팅 (시간 포함)
  */
-export const formatDeadline = (eventDate: string): string => {
-  const deadline = calculateApplicationDeadline(eventDate);
-  return deadline.toLocaleDateString('ko-KR', {
+export const formatDeadline = (eventDate: string, applicationDeadline?: string): string => {
+  const deadline = calculateApplicationDeadline(eventDate, applicationDeadline);
+  const dateStr = deadline.toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }) + ' 23:59';
+  });
+  const timeStr = deadline.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  return `${dateStr} ${timeStr}`;
 };
 
 /**

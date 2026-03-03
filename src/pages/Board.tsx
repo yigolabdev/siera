@@ -1,716 +1,748 @@
-import { Bell, Pin, MessageSquare, ThumbsUp, Eye, Search, Plus, X, Send, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { Bell, MessageSquare, ThumbsUp, Eye, Search, Plus, Pin, ChevronRight, Upload, Download, FileText, FileSpreadsheet, X, Trash2, FolderOpen } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContextEnhanced';
-import { useNotices, Notice } from '../contexts/NoticeContext';
-import { usePosts, Comment as PostComment, Post } from '../contexts/PostContext';
-import Card from '../components/ui/Card';
+import { useNotices } from '../contexts/NoticeContext';
+import { usePosts } from '../contexts/PostContext';
+import { getDocuments, setDocument, deleteDocument } from '../lib/firebase/firestore';
+import { uploadFile, deleteFile } from '../lib/firebase/storage';
+import { SharedFile } from '../types';
 import Badge from '../components/ui/Badge';
+import Tabs from '../components/ui/Tabs';
+
+const ALLOWED_EXTENSIONS = ['.pdf', '.xlsx', '.xls', '.csv'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+};
+
+const getFileIcon = (fileName: string) => {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return <FileText className="w-5 h-5 text-red-500" />;
+  if (ext === 'xlsx' || ext === 'xls') return <FileSpreadsheet className="w-5 h-5 text-green-600" />;
+  return <FileSpreadsheet className="w-5 h-5 text-blue-500" />;
+};
 
 const Board = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, isAdmin } = useAuth();
   const { notices } = useNotices();
-  const { 
-    posts, 
-    comments, 
-    isLoading, 
-    addPost, 
-    deletePost, 
-    togglePostLike, 
-    addComment, 
-    deleteComment, 
-    toggleCommentLike, 
-    incrementPostViews,
-    getPostComments 
-  } = usePosts();
-  
-  const [activeTab, setActiveTab] = useState<'notice' | 'general' | 'poem'>('notice');
+  const { posts, isLoading } = usePosts();
+
+  const tabFromUrl = searchParams.get('tab') as 'notice' | 'general' | 'poem' | 'files' | null;
+  const [activeTab, setActiveTab] = useState<'notice' | 'general' | 'poem' | 'files'>(tabFromUrl || 'notice');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showWriteModal, setShowWriteModal] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null); // 선택된 공지사항
-  
-  // 글쓰기 폼
-  const [writeForm, setWriteForm] = useState({
-    category: 'general' as 'general' | 'poem',
-    title: '',
-    content: '',
-  });
-  
-  // 댓글 관련
-  const [newComment, setNewComment] = useState('');
-  const [replyToComment, setReplyToComment] = useState<string | null>(null);
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  // 자료실 상태
+  const [sharedFiles, setSharedFiles] = useState<SharedFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile_selected, setUploadFileSelected] = useState<File | null>(null);
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    if (tabFromUrl && ['notice', 'general', 'poem', 'files'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl as typeof activeTab);
+    }
+  }, [tabFromUrl]);
+
+  const handleTabChange = (tab: 'notice' | 'general' | 'poem' | 'files') => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+    setCurrentPage(1);
+    setSearchTerm('');
+  };
+
+  // 자료실 파일 로드
+  const loadSharedFiles = useCallback(async () => {
+    setFilesLoading(true);
+    try {
+      const result = await getDocuments<SharedFile>('sharedFiles');
+      if (result.success && result.data) {
+        const sorted = result.data.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setSharedFiles(sorted);
+      }
+    } catch (error) {
+      console.error('자료실 파일 로드 실패:', error);
+    } finally {
+      setFilesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'files') {
+      loadSharedFiles();
+    }
+  }, [activeTab, loadSharedFiles]);
+
+  // 파일 업로드 처리
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`파일 크기가 10MB를 초과합니다: ${file.name} (${formatFileSize(file.size)})`);
+      return;
+    }
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      alert(`허용되지 않은 파일 형식입니다: ${file.name}\n(허용: PDF, Excel, CSV)`);
+      return;
+    }
+
+    setUploadFileSelected(file);
+    e.target.value = '';
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!uploadFile_selected || !user) return;
+    if (!uploadDescription.trim()) {
+      alert('파일 설명을 입력해주세요.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileId = `file_${Date.now()}`;
+      const storagePath = `posts/${fileId}/${uploadFile_selected.name}`;
+
+      const uploadResult = await uploadFile(storagePath, uploadFile_selected, {
+        contentType: uploadFile_selected.type,
+      });
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error('파일 업로드 실패');
+      }
+
+      const newFile: SharedFile = {
+        id: fileId,
+        fileName: uploadFile_selected.name,
+        storagePath,
+        downloadURL: uploadResult.url,
+        fileSize: uploadFile_selected.size,
+        fileType: uploadFile_selected.type,
+        description: uploadDescription.trim(),
+        uploadedBy: user.name,
+        uploadedById: user.id,
+        createdAt: new Date().toISOString(),
+      };
+
+      const result = await setDocument('sharedFiles', fileId, newFile);
+      if (result.success) {
+        setSharedFiles(prev => [newFile, ...prev]);
+        setShowUploadModal(false);
+        setUploadFileSelected(null);
+        setUploadDescription('');
+        alert('파일이 업로드되었습니다.');
+      } else {
+        await deleteFile(storagePath).catch(() => {});
+        throw new Error('Firestore 저장 실패');
+      }
+    } catch (error) {
+      console.error('파일 업로드 실패:', error);
+      alert('파일 업로드에 실패했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteFile = async (file: SharedFile) => {
+    if (!window.confirm(`"${file.fileName}" 파일을 삭제하시겠습니까?`)) return;
+
+    try {
+      await deleteFile(file.storagePath).catch(() => {});
+      const result = await deleteDocument('sharedFiles', file.id);
+      if (result.success) {
+        setSharedFiles(prev => prev.filter(f => f.id !== file.id));
+      } else {
+        throw new Error('삭제 실패');
+      }
+    } catch (error) {
+      console.error('파일 삭제 실패:', error);
+      alert('파일 삭제에 실패했습니다.');
+    }
+  };
+
   const pinnedNotices = notices.filter(n => n.isPinned);
   const regularNotices = notices.filter(n => !n.isPinned);
-  
-  // 탭에 따라 게시글 필터링
+
+  // 자유게시판: 시(poem) 카테고리 제외, 시 탭: poem만
   const filteredPosts = posts.filter(post => {
-    if (activeTab === 'notice') return false; // 공지사항 탭에서는 게시글 표시 안 함
-    const matchesCategory = activeTab === 'general' || post.category === activeTab;
+    if (activeTab === 'notice' || activeTab === 'files') return false;
+    if (activeTab === 'general') {
+      // 자유게시판에서는 시(poem) 제외
+      if (post.category === 'poem') return false;
+    }
+    if (activeTab === 'poem') {
+      if (post.category !== 'poem') return false;
+    }
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          post.author.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return matchesSearch;
   });
-  
-  // 글쓰기
-  const handleWritePost = async () => {
-    if (!writeForm.title.trim() || !writeForm.content.trim()) {
-      alert('제목과 내용을 입력해주세요.');
-      return;
-    }
-    
-    if (!user) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
 
-    try {
-      await addPost({
-        category: activeTab === 'notice' ? 'general' : activeTab,
-        title: writeForm.title,
-        author: user.name,
-        authorId: user.id,
-        date: new Date().toISOString().split('T')[0],
-        content: writeForm.content,
-      });
-      
-      setWriteForm({ category: 'general', title: '', content: '' });
-      setShowWriteModal(false);
-      alert('게시글이 등록되었습니다!');
-    } catch (error) {
-      console.error('게시글 작성 실패:', error);
-      alert('게시글 작성에 실패했습니다.');
-    }
-  };
-  
-  // 게시글 좋아요
-  const handleLikePost = async (postId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) return;
-    
-    await togglePostLike(postId, user.id);
-  };
-  
-  // 댓글 작성
-  const handleAddComment = async () => {
-    if (!newComment.trim() || !selectedPost || !user) return;
-    
-    console.log('📝 댓글 추가 시도:', {
-      postId: selectedPost.id,
-      content: newComment,
-    });
-    
-    try {
-      await addComment({
-        postId: selectedPost.id,
-        author: user.name,
-        authorId: user.id,
-        content: newComment,
-        date: new Date().toISOString().split('T')[0],
-        parentId: replyToComment || undefined,
-      });
-      
-      console.log('✅ 댓글 추가 성공');
-      setNewComment('');
-      setReplyToComment(null);
-    } catch (error: any) {
-      console.error('❌ 댓글 작성 실패:', error);
-      alert(`댓글 작성에 실패했습니다.\n\n${error.message || '다시 시도해주세요.'}`);
-    }
-  };
-  
-  // 댓글 좋아요
-  const handleLikeComment = async (commentId: string) => {
-    if (!user) return;
-    await toggleCommentLike(commentId, user.id);
-  };
-  
-  // 게시글 조회
-  const handleViewPost = async (post: Post) => {
-    await incrementPostViews(post.id);
-    setSelectedPost(post);
-  };
-  
-  // 대댓글 토글
-  const toggleCommentExpand = (commentId: string) => {
-    setExpandedComments(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(commentId)) {
-        newSet.delete(commentId);
-      } else {
-        newSet.add(commentId);
-      }
-      return newSet;
-    });
-  };
-  
-  const getCategoryBadge = (category: string) => {
-    switch (category) {
-      case 'general':
-        return <Badge variant="info">자유</Badge>;
-      case 'poem':
-        return <Badge variant="primary">시</Badge>;
-      default:
-        return <Badge variant="info">자유</Badge>;
-    }
+  // 공지사항 검색
+  const filteredNotices = useMemo(() => {
+    if (!searchTerm) return { pinned: pinnedNotices, regular: regularNotices };
+    const term = searchTerm.toLowerCase();
+    return {
+      pinned: pinnedNotices.filter(n => n.title.toLowerCase().includes(term) || n.content.toLowerCase().includes(term)),
+      regular: regularNotices.filter(n => n.title.toLowerCase().includes(term) || n.content.toLowerCase().includes(term)),
+    };
+  }, [pinnedNotices, regularNotices, searchTerm]);
+
+  // 자료실 검색
+  const filteredSharedFiles = useMemo(() => {
+    if (!searchTerm) return sharedFiles;
+    const term = searchTerm.toLowerCase();
+    return sharedFiles.filter(f =>
+      f.fileName.toLowerCase().includes(term) ||
+      f.description.toLowerCase().includes(term)
+    );
+  }, [sharedFiles, searchTerm]);
+
+  // 페이지네이션
+  const paginatedPosts = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredPosts.slice(start, start + itemsPerPage);
+  }, [filteredPosts, currentPage]);
+
+  const totalPages = Math.ceil(filteredPosts.length / itemsPerPage);
+
+  const handlePostClick = (postId: string) => {
+    navigate(`/home/board/post/${postId}?from=${activeTab}`);
   };
 
-  // 현재 게시글의 댓글 가져오기
-  const postComments = selectedPost ? getPostComments(selectedPost.id) : [];
-  
+  const handleNoticeClick = (noticeId: string) => {
+    navigate(`/home/board/notice/${noticeId}?from=notice`);
+  };
+
+  const handleWriteClick = () => {
+    navigate(`/home/board/write?category=${activeTab === 'poem' ? 'poem' : 'general'}&from=${activeTab}`);
+  };
+
+  const formatDate = (dateStr: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    if (dateStr === today) {
+      return '오늘';
+    }
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[1]}.${parts[2]}`;
+    }
+    return dateStr;
+  };
+
+  const formatDateTime = (isoStr: string) => {
+    const date = new Date(isoStr);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}.${m}.${d}`;
+  };
+
+  // 탭별 카운트
+  const generalCount = posts.filter(p => p.category !== 'poem').length;
+  const poemCount = posts.filter(p => p.category === 'poem').length;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 탭 네비게이션 */}
+      <Tabs
+        tabs={[
+          { key: 'notice', label: '공지사항', count: notices.length },
+          { key: 'general', label: '자유게시판', count: generalCount },
+          { key: 'poem', label: '시(詩)', count: poemCount },
+          { key: 'files', label: '자료실', count: sharedFiles.length },
+        ]}
+        activeTab={activeTab}
+        onChange={(key) => handleTabChange(key as typeof activeTab)}
+        className="mb-6"
+      />
+
+      {/* 검색 + 글쓰기/업로드 */}
+      <div className="mb-5 flex gap-2">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
+          <input
+            type="text"
+            placeholder={activeTab === 'files' ? '파일명, 설명 검색...' : '제목, 내용 검색...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
+          />
+        </div>
+        {user && activeTab !== 'notice' && activeTab !== 'files' && (
+          <button
+            onClick={handleWriteClick}
+            className="px-5 py-3 bg-primary-600 text-white rounded-lg font-semibold text-lg hover:bg-primary-700 transition-all flex items-center gap-2 whitespace-nowrap"
+          >
+            <Plus className="w-5 h-5" />
+            글쓰기
+          </button>
+        )}
+        {isAdmin && activeTab === 'files' && (
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="px-5 py-3 bg-primary-600 text-white rounded-lg font-semibold text-lg hover:bg-primary-700 transition-all flex items-center gap-2 whitespace-nowrap"
+          >
+            <Upload className="w-5 h-5" />
+            파일 업로드
+          </button>
+        )}
+      </div>
+
       {/* 로딩 상태 */}
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
+      {(isLoading || (activeTab === 'files' && filesLoading)) ? (
+        <div className="flex items-center justify-center min-h-[300px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-slate-900 mx-auto mb-4"></div>
-            <p className="text-xl text-slate-600 font-medium">게시글을 불러오는 중...</p>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
+            <p className="text-base text-slate-500">
+              {activeTab === 'files' ? '파일을 불러오는 중...' : '게시글을 불러오는 중...'}
+            </p>
           </div>
         </div>
       ) : (
         <>
-      {/* Tabs */}
-      <div className="mb-8">
-        <div className="border-b border-slate-200">
-          <div className="flex items-center justify-between">
-            <nav className="flex space-x-6 overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('notice')}
-                className={`py-4 px-2 border-b-2 font-bold text-base transition-colors whitespace-nowrap ${
-                  activeTab === 'notice'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
-              >
-                공지사항
-              </button>
-              <button
-                onClick={() => setActiveTab('general')}
-                className={`py-4 px-2 border-b-2 font-bold text-base transition-colors whitespace-nowrap ${
-                  activeTab === 'general'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
-              >
-                자유게시판
-              </button>
-              <button
-                onClick={() => setActiveTab('poem')}
-                className={`py-4 px-2 border-b-2 font-bold text-base transition-colors whitespace-nowrap ${
-                  activeTab === 'poem'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
-              >
-                시(詩)
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
-      
-      {/* Content */}
-      {activeTab === 'notice' ? (
-        /* 공지사항 탭 */
-        <div>
-          {/* 공지사항이 없을 때 */}
-          {notices.length === 0 && (
-            <Card className="text-center py-12 border-2 border-dashed border-slate-200">
-              <Bell className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-xl text-slate-600">
-                아직 등록된 공지사항이 없습니다.
-              </p>
-            </Card>
-          )}
-          
-          {/* Pinned Notices */}
-          {pinnedNotices.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4">중요 공지</h3>
-              <div className="space-y-4">
-                {pinnedNotices.map((notice) => (
-                  <Card 
-                    key={notice.id} 
-                    className="border-l-4 border-red-600 hover:shadow-lg transition-all cursor-pointer"
-                    onClick={() => setSelectedNotice(notice)}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2 flex-wrap flex-1">
-                        <Badge variant="danger">필독</Badge>
-                        <h3 className="text-xl font-bold text-slate-900">{notice.title}</h3>
-                      </div>
-                      <span className="text-sm text-slate-500 whitespace-nowrap">
-                        {notice.date}
-                      </span>
-                    </div>
-                    {/* 미리보기 텍스트 (최대 2줄) */}
-                    <p className="text-slate-700 leading-relaxed line-clamp-2">
-                      {notice.content}
-                    </p>
-                    <div className="mt-3 text-sm text-blue-600 font-medium">
-                      자세히 보기 →
-                    </div>
-                  </Card>
-                ))}
+          {/* ======================== 공지사항 탭 ======================== */}
+          {activeTab === 'notice' && (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              {/* 테이블 헤더 */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr_120px_80px] gap-4 px-6 py-3.5 bg-slate-50 border-b border-slate-200 text-sm sm:text-base font-semibold text-slate-500 uppercase tracking-wider">
+                <span>제목</span>
+                <span className="text-center">작성일</span>
+                <span className="text-center">조회</span>
               </div>
-            </div>
-          )}
-          
-          {/* Regular Notices */}
-          {regularNotices.length > 0 && (
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">일반 공지</h3>
-              <div className="space-y-4">
-                {regularNotices.map((notice) => (
-                  <Card 
-                    key={notice.id} 
-                    className="hover:shadow-lg transition-all cursor-pointer"
-                    onClick={() => setSelectedNotice(notice)}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-2">
-                      <h3 className="text-xl font-bold text-slate-900 flex-1">{notice.title}</h3>
-                      <span className="text-sm text-slate-500 whitespace-nowrap">
-                        {notice.date}
-                      </span>
-                    </div>
-                    {/* 미리보기 텍스트 (최대 2줄) */}
-                    <p className="text-slate-700 leading-relaxed line-clamp-2">
-                      {notice.content}
-                    </p>
-                    <div className="mt-3 text-sm text-blue-600 font-medium">
-                      자세히 보기 →
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* 커뮤니티 게시판 탭들 */
-        <div>
-          {/* Search and Write Button */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
-              <input
-                type="text"
-                placeholder="제목 또는 작성자로 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-12"
-              />
-            </div>
-            <button 
-              onClick={() => setShowWriteModal(true)}
-              className="btn-primary whitespace-nowrap flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>글쓰기</span>
-            </button>
-          </div>
-          
-          {/* Loading State */}
-          {isLoading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-slate-600 mt-4">게시글을 불러오는 중...</p>
-            </div>
-          )}
-          
-          {/* Posts List */}
-          {!isLoading && filteredPosts.length === 0 && (
-            <Card className="text-center py-16 border-2 border-dashed border-slate-200">
-              <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-xl font-bold text-slate-900 mb-2">
-                {searchTerm ? '검색 결과가 없습니다' : '첫 번째 게시글을 작성해보세요!'}
-              </p>
-              <p className="text-slate-600 mb-6">
-                {searchTerm 
-                  ? '다른 검색어로 시도해보세요.' 
-                  : activeTab === 'poem' 
-                    ? '감동적인 시를 공유해주세요.'
-                    : '회원들과 자유롭게 소통해보세요.'
-                }
-              </p>
-              {!searchTerm && (
-                <button 
-                  onClick={() => setShowWriteModal(true)}
-                  className="btn-primary inline-flex items-center gap-2"
+
+              {/* 필독 공지 */}
+              {filteredNotices.pinned.map((notice) => (
+                <div
+                  key={notice.id}
+                  onClick={() => handleNoticeClick(notice.id)}
+                  className="flex items-center gap-3 px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-red-50/40 hover:bg-red-50 cursor-pointer transition-colors group"
                 >
-                  <Plus className="w-5 h-5" />
-                  <span>글쓰기</span>
-                </button>
-              )}
-            </Card>
-          )}
-          
-          {!isLoading && filteredPosts.length > 0 && (
-            <div className="space-y-4">
-              {filteredPosts.map((post) => (
-                <Card
-                  key={post.id} 
-                  className="cursor-pointer hover:shadow-lg hover:border-primary-600 transition-all"
-                  onClick={() => handleViewPost(post)}
-                >
-                  <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                    <div className="flex items-center gap-2 flex-wrap flex-1">
-                      {getCategoryBadge(post.category)}
-                      <h3 className="text-xl font-bold text-slate-900">
-                        {post.title}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex-shrink-0 inline-flex items-center px-2.5 py-1 bg-red-600 text-white text-sm font-bold rounded">필독</span>
+                      <Pin className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      <h3 className="text-xl font-bold text-slate-900 truncate group-hover:text-red-600 transition-colors">
+                        {notice.title}
                       </h3>
                     </div>
+                    <span className="sm:hidden text-lg text-slate-400 mt-1.5 block">{formatDate(notice.date)}</span>
                   </div>
-                  
-                  <p className="text-slate-600 mb-4 line-clamp-2">{post.content}</p>
-                  
-                  <div className="flex items-center justify-between text-sm text-slate-500 flex-wrap gap-3">
-                    <div className="flex items-center gap-4">
-                      <span className="font-semibold text-slate-700">{post.author}</span>
-                      <span>{post.date}</span>
+                  <span className="hidden sm:block text-lg text-slate-400 w-[120px] text-center flex-shrink-0">
+                    {formatDate(notice.date)}
+                  </span>
+                  <span className="hidden sm:block text-lg text-slate-400 w-[80px] text-center flex-shrink-0">
+                    -
+                  </span>
+                  <ChevronRight className="w-5 h-5 text-slate-300 sm:hidden flex-shrink-0" />
+                </div>
+              ))}
+
+              {/* 일반 공지 */}
+              {filteredNotices.regular.map((notice) => (
+                <div
+                  key={notice.id}
+                  onClick={() => handleNoticeClick(notice.id)}
+                  className="flex items-center gap-3 px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors group last:border-b-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex-shrink-0 inline-flex items-center px-2.5 py-1 bg-slate-200 text-slate-600 text-sm font-bold rounded">공지</span>
+                      <h3 className="text-xl font-medium text-slate-800 truncate group-hover:text-primary-600 transition-colors">
+                        {notice.title}
+                      </h3>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-4 w-4" />
-                        <span>{post.views}</span>
+                    <span className="sm:hidden text-lg text-slate-400 mt-1.5 block">{formatDate(notice.date)}</span>
+                  </div>
+                  <span className="hidden sm:block text-lg text-slate-400 w-[120px] text-center flex-shrink-0">
+                    {formatDate(notice.date)}
+                  </span>
+                  <span className="hidden sm:block text-lg text-slate-400 w-[80px] text-center flex-shrink-0">
+                    -
+                  </span>
+                  <ChevronRight className="w-5 h-5 text-slate-300 sm:hidden flex-shrink-0" />
+                </div>
+              ))}
+
+              {notices.length === 0 && (
+                <div className="py-16 text-center">
+                  <Bell className="w-14 h-14 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-500 text-lg">등록된 공지사항이 없습니다.</p>
+                </div>
+              )}
+
+              {filteredNotices.pinned.length === 0 && filteredNotices.regular.length === 0 && notices.length > 0 && (
+                <div className="py-16 text-center">
+                  <Search className="w-14 h-14 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-500 text-lg">검색 결과가 없습니다.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================== 자료실 탭 ======================== */}
+          {activeTab === 'files' && (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              {/* 테이블 헤더 */}
+              <div className="hidden sm:grid sm:grid-cols-[auto_1fr_100px_100px_80px] gap-4 px-6 py-3.5 bg-slate-50 border-b border-slate-200 text-sm sm:text-base font-semibold text-slate-500 uppercase tracking-wider">
+                <span className="w-10"></span>
+                <span>파일명 / 설명</span>
+                <span className="text-center">크기</span>
+                <span className="text-center">업로드일</span>
+                <span className="text-center">다운로드</span>
+              </div>
+
+              {filteredSharedFiles.length === 0 ? (
+                <div className="py-16 text-center">
+                  <FolderOpen className="w-14 h-14 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-500 text-lg mb-1">
+                    {searchTerm ? '검색 결과가 없습니다.' : '등록된 파일이 없습니다.'}
+                  </p>
+                  {!searchTerm && isAdmin && (
+                    <button
+                      onClick={() => setShowUploadModal(true)}
+                      className="mt-3 px-5 py-2.5 bg-primary-600 text-white rounded-lg text-base font-semibold hover:bg-primary-700 transition-all inline-flex items-center gap-2"
+                    >
+                      <Upload className="w-5 h-5" />
+                      파일 업로드
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredSharedFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors"
+                  >
+                    {/* 데스크톱 */}
+                    <div className="hidden sm:grid sm:grid-cols-[auto_1fr_100px_100px_80px] gap-4 px-6 py-4 items-center">
+                      <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                        {getFileIcon(file.fileName)}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>{post.comments}</span>
+                      <div className="min-w-0">
+                        <p className="text-lg font-medium text-slate-800 truncate">{file.fileName}</p>
+                        <p className="text-sm text-slate-500 truncate">{file.description}</p>
                       </div>
-                      <button
-                        onClick={(e) => handleLikePost(post.id, e)}
-                        className="flex items-center gap-1 hover:text-primary-600 transition-colors"
-                      >
-                        <ThumbsUp 
-                          className={`h-4 w-4 ${user && post.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
-                        />
-                        <span className={user && post.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}>
+                      <span className="text-base text-slate-400 text-center">{formatFileSize(file.fileSize)}</span>
+                      <span className="text-base text-slate-400 text-center">{formatDateTime(file.createdAt)}</span>
+                      <div className="flex items-center justify-center gap-1">
+                        <a
+                          href={file.downloadURL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                          title="다운로드"
+                        >
+                          <Download className="w-5 h-5" />
+                        </a>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteFile(file)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 모바일 */}
+                    <div className="sm:hidden px-4 py-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
+                          {getFileIcon(file.fileName)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-lg font-medium text-slate-800 truncate">{file.fileName}</p>
+                          <p className="text-sm text-slate-500 truncate mb-1.5">{file.description}</p>
+                          <div className="flex items-center gap-2 text-sm text-slate-400">
+                            <span>{formatFileSize(file.fileSize)}</span>
+                            <span>·</span>
+                            <span>{formatDateTime(file.createdAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <a
+                            href={file.downloadURL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                          >
+                            <Download className="w-5 h-5" />
+                          </a>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDeleteFile(file)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {filteredSharedFiles.length > 0 && (
+                <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
+                  <p className="text-sm text-slate-400 text-center">
+                    총 {filteredSharedFiles.length}개의 파일
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================== 자유게시판 / 시 탭 ======================== */}
+          {(activeTab === 'general' || activeTab === 'poem') && (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              {/* 테이블 헤더 */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr_110px_100px_70px_70px_70px] gap-3 px-6 py-3.5 bg-slate-50 border-b border-slate-200 text-sm sm:text-base font-semibold text-slate-500 uppercase tracking-wider">
+                <span>제목</span>
+                <span className="text-center">작성자</span>
+                <span className="text-center">작성일</span>
+                <span className="text-center">조회</span>
+                <span className="text-center">댓글</span>
+                <span className="text-center">좋아요</span>
+              </div>
+
+              {paginatedPosts.length === 0 ? (
+                <div className="py-16 text-center">
+                  <MessageSquare className="w-14 h-14 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-500 text-lg mb-1">
+                    {searchTerm ? '검색 결과가 없습니다.' : '첫 번째 게시글을 작성해보세요!'}
+                  </p>
+                  {!searchTerm && user && (
+                    <button
+                      onClick={handleWriteClick}
+                      className="mt-3 px-5 py-2.5 bg-primary-600 text-white rounded-lg text-base font-semibold hover:bg-primary-700 transition-all inline-flex items-center gap-2"
+                    >
+                      <Plus className="w-5 h-5" />
+                      글쓰기
+                    </button>
+                  )}
+                </div>
+              ) : (
+                paginatedPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    onClick={() => handlePostClick(post.id)}
+                    className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors group last:border-b-0"
+                  >
+                    {/* 데스크톱 */}
+                    <div className="hidden sm:grid sm:grid-cols-[1fr_110px_100px_70px_70px_70px] gap-3 px-6 py-5 items-center">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-medium text-slate-800 truncate group-hover:text-primary-600 transition-colors">
+                            {post.title}
+                          </h3>
+                          {post.comments > 0 && (
+                            <span className="text-lg text-primary-600 font-bold flex-shrink-0">[{post.comments}]</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-lg text-slate-500 text-center truncate">{post.author}</span>
+                      <span className="text-lg text-slate-400 text-center">{formatDate(post.date)}</span>
+                      <span className="text-lg text-slate-400 text-center">{post.views}</span>
+                      <span className="text-lg text-slate-400 text-center">{post.comments}</span>
+                      <div className="flex items-center justify-center gap-1">
+                        <ThumbsUp className={`w-5 h-5 ${user && post.likedBy.includes(user.id) ? 'text-primary-600 fill-primary-600' : 'text-slate-400'}`} />
+                        <span className={`text-lg ${user && post.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : 'text-slate-400'}`}>
                           {post.likes}
                         </span>
-                      </button>
+                      </div>
+                    </div>
+
+                    {/* 모바일 */}
+                    <div className="sm:hidden px-4 py-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-xl font-medium text-slate-800 truncate group-hover:text-primary-600 transition-colors">
+                              {post.title}
+                            </h3>
+                            {post.comments > 0 && (
+                              <span className="text-lg text-primary-600 font-bold flex-shrink-0">[{post.comments}]</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2.5 text-base text-slate-400">
+                            <span className="font-medium text-slate-500">{post.author}</span>
+                            <span>·</span>
+                            <span>{formatDate(post.date)}</span>
+                            <span>·</span>
+                            <span className="flex items-center gap-0.5">
+                              <Eye className="w-4 h-4" /> {post.views}
+                            </span>
+                            <span className="flex items-center gap-0.5">
+                              <ThumbsUp className={`w-4 h-4 ${user && post.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`} /> {post.likes}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-300 mt-1 flex-shrink-0" />
+                      </div>
                     </div>
                   </div>
-                </Card>
-              ))}
+                ))
+              )}
             </div>
           )}
-          
-          {!isLoading && filteredPosts.length === 0 && (
-            <Card className="text-center py-12">
-              <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-xl text-slate-500 mb-3">
-                {searchTerm ? '검색 결과가 없습니다.' : '아직 작성된 게시글이 없습니다.'}
-              </p>
+
+          {/* 페이지네이션 */}
+          {(activeTab === 'general' || activeTab === 'poem') && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 mt-8">
               <button
-                onClick={() => setShowWriteModal(true)}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors inline-flex items-center gap-2"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2.5 text-lg text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <Plus className="w-5 h-5" />
-                첫 게시글 작성하기
+                이전
               </button>
-            </Card>
-          )}
-        </div>
-      )}
-      
-      {/* 글쓰기 모달 */}
-      {showWriteModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowWriteModal(false)}
-        >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="text-2xl font-bold text-slate-900">새 글 작성</h3>
-              <button 
-                onClick={() => setShowWriteModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-10 h-10 rounded-lg text-lg font-medium transition-all ${
+                    currentPage === page
+                      ? 'bg-primary-600 text-white'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2.5 text-lg text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <X className="h-6 w-6 text-slate-600" />
+                다음
               </button>
             </div>
-            
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">
-                    제목
-                  </label>
-                  <input
-                    type="text"
-                    value={writeForm.title}
-                    onChange={(e) => setWriteForm({ ...writeForm, title: e.target.value })}
-                    placeholder="제목을 입력하세요"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">
-                    내용
-                  </label>
-                  <textarea
-                    value={writeForm.content}
-                    onChange={(e) => setWriteForm({ ...writeForm, content: e.target.value })}
-                    placeholder="내용을 입력하세요"
-                    rows={12}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-none"
-                  />
-                </div>
+          )}
+
+          {(activeTab === 'general' || activeTab === 'poem') && filteredPosts.length > 0 && (
+            <p className="text-center text-base text-slate-400 mt-4">
+              총 {filteredPosts.length}개의 게시글
+            </p>
+          )}
+        </>
+      )}
+
+      {/* ======================== 파일 업로드 모달 ======================== */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={() => !isUploading && setShowUploadModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-900">파일 업로드</h2>
+              <button
+                onClick={() => !isUploading && setShowUploadModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* 파일 선택 */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  파일 선택 <span className="text-red-500">*</span>
+                </label>
+                {uploadFile_selected ? (
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {getFileIcon(uploadFile_selected.name)}
+                      <span className="text-sm text-slate-700 truncate">{uploadFile_selected.name}</span>
+                      <span className="text-xs text-slate-400 shrink-0">({formatFileSize(uploadFile_selected.size)})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUploadFileSelected(null)}
+                      className="text-slate-400 hover:text-red-500 shrink-0 ml-2"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-primary-400 transition-colors">
+                    <input
+                      type="file"
+                      id="shared-file-upload"
+                      accept=".pdf,.xlsx,.xls,.csv"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <label htmlFor="shared-file-upload" className="cursor-pointer">
+                      <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <p className="text-sm text-slate-600 font-medium">클릭하여 파일 선택</p>
+                      <p className="text-xs text-slate-400 mt-1">PDF, Excel, CSV / 최대 10MB</p>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* 설명 */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  파일 설명 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={uploadDescription}
+                  onChange={(e) => setUploadDescription(e.target.value)}
+                  placeholder="파일에 대한 간단한 설명을 입력하세요"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+                  maxLength={100}
+                />
+                <p className="text-xs text-slate-400 mt-1">{uploadDescription.length}/100</p>
               </div>
             </div>
-            
-            <div className="p-6 border-t flex justify-end space-x-3">
+
+            {/* 버튼 */}
+            <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setShowWriteModal(false)}
-                className="px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors"
+                onClick={() => !isUploading && setShowUploadModal(false)}
+                disabled={isUploading}
+                className="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-all disabled:opacity-50"
               >
                 취소
               </button>
               <button
-                onClick={handleWritePost}
-                className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
+                onClick={handleUploadSubmit}
+                disabled={isUploading || !uploadFile_selected || !uploadDescription.trim()}
+                className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                등록
+                {isUploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    업로드 중...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    업로드
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
-      )}
-      
-      {/* 게시글 상세 모달 */}
-      {selectedPost && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedPost(null)}
-        >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6 border-b flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  {getCategoryBadge(selectedPost.category)}
-                  <span className="text-sm text-slate-500">{selectedPost.date}</span>
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{selectedPost.title}</h3>
-                <div className="flex items-center space-x-4 text-sm text-slate-600">
-                  <span className="font-medium">{selectedPost.author}</span>
-                  <span>조회 {selectedPost.views}</span>
-                  <span>댓글 {selectedPost.comments}</span>
-                  <button
-                    onClick={(e) => handleLikePost(selectedPost.id, e)}
-                    className="flex items-center space-x-1 hover:text-primary-600 transition-colors"
-                  >
-                    <ThumbsUp 
-                      className={`h-4 w-4 ${user && selectedPost.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
-                    />
-                    <span className={user && selectedPost.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}>
-                      {selectedPost.likes}
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedPost(null)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="h-6 w-6 text-slate-600" />
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-6">
-              {/* 게시글 내용 */}
-              <div className="mb-8">
-                <p className="text-slate-800 text-lg leading-relaxed whitespace-pre-wrap">
-                  {selectedPost.content}
-                </p>
-              </div>
-              
-              {/* 댓글 섹션 */}
-              <div className="border-t pt-6">
-                <h4 className="text-xl font-bold text-slate-900 mb-4">
-                  댓글 {postComments.length}개
-                </h4>
-                
-                {/* 댓글 목록 */}
-                <div className="space-y-4 mb-6">
-                  {postComments
-                    .filter(c => !c.parentId)
-                    .map((comment) => {
-                      const replies = postComments.filter(c => c.parentId === comment.id);
-                      const isExpanded = expandedComments.has(comment.id);
-                      
-                      return (
-                        <div key={comment.id} className="space-y-3">
-                          <div className="p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-bold text-gray-900">{comment.author}</span>
-                                <span className="text-sm text-gray-500">{comment.date}</span>
-                              </div>
-                              <button
-                                onClick={() => handleLikeComment(comment.id)}
-                                className="flex items-center space-x-1 text-gray-500 hover:text-primary-600 transition-colors"
-                              >
-                                <ThumbsUp 
-                                  className={`h-4 w-4 ${user && comment.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
-                                />
-                                <span className={`text-sm ${user && comment.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}`}>
-                                  {comment.likes}
-                                </span>
-                              </button>
-                            </div>
-                            <p className="text-gray-700 mb-2">{comment.content}</p>
-                            <button
-                              onClick={() => setReplyToComment(replyToComment === comment.id ? null : comment.id)}
-                              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                              {replyToComment === comment.id ? '취소' : '답글'}
-                            </button>
-                          </div>
-                          
-                          {/* 대댓글 */}
-                          {replies.length > 0 && (
-                            <div className="ml-8">
-                              <button
-                                onClick={() => toggleCommentExpand(comment.id)}
-                                className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700 font-medium mb-2"
-                              >
-                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                <span>{isExpanded ? '답글 숨기기' : `답글 ${replies.length}개 보기`}</span>
-                              </button>
-                              
-                              {isExpanded && (
-                                <div className="space-y-3">
-                                  {replies.map((reply) => (
-                                    <div key={reply.id} className="p-4 bg-blue-50 rounded-lg border-l-2 border-primary-600">
-                                      <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center space-x-2">
-                                          <span className="font-bold text-gray-900">{reply.author}</span>
-                                          <span className="text-sm text-gray-500">{reply.date}</span>
-                                        </div>
-                                        <button
-                                          onClick={() => handleLikeComment(reply.id)}
-                                          className="flex items-center space-x-1 text-gray-500 hover:text-primary-600 transition-colors"
-                                        >
-                                          <ThumbsUp 
-                                            className={`h-4 w-4 ${user && reply.likedBy.includes(user.id) ? 'fill-primary-600 text-primary-600' : ''}`}
-                                          />
-                                          <span className={`text-sm ${user && reply.likedBy.includes(user.id) ? 'text-primary-600 font-bold' : ''}`}>
-                                            {reply.likes}
-                                          </span>
-                                        </button>
-                                      </div>
-                                      <p className="text-gray-700">{reply.content}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-                
-                {/* 댓글 작성 */}
-                <div className="sticky bottom-0 bg-white pt-4 border-t">
-                  {replyToComment && (
-                    <div className="mb-2 flex items-center justify-between p-2 bg-blue-50 rounded">
-                      <span className="text-sm text-gray-700">
-                        <span className="font-bold">
-                          {postComments.find(c => c.id === replyToComment)?.author}
-                        </span>
-                        님에게 답글 작성 중
-                      </span>
-                      <button
-                        onClick={() => setReplyToComment(null)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex space-x-3">
-                    <input
-                      type="text"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
-                      placeholder={replyToComment ? '답글을 입력하세요...' : '댓글을 입력하세요...'}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-                    />
-                    <button
-                      onClick={handleAddComment}
-                      className="px-6 py-3 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors flex items-center space-x-2"
-                    >
-                      <Send className="h-5 w-5" />
-                      <span>작성</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* 공지사항 상세 모달 */}
-      {selectedNotice && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* 모달 헤더 */}
-            <div className="p-6 border-b border-slate-200 flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  {selectedNotice.isPinned && <Badge variant="danger">필독</Badge>}
-                  <Bell className="w-5 h-5 text-blue-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                  {selectedNotice.title}
-                </h2>
-                <div className="text-sm text-slate-500">
-                  {selectedNotice.date}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedNotice(null)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6 text-slate-600" />
-              </button>
-            </div>
-            
-            {/* 모달 본문 */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="prose max-w-none">
-                <p className="text-slate-700 text-lg leading-relaxed whitespace-pre-wrap">
-                  {selectedNotice.content}
-                </p>
-              </div>
-            </div>
-            
-            {/* 모달 푸터 */}
-            <div className="p-6 border-t border-slate-200">
-              <button
-                onClick={() => setSelectedNotice(null)}
-                className="btn-primary w-full"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      </>
       )}
     </div>
   );

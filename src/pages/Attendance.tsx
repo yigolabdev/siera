@@ -4,6 +4,9 @@ import { useMembers } from '../contexts/MemberContext';
 import { useEvents } from '../contexts/EventContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import StatCard from '../components/ui/StatCard';
+import Tabs from '../components/ui/Tabs';
+import { getMemberPhoto } from '../utils/memberPhoto';
 
 const Attendance = () => {
   const { members, isLoading } = useMembers();
@@ -24,6 +27,7 @@ const Attendance = () => {
         attended: 0, // TODO: 실제 참석한 산행 수
         rate: member.attendanceRate || 0,
         profileImage: member.profileImage || undefined,
+        phoneNumber: member.phoneNumber || undefined,
       }))
       .sort((a, b) => {
         if (activeTab === 'rate') {
@@ -133,38 +137,12 @@ const Attendance = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Stats - 모바일에서 숨김 */}
-      <div className="hidden md:grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <Calendar className="w-6 h-6 text-slate-600" />
-          </div>
-          <p className="text-sm text-slate-600 mb-1">총 산행 횟수</p>
-          <p className="text-3xl font-bold text-slate-900">{totalEvents}회</p>
-        </Card>
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <Users className="w-6 h-6 text-slate-600" />
-          </div>
-          <p className="text-sm text-slate-600 mb-1">평균 참가자</p>
-          <p className="text-3xl font-bold text-slate-900">35명</p>
-        </Card>
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <Target className="w-6 h-6 text-slate-600" />
-          </div>
-          <p className="text-sm text-slate-600 mb-1">평균 참여율</p>
-          <p className="text-3xl font-bold text-slate-900">{avgAttendanceRate}%</p>
-        </Card>
-        <Card className="text-center hover:shadow-lg transition-all">
-          <div className="flex items-center justify-center mb-2">
-            <Trophy className="w-6 h-6 text-slate-600" />
-          </div>
-          <p className="text-sm text-slate-600 mb-1">최고 참여율</p>
-          <p className="text-3xl font-bold text-slate-900">
-            {Math.max(...attendanceData.map(m => m.rate)).toFixed(1)}%
-          </p>
-        </Card>
+      {/* Stats */}
+      <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard icon={<Calendar className="w-8 h-8" />} label="총 산행 횟수" value={totalEvents} unit="회" iconColor="text-slate-600" />
+        <StatCard icon={<Users className="w-8 h-8" />} label="평균 참가자" value={35} unit="명" iconColor="text-slate-600" />
+        <StatCard icon={<Target className="w-8 h-8" />} label="평균 참여율" value={`${avgAttendanceRate}%`} iconColor="text-slate-600" />
+        <StatCard icon={<Trophy className="w-8 h-8" />} label="최고 참여율" value={`${Math.max(...attendanceData.map(m => m.rate)).toFixed(1)}%`} iconColor="text-slate-600" />
       </div>
       
       {/* Monthly Trend */}
@@ -205,28 +183,15 @@ const Attendance = () => {
           </h2>
           
           {/* Tabs */}
-          <div className="flex bg-slate-100 rounded-xl p-1">
-            <button
-              onClick={() => setActiveTab('rate')}
-              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
-                activeTab === 'rate'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              참여율
-            </button>
-            <button
-              onClick={() => setActiveTab('count')}
-              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
-                activeTab === 'count'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              참여 횟수
-            </button>
-          </div>
+          <Tabs
+            tabs={[
+              { key: 'rate', label: '참여율' },
+              { key: 'count', label: '참여 횟수' },
+            ]}
+            activeTab={activeTab}
+            onChange={(key) => setActiveTab(key as 'rate' | 'count')}
+            size="sm"
+          />
         </div>
         
         <div className="space-y-4">
@@ -245,11 +210,17 @@ const Attendance = () => {
               </div>
               
               {/* Profile */}
-              <img 
-                src={member.profileImage}
-                alt={member.name}
-                className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md flex-shrink-0"
-              />
+              {getMemberPhoto(member.name, member.profileImage, member.phoneNumber) ? (
+                <img 
+                  src={getMemberPhoto(member.name, member.profileImage, member.phoneNumber)!}
+                  alt={member.name}
+                  className="w-16 h-16 rounded-full object-cover object-top border-4 border-white shadow-md flex-shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-slate-200 border-4 border-white shadow-md flex-shrink-0 flex items-center justify-center">
+                  <span className="text-xl font-bold text-slate-500">{member.name.charAt(0)}</span>
+                </div>
+              )}
               
               {/* Info */}
               <div className="flex-grow min-w-0">

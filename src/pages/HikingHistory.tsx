@@ -1,17 +1,22 @@
-import { Calendar, MapPin, Users, Award, Mountain, ChevronRight, Image as ImageIcon, MessageSquare, Plus, Edit2, Trash2, X, CalendarX } from 'lucide-react';
+import { Calendar, MapPin, Users, Mountain, ChevronRight, MessageSquare, Plus, Edit2, Trash2, X, CalendarX, UserCheck, Phone } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContextEnhanced';
 import { useHikingHistory } from '../contexts/HikingHistoryContext';
 import { useEvents } from '../contexts/EventContext';
+import { useGallery } from '../contexts/GalleryContext';
+import { formatPhoneNumber } from '../utils/format';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
+import FilterGroup from '../components/ui/FilterGroup';
+import { Team } from '../types';
 
 const HikingHistory = () => {
   const { user, isAdmin } = useAuth();
   const { history, isLoading, getHistoryByYear, addComment, updateComment, deleteComment, getCommentsByHikeId } = useHikingHistory();
-  const { events, getParticipantsByEventId } = useEvents();
+  const { events, getParticipantsByEventId, getTeamsByEventId } = useEvents();
+  const { photos } = useGallery();
   
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -19,6 +24,9 @@ const HikingHistory = () => {
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [selectedTeams, setSelectedTeams] = useState<Team[]>([]);
+  const [selectedTeamEventTitle, setSelectedTeamEventTitle] = useState('');
   
   // 완료된 이벤트를 산행 이력으로 변환
   const completedEvents = useMemo(() => {
@@ -26,12 +34,32 @@ const HikingHistory = () => {
       .filter(event => event.status === 'completed')
       .map(event => {
         const eventDate = new Date(event.date);
+        const isValidDate = !isNaN(eventDate.getTime());
         const participants = getParticipantsByEventId(event.id);
+        
+        // 해당 이벤트의 사진 개수 계산
+        const photoCount = photos.filter(photo => photo.eventId === event.id).length;
+
+        // 날짜가 유효하지 않은 경우 date 문자열에서 직접 파싱
+        let year = '';
+        let month = '';
+        if (isValidDate) {
+          year = eventDate.getFullYear().toString();
+          month = (eventDate.getMonth() + 1).toString().padStart(2, '0');
+        } else if (event.date) {
+          // "2026-02-22" 또는 "2026-02" 형태에서 직접 추출
+          const parts = event.date.split('-');
+          year = parts[0] || new Date().getFullYear().toString();
+          month = (parts[1] || '01').padStart(2, '0');
+        } else {
+          year = new Date().getFullYear().toString();
+          month = '01';
+        }
         
         return {
           id: event.id,
-          year: eventDate.getFullYear().toString(),
-          month: (eventDate.getMonth() + 1).toString().padStart(2, '0'),
+          year,
+          month,
           date: event.date,
           mountain: event.mountain || event.location || event.title,
           location: event.location,
@@ -42,10 +70,11 @@ const HikingHistory = () => {
           summary: event.description,
           imageUrl: event.imageUrl,
           isSpecial: event.isSpecial || false,
-          photoCount: 0, // TODO: 갤러리와 연동
+          photoCount: photoCount,
+          eventNumber: event.eventNumber,
         };
       });
-  }, [events, getParticipantsByEventId]);
+  }, [events, getParticipantsByEventId, photos]);
   
   // 기존 산행 이력과 완료된 이벤트 병합
   const combinedHistory = useMemo(() => {
@@ -148,12 +177,6 @@ const HikingHistory = () => {
   if (combinedHistory.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">산행 이력</h1>
-          <p className="text-slate-600">시애라클럽의 산행 기록을 확인하세요.</p>
-        </div>
-
         {/* Empty State */}
         <Card className="p-12 text-center">
           <div className="max-w-md mx-auto">
@@ -190,12 +213,6 @@ const HikingHistory = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* 헤더 */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">산행 이력</h1>
-        <p className="text-slate-600">시애라클럽의 산행 기록을 확인하세요.</p>
-      </div>
-
       {/* 로딩 상태 */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -212,77 +229,19 @@ const HikingHistory = () => {
         </Card>
       ) : (
         <>
-      {/* 통계 */}
-      {combinedHistory.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <Mountain className="w-8 h-8 text-blue-600" />
-              <div>
-                <p className="text-slate-600 text-sm">총 산행</p>
-                <p className="text-2xl font-bold">{combinedHistory.length}회</p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-emerald-600" />
-              <div>
-                <p className="text-slate-600 text-sm">총 참가자</p>
-                <p className="text-2xl font-bold">
-                  {combinedHistory.reduce((sum, h) => sum + h.participants, 0)}명
-                </p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <ImageIcon className="w-8 h-8 text-amber-600" />
-              <div>
-                <p className="text-slate-600 text-sm">총 사진</p>
-                <p className="text-2xl font-bold">
-                  {combinedHistory.reduce((sum, h) => sum + h.photoCount, 0)}장
-                </p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <Award className="w-8 h-8 text-purple-600" />
-              <div>
-                <p className="text-slate-600 text-sm">평균 참가</p>
-                <p className="text-2xl font-bold">
-                  {Math.round(combinedHistory.reduce((sum, h) => sum + h.participants, 0) / combinedHistory.length)}명
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
 
       {/* 연도 선택 */}
       {years.length > 0 && (
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {years.map((year) => {
-            const yearCount = combinedHistory.filter(h => h.year === year).length;
-            return (
-              <button
-                key={year}
-                onClick={() => setSelectedYear(year)}
-                className={`px-6 py-2 rounded-lg whitespace-nowrap font-medium transition-colors ${
-                  selectedYear === year
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
-                }`}
-              >
-                {year}년 ({yearCount}회)
-              </button>
-            );
-          })}
-        </div>
+        <FilterGroup
+          options={years.map(year => ({
+            key: year,
+            label: `${year}년`,
+            count: combinedHistory.filter(h => h.year === year).length,
+          }))}
+          selected={selectedYear}
+          onChange={setSelectedYear}
+          className="mb-6"
+        />
       )}
 
       {/* 산행 이력 */}
@@ -319,7 +278,7 @@ const HikingHistory = () => {
             return (
               <div key={monthKey}>
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">
-                  {parseInt(month)}월
+                  {parseInt(month) || 0}월
                 </h2>
                 
                 <div className="space-y-4">
@@ -354,6 +313,11 @@ const HikingHistory = () => {
                             <div className="flex items-start justify-between mb-4">
                               <div>
                                 <div className="flex items-center gap-3 mb-2">
+                                  {hike.eventNumber && (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-900 text-white flex-shrink-0">
+                                      제{hike.eventNumber}회
+                                    </span>
+                                  )}
                                   <h3 className="text-2xl font-bold text-slate-900">{hike.mountain}</h3>
                                   {getDifficultyBadge(hike.difficulty)}
                                 </div>
@@ -364,7 +328,7 @@ const HikingHistory = () => {
                               </div>
                             </div>
                             
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                               <div>
                                 <p className="text-sm text-slate-600">날짜</p>
                                 <p className="font-medium">{hike.date}</p>
@@ -387,6 +351,29 @@ const HikingHistory = () => {
                               <p className="text-slate-700 mb-4">{hike.summary}</p>
                             )}
                             
+                            {/* 액션 버튼 */}
+                            <div className="flex flex-wrap gap-2 mt-4">
+                              {(() => {
+                                const eventTeams = getTeamsByEventId(hike.id);
+                                if (eventTeams.length > 0) {
+                                  return (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedTeams(eventTeams);
+                                        setSelectedTeamEventTitle(hike.mountain);
+                                        setShowTeamModal(true);
+                                      }}
+                                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-200"
+                                    >
+                                      <Users className="w-4 h-4" />
+                                      조편성 보기 ({eventTeams.length}조)
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+
                             {/* 후기 섹션 */}
                             <div className="border-t pt-4 mt-4">
                               <div className="flex items-center justify-between mb-3">
@@ -484,6 +471,107 @@ const HikingHistory = () => {
             );
           })}
         </div>
+      )}
+
+      {/* 조편성 보기 모달 */}
+      {showTeamModal && selectedTeams.length > 0 && (
+        <Modal
+          onClose={() => {
+            setShowTeamModal(false);
+            setSelectedTeams([]);
+            setSelectedTeamEventTitle('');
+          }}
+          title={`${selectedTeamEventTitle} - 조편성`}
+          maxWidth="max-w-3xl"
+        >
+          <div className="p-6">
+            <div className="space-y-6">
+              {selectedTeams
+                .sort((a, b) => (a.number || 0) - (b.number || 0))
+                .map((team) => (
+                <div key={team.id} className="bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
+                  {/* 조 헤더 */}
+                  <div className="px-5 py-3 bg-indigo-50 border-b border-indigo-100">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-base font-bold text-indigo-900">{team.name}</h4>
+                      <Badge variant="info">{team.members.length + 1}명</Badge>
+                    </div>
+                  </div>
+                  
+                  {/* 조장 */}
+                  <div className="px-5 py-3 bg-amber-50/50 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <UserCheck className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">{team.leaderName}</span>
+                          <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">조장</span>
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          {team.leaderCompany || team.leaderOccupation || ''}
+                          {team.leaderPosition ? ` / ${team.leaderPosition}` : ''}
+                        </div>
+                      </div>
+                      {team.leaderPhone && (
+                        <div className="text-sm text-slate-500 flex items-center gap-1 flex-shrink-0">
+                          <Phone className="w-3.5 h-3.5" />
+                          {formatPhoneNumber(team.leaderPhone)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 조원 목록 */}
+                  <div className="divide-y divide-slate-100">
+                    {team.members.map((member, idx) => (
+                      <div key={member.id || idx} className="px-5 py-3 flex items-center gap-3">
+                        <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-slate-500">{idx + 1}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-900">{member.name}</span>
+                            {member.isGuest && (
+                              <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">게스트</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            {member.company || member.occupation || ''}
+                            {member.position ? ` / ${member.position}` : ''}
+                          </div>
+                        </div>
+                        {member.phoneNumber && (
+                          <div className="text-sm text-slate-500 flex items-center gap-1 flex-shrink-0">
+                            <Phone className="w-3.5 h-3.5" />
+                            {formatPhoneNumber(member.phoneNumber)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {team.members.length === 0 && (
+                      <div className="px-5 py-4 text-center text-sm text-slate-400">조원이 없습니다.</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowTeamModal(false);
+                  setSelectedTeams([]);
+                  setSelectedTeamEventTitle('');
+                }}
+                className="px-5 py-2.5 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-700 transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* 후기 작성 모달 */}

@@ -1,0 +1,11 @@
+# robots.txt for 시애라(Sierra)
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /home/profile/
+Disallow: /home/profile/edit-photo
+Disallow: /complete-profile
+Disallow: /complete-google-profile
+
+# Sitemap
+Sitemap: https://sierra-be167.web.app/sitemap.xml

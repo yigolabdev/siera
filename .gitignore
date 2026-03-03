@@ -28,5 +28,8 @@ dist-ssr
 .env.local
 .env.production
 
+# Firebase Admin Key (민감한 정보)
+firebase-admin-key.json
+
 # Build info
 .tsbuildinfo

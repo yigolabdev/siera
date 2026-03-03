@@ -1,10 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { HikingEvent, Participant, Team, TeamMember, Participation, EventWeather } from '../types';
+import { HikingEvent, Participant, Team, TeamMember, Participation, EventWeather, User } from '../types';
 import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { waitForFirebase } from '../lib/firebase/config';
 import { getEventWeather } from '../utils/weather';
-import { useAuth } from './AuthContextEnhanced';
 
 interface EventContextType {
   events: HikingEvent[];
@@ -40,30 +39,19 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
-  // 🔥 AuthContext를 Provider 내부에서 사용
-  const auth = useAuth();
-  
-  // Firebase 초기 데이터 로드 및 로그인 상태 변경 시 재로드
+  // Firebase 초기 데이터 로드 - Auth와 독립적 (public access)
   useEffect(() => {
     const initializeData = async () => {
-      console.log('🔄 [EventContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
-      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
-      if (auth.firebaseUser || !hasLoadedOnce) {
+      // 한 번도 로드하지 않았다면 로드 (Auth와 무관하게 즉시 실행)
+      if (!hasLoadedOnce) {
         await loadInitialData();
         setHasLoadedOnce(true);
       }
     };
     
-    // Auth 로딩이 완료된 후에만 실행
-    if (!auth.isLoading) {
-      initializeData();
-    }
-  }, [auth.firebaseUser, auth.isLoading]); // auth.user 대신 auth.firebaseUser 사용
+    // Auth와 무관하게 즉시 실행
+    initializeData();
+  }, [hasLoadedOnce]);
   
   const loadInitialData = async () => {
     try {
@@ -75,43 +63,88 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       
       if (eventsResult.success && eventsResult.data) {
         setEvents(eventsResult.data);
-        console.log('✅ Firebase에서 이벤트 데이터 로드:', eventsResult.data.length);
         
         // Firebase에서 조편성 데이터 로드
         const teamsResult = await getDocuments<Team>('teams');
         if (teamsResult.success && teamsResult.data) {
-          // eventId별로 그룹화
+          // members 컬렉션에서 회사/직책 정보 로드
+          const membersResult = await getDocuments<User>('members');
+          const membersMap = new Map<string, User>();
+          if (membersResult.success && membersResult.data) {
+            membersResult.data.forEach(member => {
+              membersMap.set(member.id, member);
+            });
+          }
+          
+          // eventId별로 그룹화하면서 회사/직책 정보 보강
           const teamsByEvent: Record<string, Team[]> = {};
           teamsResult.data.forEach(team => {
             if (!teamsByEvent[team.eventId]) {
               teamsByEvent[team.eventId] = [];
             }
+            
+            // 조장 정보 보강
+            const leaderInfo = membersMap.get(team.leaderId);
+            if (leaderInfo) {
+              team.leaderCompany = leaderInfo.company || team.leaderCompany;
+              team.leaderPosition = leaderInfo.position || team.leaderPosition;
+            }
+            
+            // 조원 정보 보강
+            if (team.members && team.members.length > 0) {
+              team.members = team.members.map(member => {
+                const memberInfo = membersMap.get(member.id);
+                return {
+                  ...member,
+                  company: memberInfo?.company || member.company || '',
+                  position: memberInfo?.position || member.position || ''
+                };
+              });
+            }
+            
             teamsByEvent[team.eventId].push(team);
           });
           setTeams(teamsByEvent);
-          console.log('✅ Firebase에서 조편성 데이터 로드:', teamsResult.data.length);
         }
         
         // Firebase에서 participations 컬렉션 로드 (실제 신청 데이터)
         const participationsResult = await getDocuments<Participation>('participations');
         if (participationsResult.success && participationsResult.data) {
-          // eventId별로 그룹화하여 Participant 형식으로 변환
-          const participantsByEvent: Record<string, Participant[]> = {};
-          participationsResult.data.forEach(participation => {
-            if (!participantsByEvent[participation.eventId]) {
-              participantsByEvent[participation.eventId] = [];
-            }
-            // Participation을 Participant 형식으로 변환
-            participantsByEvent[participation.eventId].push({
-              id: participation.userId,
-              name: participation.userName,
-              email: participation.userEmail,
-              status: participation.status as 'confirmed' | 'pending',
-              isGuest: participation.isGuest || false, // 게스트 여부 포함
+          // members 컬렉션에서 회사/직책 정보 로드
+          const membersResult = await getDocuments<User>('members');
+          const membersMap = new Map<string, User>();
+          if (membersResult.success && membersResult.data) {
+            membersResult.data.forEach(member => {
+              membersMap.set(member.id, member);
             });
-          });
+          }
+          
+          // eventId별로 그룹화하여 Participant 형식으로 변환 (취소된 참가자 제외)
+          const participantsByEvent: Record<string, Participant[]> = {};
+          participationsResult.data
+            .filter(p => p.status !== 'cancelled')
+            .forEach(participation => {
+              if (!participantsByEvent[participation.eventId]) {
+                participantsByEvent[participation.eventId] = [];
+              }
+              
+              // members 컬렉션에서 회사/직책 정보 조회
+              const memberInfo = membersMap.get(participation.userId);
+              
+              // Participation을 Participant 형식으로 변환
+              participantsByEvent[participation.eventId].push({
+                id: participation.userId,
+                memberId: participation.userId,
+                name: participation.userName,
+                email: participation.userEmail,
+                company: memberInfo?.company || '',
+                position: memberInfo?.position || '',
+                phoneNumber: memberInfo?.phoneNumber || '',
+                status: participation.status as 'confirmed' | 'pending',
+                isGuest: participation.isGuest || false,
+              });
+            });
           setParticipants(participantsByEvent);
-          console.log('✅ Firebase에서 참가 신청 데이터 로드 (participations):', participationsResult.data.length);
         }
         
         // 레거시 participants 컬렉션도 로드 (호환성 유지)
@@ -142,10 +175,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
             });
             return merged;
           });
-          console.log('✅ Firebase에서 레거시 참가자 데이터 로드 (participants):', legacyParticipantsResult.data.length);
         }
-      } else {
-        console.log('ℹ️ Firebase에서 로드된 데이터가 없습니다.');
       }
     } catch (err: any) {
       console.error('❌ Firebase 로드 실패:', err.message);
@@ -217,9 +247,16 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await firestoreUpdate('events', id, updatedEvent);
       if (result.success) {
-        setEvents(prev => prev.map(event => 
-          event.id === id ? { ...event, ...updatedEvent } : event
-        ));
+        // Firebase에서 최신 데이터 다시 로드
+        const refreshResult = await getDocuments<HikingEvent>('events');
+        if (refreshResult.success && refreshResult.data) {
+          setEvents(refreshResult.data);
+        } else {
+          // Fallback: 로컬 state만 업데이트
+          setEvents(prev => prev.map(event => 
+            event.id === id ? { ...event, ...updatedEvent } : event
+          ));
+        }
       } else {
         throw new Error(result.error || '이벤트 수정 실패');
       }
@@ -347,27 +384,28 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
   
-  // 참석자 새로고침
+  // 참석자 새로고침 (취소된 참가자 제외)
   const refreshParticipants = useCallback(async (eventId: string) => {
     try {
       // participations 컬렉션에서 로드
       const participationsResult = await getDocuments<Participation>('participations');
       if (participationsResult.success && participationsResult.data) {
-        const eventParticipations = participationsResult.data.filter(p => p.eventId === eventId);
+        const eventParticipations = participationsResult.data.filter(
+          p => p.eventId === eventId && p.status !== 'cancelled'
+        );
         const participants: Participant[] = eventParticipations.map(participation => ({
           id: participation.userId,
+          memberId: participation.userId,
           name: participation.userName,
           email: participation.userEmail,
           status: participation.status as 'confirmed' | 'pending',
-          isGuest: participation.isGuest || false, // 게스트 여부 포함
+          isGuest: participation.isGuest || false,
         }));
         
         setParticipants(prev => ({
           ...prev,
           [eventId]: participants,
         }));
-        
-        console.log(`✅ 이벤트 ${eventId}의 참가자 새로고침 완료:`, participants.length);
       }
       
       // 레거시 participants 컬렉션도 확인
@@ -399,8 +437,6 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('이벤트를 찾을 수 없습니다');
       }
 
-      console.log(`🌤️ 이벤트 날씨 정보 업데이트 시작: ${event.title} (${event.date})`);
-      
       // 기상청 API로 날씨 조회
       const weatherData = await getEventWeather(event.date);
       
@@ -420,13 +456,10 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       const result = await firestoreUpdate('events', eventId, { weather: eventWeather });
       
       if (result.success) {
-        console.log('✅ 날씨 정보 Firebase 저장 완료:', eventWeather);
-        
         // Firebase에서 최신 데이터 다시 로드
         const eventsResult = await getDocuments<HikingEvent>('events');
         if (eventsResult.success && eventsResult.data) {
           setEvents(eventsResult.data);
-          console.log('✅ 이벤트 목록 새로고침 완료');
         }
       } else {
         throw new Error(result.error || '날씨 정보 저장 실패');
@@ -446,7 +479,6 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     try {
       const event = events.find(e => e.id === eventId);
       if (!event) {
-        console.log('⚠️ 이벤트를 찾을 수 없습니다:', eventId);
         return;
       }
 
@@ -455,14 +487,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       
       // 날씨 정보가 없거나, 마지막 업데이트가 24시간 이전인 경우 업데이트
       if (!lastUpdated || (now.getTime() - lastUpdated.getTime()) > 24 * 60 * 60 * 1000) {
-        const timeSinceUpdate = lastUpdated 
-          ? Math.round((now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60))
-          : null;
-        
-        console.log(`🔄 날씨 정보 갱신 필요 (마지막 업데이트: ${timeSinceUpdate ? timeSinceUpdate + '시간 전' : '없음'})`);
         await updateEventWeather(eventId);
-      } else {
-        console.log('✅ 날씨 정보가 최신 상태입니다 (24시간 이내)');
       }
     } catch (err: any) {
       console.error('❌ 날씨 확인 및 업데이트 실패:', err);

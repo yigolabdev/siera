@@ -20,22 +20,9 @@ const Home = () => {
   const { events, currentEvent, specialEvent, getParticipantsByEventId, refreshParticipants, isLoading: eventsLoading, checkAndUpdateWeather } = useEvents();
   const { members } = useMembers();
   const { currentPoem } = usePoems();
-  const { getUserParticipationForEvent, cancelParticipation, registerForEvent } = useParticipations();
+  const { participations, getUserParticipationForEvent, getParticipationsByEvent, cancelParticipation, registerForEvent, refreshParticipations: refreshAllParticipations } = useParticipations();
   const { createPaymentForParticipation } = usePayments();
   const { notices } = useNotices();
-  
-  // 디버깅 로그
-  useEffect(() => {
-    console.log('🏠 [Home] 렌더링 상태:', {
-      eventsLoading,
-      eventsCount: events.length,
-      hasCurrentEvent: !!currentEvent,
-      currentEventTitle: currentEvent?.title,
-      currentEventDate: currentEvent?.date,
-      currentEventPublished: currentEvent?.isPublished,
-      currentEventDraft: currentEvent?.isDraft,
-    });
-  }, [eventsLoading, events, currentEvent]);
   
   // 참석 여부 상태 (Firebase에서 가져오기)
   const myParticipationStatus = useMemo(() => {
@@ -43,50 +30,39 @@ const Home = () => {
     const participation = getUserParticipationForEvent(user.id.toString(), currentEvent.id);
     return participation?.status || null;
   }, [user, currentEvent, getUserParticipationForEvent]);
-  
+
+  // 페이지 진입 시 최신 참가 데이터 로드 (다른 세션에서 추가된 신청 반영)
+  useEffect(() => {
+    refreshAllParticipations();
+    if (currentEvent) {
+      refreshParticipants(currentEvent.id);
+    }
+  }, [refreshAllParticipations, refreshParticipants, currentEvent?.id]);
+
   // 날씨 데이터 (DB에서 가져오기 또는 기본값)
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   
-  // 날씨 데이터 로드 (DB 우선, 24시간 이상 경과 시 자동 갱신)
+  // 날씨 데이터 로드 - 내일 날씨 표시
   useEffect(() => {
     const loadWeather = async () => {
       try {
-        if (currentEvent) {
-          console.log('🌤️ 날씨 데이터 로드 시작:', currentEvent.date);
-          
-          // DB에 저장된 날씨 정보 확인 및 갱신
-          await checkAndUpdateWeather(currentEvent.id);
-          
-          // 갱신 후 최신 이벤트 정보를 다시 가져오기
-          // (EventContext의 events 상태가 업데이트되면 currentEvent도 자동으로 업데이트됨)
-        }
+        // 내일 날짜 계산
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        // 내일 날씨 조회
+        const weather = await getCachedWeather();
+        
+        setWeatherData(weather);
       } catch (error) {
-        console.error('날씨 데이터 로드 실패:', error);
+        console.error('❌ [Home] 날씨 데이터 로드 실패:', error);
+        console.error('❌ [Home] 에러 상세:', error);
       }
     };
     
     loadWeather();
-  }, [currentEvent?.id, checkAndUpdateWeather]); // id만 의존성으로
-  
-  // currentEvent.weather가 변경되면 화면 업데이트
-  useEffect(() => {
-    if (currentEvent?.weather) {
-      setWeatherData({
-        temperature: currentEvent.weather.temperature,
-        feelsLike: currentEvent.weather.feelsLike,
-        condition: currentEvent.weather.condition,
-        precipitation: currentEvent.weather.precipitation,
-        windSpeed: currentEvent.weather.windSpeed,
-        humidity: currentEvent.weather.humidity,
-        uvIndex: currentEvent.weather.uvIndex,
-      });
-      console.log('✅ DB에서 날씨 정보 로드:', currentEvent.weather);
-      console.log('📅 산행 날짜:', currentEvent.date);
-      console.log('🕐 마지막 업데이트:', currentEvent.weather.lastUpdated);
-    } else {
-      console.log('⚠️ 날씨 정보가 없습니다. API 호출 대기 중...');
-    }
-  }, [currentEvent?.weather]);
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
   
   // 회원 통계 계산
   const calculateStats = {
@@ -118,16 +94,28 @@ const Home = () => {
   const weatherInfo = weatherData ? getWeatherIcon(weatherData.condition) : { icon: Cloud, color: 'text-slate-400', bg: 'bg-slate-50', text: '로딩 중' };
   const WeatherIcon = weatherInfo.icon;
   
+  // ParticipationContext 기반 실시간 참가자 수 계산
+  const realTimeParticipantCount = useMemo(() => {
+    if (!currentEvent) return 0;
+    const activeParticipations = getParticipationsByEvent(currentEvent.id)
+      .filter(p => p.status !== 'cancelled');
+    // 레거시 참가자 (ParticipationContext에 없는 경우만)
+    const participationUserIds = new Set(activeParticipations.map(p => p.userId));
+    const legacyCount = getParticipantsByEventId(currentEvent.id)
+      .filter(p => !participationUserIds.has(p.memberId || p.id)).length;
+    return activeParticipations.length + legacyCount;
+  }, [currentEvent, participations, getParticipationsByEvent, getParticipantsByEventId]);
+
   // EventContext에서 이벤트 가져오기
   const upcomingEvents = useMemo(() => {
     if (!currentEvent) return [];
     
-    // 개발 모드 상태 반영
+    // 개발 모드 상태 반영 + 실시간 참가자 수
     const mainEvent = {
       ...currentEvent,
       participants: isDevMode && applicationStatus === 'full' 
         ? currentEvent.maxParticipants 
-        : currentEvent.currentParticipants,
+        : realTimeParticipantCount,
       daysLeft: Math.ceil((new Date(currentEvent.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)),
       dateDisplay: new Date(currentEvent.date).toLocaleDateString('ko-KR', { 
         year: 'numeric', 
@@ -138,20 +126,20 @@ const Home = () => {
     };
     
     return [mainEvent];
-  }, [currentEvent, isDevMode, applicationStatus]);
+  }, [currentEvent, isDevMode, applicationStatus, realTimeParticipantCount]);
   
   // 첫 번째 이벤트를 기본으로 사용
   const mainEvent = upcomingEvents[0] || null;
   
   // 신청 마감일 정보 계산 (개발 모드 상태 반영) - mainEvent 기준
-  const applicationDeadline = mainEvent ? formatDeadline(mainEvent.date) : '';
+  const applicationDeadline = mainEvent ? formatDeadline(mainEvent.date, mainEvent.applicationDeadline) : '';
   const daysUntilDeadline = useMemo(() => {
     if (!mainEvent) return 0;
-    if (!isDevMode) return getDaysUntilDeadline(mainEvent.date);
+    if (!isDevMode) return getDaysUntilDeadline(mainEvent.date, mainEvent.applicationDeadline);
     
     // 개발 모드에서는 applicationStatus에 따라 강제 설정
     if (applicationStatus === 'closed') return -1;
-    return getDaysUntilDeadline(mainEvent.date);
+    return getDaysUntilDeadline(mainEvent.date, mainEvent.applicationDeadline);
   }, [isDevMode, applicationStatus, mainEvent]);
   
   const applicationClosed = useMemo(() => {
@@ -165,7 +153,7 @@ const Home = () => {
     if (isDevMode) return applicationStatus === 'closed';
     
     // 3순위: 날짜 기반 자동 마감 (draft 상태일 때만)
-    if (mainEvent.status === 'draft') return isApplicationClosed(mainEvent.date);
+    if (mainEvent.status === 'draft') return isApplicationClosed(mainEvent.date, mainEvent.applicationDeadline);
     
     return false;
   }, [isDevMode, applicationStatus, mainEvent]);
@@ -397,7 +385,7 @@ const Home = () => {
                 <WeatherIcon className={`w-6 h-6 ${weatherInfo.color}`} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-600 font-medium">산행 당일 날씨</p>
+                <p className="text-xs text-slate-600 font-medium">내일 날씨</p>
                 <p className="text-lg font-bold text-slate-900">{weatherInfo.text}</p>
               </div>
             </div>
@@ -457,8 +445,33 @@ const Home = () => {
                 </div>
                 
                 <p className="text-xs text-slate-500 mt-2 text-center">
-                  ⚠️ 산행 당일 날씨가 변경될 수 있습니다
+                  📅 내일({new Date(Date.now() + 24*60*60*1000).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}) 예상 날씨
                 </p>
+                {weatherData?.lastUpdated && (
+                  <p className="text-xs text-slate-400 mt-1 text-center">
+                    업데이트: {weatherData.lastUpdated}
+                  </p>
+                )}
+
+                {/* 날씨 박스 내 산행 신청 버튼 */}
+                <Link 
+                  to="/home/events?apply=true" 
+                  className={`mt-3 w-full py-2.5 rounded-xl font-bold transition-all text-center text-sm flex items-center justify-center gap-2 ${
+                    applicationClosed || (isDevMode && applicationStatus === 'full') || mainEvent.participants >= mainEvent.maxParticipants
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                      : 'bg-slate-900 text-white hover:bg-slate-800'
+                  }`}
+                  onClick={(e) => {
+                    if (applicationClosed || (isDevMode && applicationStatus === 'full') || mainEvent.participants >= mainEvent.maxParticipants) {
+                      e.preventDefault();
+                      alert(applicationClosed ? '신청 기간이 마감되었습니다.' : '정원이 마감되었습니다.');
+                    }
+                  }}
+                >
+                  {applicationClosed ? '신청 마감' : 
+                   (isDevMode && applicationStatus === 'full') || mainEvent.participants >= mainEvent.maxParticipants ? '정원 마감' : 
+                   '산행 신청하기'}
+                </Link>
               </>
             ) : (
               <div className="py-6 text-center">
@@ -470,8 +483,8 @@ const Home = () => {
           </div>
         </div>
         
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center px-4 sm:px-6 max-w-4xl w-full">
+        <div className="absolute inset-0 flex items-end pb-8 sm:pb-10 md:pb-12 justify-center md:justify-start">
+          <div className="text-center md:text-left px-4 sm:px-6 md:px-10 lg:px-14 max-w-4xl w-full">
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-md rounded-full text-white text-xs sm:text-sm mb-4 sm:mb-6 border border-white/20 flex-wrap justify-center">
               <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="font-semibold">D-{mainEvent.daysLeft}</span>
@@ -542,10 +555,11 @@ const Home = () => {
               )}
             </div>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-3 sm:gap-4">
+              {/* 모바일에서만 산행 신청 버튼 표시 (데스크톱은 날씨 박스 내 버튼 사용) */}
               <Link 
                 to="/home/events?apply=true" 
-                className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold transition-all shadow-lg text-center text-sm sm:text-base ${
+                className={`w-full sm:w-auto md:hidden px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold transition-all shadow-lg text-center text-sm sm:text-base ${
                   applicationClosed || (isDevMode && applicationStatus === 'full') || mainEvent.participants >= mainEvent.maxParticipants
                     ? 'bg-slate-400 text-slate-600 cursor-not-allowed' 
                     : 'bg-white text-slate-900 hover:bg-white/90'
@@ -712,6 +726,9 @@ const Home = () => {
                               const participation = user && currentEvent ? getUserParticipationForEvent(user.id.toString(), currentEvent.id) : null;
                               if (participation) {
                                 await cancelParticipation(participation.id, '사용자 취소');
+                                if (currentEvent) {
+                                  refreshParticipants(currentEvent.id);
+                                }
                                 alert('참석 신청이 취소되었습니다.');
                               }
                             } catch (error) {

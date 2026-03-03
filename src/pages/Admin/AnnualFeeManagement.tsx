@@ -3,6 +3,8 @@ import { Search, CheckCircle, Clock, Users, AlertCircle, Filter, ArrowLeft, Doll
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
+import StatCard from '../../components/ui/StatCard';
+import FilterGroup from '../../components/ui/FilterGroup';
 
 interface Member {
   id: number;
@@ -192,87 +194,32 @@ const AnnualFeeManagement = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <Link
-          to="/admin/payment"
-          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          월별 산행 회비 관리로 돌아가기
-        </Link>
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">연회비 관리</h1>
-        <p className="text-xl text-slate-600">
-          전체 회원의 연회비 납부 여부를 확인하고 관리합니다.
-        </p>
-      </div>
+      {/* Back Link */}
+      <Link
+        to="/admin/payment"
+        className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        월별 산행 회비 관리로 돌아가기
+      </Link>
 
       {/* 연도 선택 */}
-      <Card className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-shrink-0 w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-            <Calendar className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">
-              납부 연도 선택
-            </h3>
-            <p className="text-sm text-slate-600">
-              확인할 연도를 선택하세요
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          {[currentYear - 1, currentYear, currentYear + 1].map((year) => (
-            <button
-              key={year}
-              onClick={() => setSelectedYear(year)}
-              className={`px-6 py-3 rounded-xl border-2 font-bold transition-all ${
-                selectedYear === year
-                  ? 'border-purple-600 bg-white shadow-lg text-purple-600'
-                  : 'border-purple-200 bg-white/50 hover:border-purple-400 hover:bg-white text-slate-600'
-              }`}
-            >
-              {year}년
-            </button>
-          ))}
-        </div>
-      </Card>
+      <FilterGroup
+        options={[currentYear - 1, currentYear, currentYear + 1].map(year => ({
+          key: year.toString(),
+          label: `${year}년`,
+        }))}
+        selected={selectedYear.toString()}
+        onChange={(key) => setSelectedYear(Number(key))}
+        className="mb-6"
+      />
 
       {/* 통계 대시보드 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="text-center">
-          <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
-            <Users className="w-6 h-6 text-blue-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-1">총 회원</p>
-          <p className="text-3xl font-bold text-slate-900">{stats.total}명</p>
-        </Card>
-
-        <Card className="text-center">
-          <div className="flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-full mx-auto mb-3">
-            <CheckCircle className="w-6 h-6 text-emerald-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-1">납부 완료</p>
-          <p className="text-3xl font-bold text-emerald-600">{stats.completed}명</p>
-        </Card>
-
-        <Card className="text-center">
-          <div className="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-full mx-auto mb-3">
-            <Clock className="w-6 h-6 text-amber-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-1">납부 대기</p>
-          <p className="text-3xl font-bold text-amber-600">{stats.pending}명</p>
-        </Card>
-
-        <Card className="text-center">
-          <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
-            <DollarSign className="w-6 h-6 text-purple-600" />
-          </div>
-          <p className="text-slate-600 text-sm mb-1">총 납부액</p>
-          <p className="text-2xl font-bold text-purple-600">₩{stats.totalAmount.toLocaleString()}</p>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard icon={<Users className="w-8 h-8" />} label="총 회원" value={stats.total} unit="명" iconColor="text-blue-600" />
+        <StatCard icon={<CheckCircle className="w-8 h-8" />} label="납부 완료" value={stats.completed} unit="명" iconColor="text-emerald-600" />
+        <StatCard icon={<Clock className="w-8 h-8" />} label="납부 대기" value={stats.pending} unit="명" iconColor="text-amber-600" />
+        <StatCard icon={<DollarSign className="w-8 h-8" />} label="총 납부액" value={`₩${stats.totalAmount.toLocaleString()}`} iconColor="text-purple-600" />
       </div>
 
       {/* 필터 및 검색 */}

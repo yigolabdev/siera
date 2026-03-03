@@ -16,6 +16,7 @@ interface ExecutiveContextType {
   deleteExecutive: (executiveId: string) => Promise<void>;
   getExecutivesByCategory: (category: 'chairman' | 'committee') => Executive[];
   refreshExecutives: () => Promise<void>;
+  _activate: () => void;
 }
 
 const ExecutiveContext = createContext<ExecutiveContextType | undefined>(undefined);
@@ -26,44 +27,37 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
-  // 🔥 AuthContext 사용
+  // Lazy loading
+  const [_activated, _setActivated] = useState(false);
+  const _activate = useCallback(() => _setActivated(true), []);
+
   const auth = useAuth();
 
-  // Firebase에서 운영진 데이터 로드 - 로그인 상태 변경 시 재로드
+  // Firebase에서 운영진 데이터 로드 - 활성화 후 로그인 상태 변경 시 재로드
   useEffect(() => {
+    if (!_activated) return;
+
     const initializeData = async () => {
-      console.log('🔄 [ExecutiveContext] 데이터 로드 시작, 인증 상태:', {
-        isAuthenticated: !!auth.firebaseUser,
-        email: auth.firebaseUser?.email,
-        hasLoadedOnce
-      });
-      
-      // 로그인 상태이거나 아직 한 번도 로드하지 않았을 때만 로드
       if (auth.firebaseUser || !hasLoadedOnce) {
         await loadExecutives();
         setHasLoadedOnce(true);
       }
     };
     
-    // Auth 로딩이 완료된 후에만 실행
     if (!auth.isLoading) {
       initializeData();
     }
-  }, [auth.firebaseUser, auth.isLoading]);
+  }, [_activated, auth.firebaseUser, auth.isLoading]);
 
   const loadExecutives = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      console.log('🔄 [ExecutiveContext] executives 데이터 로드 시작');
-
       const result = await getDocuments<Executive>('executives');
       if (result.success && result.data) {
         setExecutives(result.data);
-        console.log('✅ Firebase에서 운영진 데이터 로드:', result.data.length, '명');
       } else {
-        console.log('ℹ️ Firebase에서 로드된 운영진 데이터가 없습니다.');
         setExecutives([]);
       }
     } catch (err: any) {
@@ -85,17 +79,21 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
       const executiveId = `executive_${Date.now()}`;
       const now = new Date().toISOString();
       
+      // Firestore는 undefined 값을 허용하지 않으므로 빈 문자열로 변환
+      const sanitizedData = Object.fromEntries(
+        Object.entries(executiveData).map(([key, value]) => [key, value ?? ''])
+      );
+
       const newExecutive: Executive = {
-        ...executiveData,
+        ...sanitizedData,
         id: executiveId,
         createdAt: now,
         updatedAt: now,
-      };
+      } as Executive;
 
       const result = await setDocument('executives', executiveId, newExecutive);
       if (result.success) {
         setExecutives(prev => [...prev, newExecutive]);
-        console.log('✅ 운영진 추가 완료:', executiveId);
       } else {
         throw new Error(result.error || '운영진 추가 실패');
       }
@@ -108,8 +106,13 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
   // 운영진 수정
   const updateExecutive = useCallback(async (executiveId: string, updates: Partial<Executive>) => {
     try {
+      // Firestore는 undefined 값을 허용하지 않으므로 제거
+      const sanitizedUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined)
+      );
+
       const updatedData = {
-        ...updates,
+        ...sanitizedUpdates,
         updatedAt: new Date().toISOString(),
       };
 
@@ -118,7 +121,6 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
         setExecutives(prev => prev.map(e => 
           e.id === executiveId ? { ...e, ...updatedData } : e
         ));
-        console.log('✅ 운영진 수정 완료:', executiveId);
       } else {
         throw new Error(result.error || '운영진 수정 실패');
       }
@@ -134,7 +136,6 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
       const result = await deleteDocument('executives', executiveId);
       if (result.success) {
         setExecutives(prev => prev.filter(e => e.id !== executiveId));
-        console.log('✅ 운영진 삭제 완료:', executiveId);
       } else {
         throw new Error(result.error || '운영진 삭제 실패');
       }
@@ -163,6 +164,7 @@ export const ExecutiveProvider = ({ children }: { children: ReactNode }) => {
     deleteExecutive,
     getExecutivesByCategory,
     refreshExecutives,
+    _activate,
   };
 
   return (
@@ -177,5 +179,6 @@ export const useExecutives = () => {
   if (context === undefined) {
     throw new Error('useExecutives must be used within an ExecutiveProvider');
   }
+  useEffect(() => { context._activate(); }, [context._activate]);
   return context;
 };

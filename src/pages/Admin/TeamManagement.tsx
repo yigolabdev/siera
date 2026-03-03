@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Save, X, Users, Shield, CheckCircle, Calendar, MapPin, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Save, X, Users, Shield, CheckCircle, Calendar, MapPin, AlertCircle, Copy, Check } from 'lucide-react';
 import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePayments } from '../../contexts/PaymentContext';
@@ -32,6 +32,7 @@ const TeamManagement = () => {
   const [showMemberSelectModal, setShowMemberSelectModal] = useState(false);
   const [isSelectingLeader, setIsSelectingLeader] = useState(false);
   const [selectedMembersForAdd, setSelectedMembersForAdd] = useState<string[]>([]);
+  const [isCopied, setIsCopied] = useState(false);
   const [teamFormData, setTeamFormData] = useState<Team>({
     id: '',
     name: '',
@@ -174,8 +175,12 @@ const TeamManagement = () => {
     }
   }, [selectedEventIdForTeam, contextTeams, events, refreshParticipants, members]);
 
-  // 선택된 산행의 조 편성만 필터링
-  const filteredTeams = teams;
+  // 선택된 산행의 조 편성 — 번호 오름차순 정렬
+  const filteredTeams = [...teams].sort((a, b) => {
+    const numA = (a as any).number ?? parseInt(a.name) ?? 0;
+    const numB = (b as any).number ?? parseInt(b.name) ?? 0;
+    return numA - numB;
+  });
 
   // 선택된 산행의 참가 신청자 반환 (취소/환불 제외, 결제 상태 포함)
   const getApplicantsForEvent = (eventId: string): TeamMember[] => {
@@ -284,6 +289,17 @@ const TeamManagement = () => {
     }
   };
 
+  // 참석자 이름 목록 클립보드 복사
+  const handleCopyAttendeeList = () => {
+    const applicants = getApplicantsForEvent(selectedEventIdForTeam);
+    if (applicants.length === 0) return;
+    const names = applicants.map(a => a.name).join(', ');
+    navigator.clipboard.writeText(names).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
+
   // 산행 선택
   const handleSelectEventForTeam = (eventId: string) => {
     setSelectedEventIdForTeam(eventId);
@@ -298,7 +314,9 @@ const TeamManagement = () => {
 
     const selectedEvent = events.find(e => e.id === selectedEventIdForTeam);
     const currentEventTeams = teams;
-    const nextTeamNumber = currentEventTeams.length + 1;
+    // 현재 가장 큰 조 번호 + 1 (중간 삭제 후 재추가해도 중복 없음)
+    const existingNumbers = currentEventTeams.map(t => (t as any).number ?? parseInt(t.name) ?? 0);
+    const nextTeamNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
 
     if (nextTeamNumber > 10) {
       alert('조는 최대 10개까지만 생성할 수 있습니다.');
@@ -489,18 +507,12 @@ const TeamManagement = () => {
             </div>
             
             <div className="space-y-6">
-              {/* 조명 */}
+              {/* 조명 (수정 불가 — 자동 부여) */}
               <div>
-                <label className="block text-slate-700 font-bold mb-2">
-                  조명 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={teamFormData.name}
-                  onChange={(e) => setTeamFormData({ ...teamFormData, name: e.target.value })}
-                  className="input-field"
-                  placeholder="1조"
-                />
+                <label className="block text-slate-700 font-bold mb-2">조명</label>
+                <div className="input-field bg-slate-100 text-slate-600 cursor-not-allowed select-none">
+                  {teamFormData.name}
+                </div>
               </div>
 
               {/* 조장 선택 */}
@@ -649,6 +661,31 @@ const TeamManagement = () => {
 
           {selectedEventIdForTeam ? (
             <>
+              {/* 참석자 리스트 복사 버튼 */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={handleCopyAttendeeList}
+                  disabled={getApplicantsForEvent(selectedEventIdForTeam).length === 0}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+                    isCopied
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400'
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  {isCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      복사 완료!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      참석자 리스트 복사 ({getApplicantsForEvent(selectedEventIdForTeam).length}명)
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* 조 편성 통계 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <StatCard icon={<CheckCircle className="w-8 h-8" />} label="입금 확인 (조편성 대상)" value={getApplicantsForEvent(selectedEventIdForTeam).length} unit="명" iconColor="text-blue-600" />

@@ -425,6 +425,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
           leaderName: leaderParticipation?.userName || team.leaderName,
           leaderCompany: leaderMember?.company || team.leaderCompany || '',
           leaderPosition: leaderMember?.position || team.leaderPosition || '',
+          leaderIsGuest: leaderParticipation?.isGuest ?? (team as any).leaderIsGuest ?? false,
           members: (team.members || []).map(member => {
             // 조원: member.id가 participationId일 수 있음
             const memberParticipation = participationMap.get(member.id);
@@ -435,6 +436,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
               name: memberParticipation?.userName || member.name,
               company: memberInfo?.company || member.company || '',
               position: memberInfo?.position || member.position || '',
+              isGuest: memberParticipation?.isGuest ?? member.isGuest ?? false,
             };
           }),
         };

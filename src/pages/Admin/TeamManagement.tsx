@@ -474,8 +474,9 @@ const TeamManagement = () => {
       leaderCompany: member.company || '',
       leaderPosition: member.position || '',
       leaderOccupation: member.occupation || `${member.company} ${member.position}`,
+      leaderIsGuest: member.isGuest || false,
       members: updatedMembers,
-    });
+    } as any);
     
     setShowMemberSelectModal(false);
     setIsSelectingLeader(false);

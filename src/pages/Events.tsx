@@ -1364,7 +1364,12 @@ const Events = () => {
                       >
                         <span className="text-xs text-slate-500 mt-0.5 min-w-[16px]">{idx + 1}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-slate-900 text-sm">{member.name}</p>
+                          <p className="font-semibold text-slate-900 text-sm">
+                            {member.name}
+                            {member.isGuest && (
+                              <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded font-semibold align-middle">게스트</span>
+                            )}
+                          </p>
                           <p className="text-xs text-slate-600">
                             {member.company && member.position
                               ? `${member.company} · ${member.position}`

@@ -1,17 +1,19 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePoems } from '../../contexts/PoemContext';
 import { usePayments } from '../../contexts/PaymentContext';
 import { Team, TeamMember } from '../../types';
-import { X } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { formatPhoneNumber } from '../../utils/format';
 
 const EventPrintView = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { events, getEventById, getTeamsByEventId, refreshTeams, isLoading } = useEvents();
+  const printContainerRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // 페이지 로드 시 최신 조편성 데이터를 Firestore에서 즉시 새로고침
   useEffect(() => {
@@ -244,6 +246,40 @@ const EventPrintView = () => {
     window.print();
   };
 
+  const handleDownloadImage = async () => {
+    if (!printContainerRef.current) return;
+    setIsDownloading(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const pages = printContainerRef.current.querySelectorAll('.page');
+      const canvases: HTMLCanvasElement[] = [];
+      for (const page of Array.from(pages)) {
+        const canvas = await html2canvas(page as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: (page as HTMLElement).offsetWidth,
+          height: (page as HTMLElement).offsetHeight,
+        });
+        canvases.push(canvas);
+      }
+      // 각 페이지를 별도 파일로 다운로드
+      const eventTitle = event?.title?.replace(/\s+/g, '_') || 'event';
+      const eventDate = event?.date?.replace(/-/g, '') || 'date';
+      canvases.forEach((canvas, idx) => {
+        const link = document.createElement('a');
+        link.download = `${eventTitle}_${eventDate}_${idx + 1}페이지.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    } catch (err) {
+      console.error('이미지 다운로드 실패:', err);
+      alert('이미지 다운로드에 실패했습니다.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* 프린트 버튼 */}
@@ -262,6 +298,14 @@ const EventPrintView = () => {
           닫기
         </button>
         <button
+          onClick={handleDownloadImage}
+          disabled={isDownloading}
+          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className="w-4 h-4" />
+          {isDownloading ? '다운로드 중...' : '이미지 저장'}
+        </button>
+        <button
           onClick={handlePrint}
           className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-bold"
         >
@@ -270,7 +314,7 @@ const EventPrintView = () => {
       </div>
 
       {/* A4 용지 */}
-      <div className="print-container mx-auto bg-white">
+      <div ref={printContainerRef} className="print-container mx-auto bg-white">
         {/* 1페이지 - 산행 정보 */}
         <div className="page page-1">
           {/* 헤더 - 좌우 배치 */}

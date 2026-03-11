@@ -985,6 +985,9 @@ const TeamManagement = () => {
                               }`}>
                                 {member.name}
                               </p>
+                              {member.isGuest && (
+                                <Badge variant="warning" className="text-xs">게스트</Badge>
+                              )}
                               {member.course && (
                                 <Badge variant="info" className="text-xs">
                                   {member.course}

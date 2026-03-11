@@ -306,7 +306,7 @@ const TeamManagement = () => {
   };
 
   // 조 추가
-  const handleAddNewTeam = () => {
+  const handleAddNewTeam = async () => {
     if (!selectedEventIdForTeam) {
       alert('먼저 산행을 선택해주세요.');
       return;
@@ -338,9 +338,12 @@ const TeamManagement = () => {
 
     const updatedTeams = [...teams, newTeam];
     setTeams(updatedTeams);
-    syncTeamsToContext(updatedTeams);
-    
-    alert(`${nextTeamNumber}조가 추가되었습니다.`);
+    try {
+      await syncTeamsToContext(updatedTeams);
+      alert(`${nextTeamNumber}조가 추가되었습니다.`);
+    } catch (err: any) {
+      alert(`조 추가 저장 실패: ${err.message}`);
+    }
   };
 
   const handleEditTeam = (team: Team) => {
@@ -383,16 +386,21 @@ const TeamManagement = () => {
       eventTitle: selectedEvent?.title || '',
     };
 
-    if (editingTeam) {
-      const updatedTeams = teams.map(t => t.id === editingTeam.id ? updatedTeamData : t);
-      setTeams(updatedTeams);
-      await syncTeamsToContext(updatedTeams);
-      alert('조 편성이 수정되었습니다.');
-    } else {
-      const updatedTeams = [...teams, updatedTeamData];
-      setTeams(updatedTeams);
-      await syncTeamsToContext(updatedTeams);
-      alert('조 편성이 저장되었습니다.');
+    try {
+      if (editingTeam) {
+        const updatedTeams = teams.map(t => t.id === editingTeam.id ? updatedTeamData : t);
+        setTeams(updatedTeams);
+        await syncTeamsToContext(updatedTeams);
+        alert('조 편성이 수정되었습니다.');
+      } else {
+        const updatedTeams = [...teams, updatedTeamData];
+        setTeams(updatedTeams);
+        await syncTeamsToContext(updatedTeams);
+        alert('조 편성이 저장되었습니다.');
+      }
+    } catch (err: any) {
+      alert(`저장 실패: ${err.message}\n\n브라우저 콘솔(F12)에서 자세한 오류를 확인하세요.`);
+      return;
     }
     
     setIsEditingTeam(false);

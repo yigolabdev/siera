@@ -357,13 +357,24 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       const existingTeams = teams[eventId] || [];
       const newTeamIds = new Set(eventTeams.map(t => t.id));
       const deletedTeams = existingTeams.filter(t => !newTeamIds.has(t.id));
-      const deletePromises = deletedTeams.map(t => deleteDocument('teams', t.id));
+
+      for (const t of deletedTeams) {
+        const result = await deleteDocument('teams', t.id);
+        if (!result.success) {
+          console.error('[setTeamsForEvent] 팀 삭제 실패:', t.id, result.error);
+        }
+      }
 
       // 현재 조 목록 저장 (각 팀을 개별 문서로 저장)
-      const savePromises = eventTeams.map(team =>
-        setDocument('teams', team.id, { ...team, eventId })
-      );
-      await Promise.all([...deletePromises, ...savePromises]);
+      for (const team of eventTeams) {
+        // Firestore에 저장 불가한 undefined 값 제거
+        const cleanTeam = JSON.parse(JSON.stringify({ ...team, eventId }));
+        const result = await setDocument('teams', team.id, cleanTeam);
+        if (!result.success) {
+          console.error('[setTeamsForEvent] 팀 저장 실패:', team.id, result.error);
+          throw new Error(`팀 저장 실패 (${team.name}): ${result.error}`);
+        }
+      }
 
       setTeams(prev => ({
         ...prev,

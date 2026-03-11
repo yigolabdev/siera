@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { HikingEvent, Participant, Team, TeamMember, Participation, EventWeather, User } from '../types';
-import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument } from '../lib/firebase/firestore';
+import { getDocuments, setDocument, updateDocument as firestoreUpdate, deleteDocument, queryDocuments } from '../lib/firebase/firestore';
 import { logError, ErrorLevel, ErrorCategory } from '../utils/errorHandler';
 import { waitForFirebase } from '../lib/firebase/config';
 import { getEventWeather } from '../utils/weather';
@@ -22,6 +22,7 @@ interface EventContextType {
   updateParticipantStatus: (eventId: string, participantId: string, status: 'confirmed' | 'pending') => Promise<void>;
   getTeamsByEventId: (eventId: string) => Team[];
   setTeamsForEvent: (eventId: string, teams: Team[]) => Promise<void>;
+  refreshTeams: (eventId: string) => Promise<void>;
   refreshEvents: () => Promise<void>;
   refreshParticipants: (eventId: string) => Promise<void>;
   updateEventWeather: (eventId: string) => Promise<void>;
@@ -352,13 +353,18 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
 
   const setTeamsForEvent = useCallback(async (eventId: string, eventTeams: Team[]) => {
     try {
-      // Firebase에 조 편성 데이터 저장
-      // 각 팀을 개별 문서로 저장
-      const promises = eventTeams.map(team => 
+      // 기존 조 중 제거된 것들의 Firestore 문서 삭제
+      const existingTeams = teams[eventId] || [];
+      const newTeamIds = new Set(eventTeams.map(t => t.id));
+      const deletedTeams = existingTeams.filter(t => !newTeamIds.has(t.id));
+      const deletePromises = deletedTeams.map(t => deleteDocument('teams', t.id));
+
+      // 현재 조 목록 저장 (각 팀을 개별 문서로 저장)
+      const savePromises = eventTeams.map(team =>
         setDocument('teams', team.id, { ...team, eventId })
       );
-      await Promise.all(promises);
-      
+      await Promise.all([...deletePromises, ...savePromises]);
+
       setTeams(prev => ({
         ...prev,
         [eventId]: eventTeams,
@@ -367,8 +373,68 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId });
       throw err;
     }
-  }, []);
+  }, [teams]);
   
+  // 특정 이벤트의 조편성 데이터를 Firestore에서 새로 불러옴
+  const refreshTeams = useCallback(async (eventId: string) => {
+    try {
+      // 1. 해당 이벤트의 팀 문서 조회
+      const teamsResult = await queryDocuments<Team>(
+        'teams',
+        [{ field: 'eventId', operator: '==', value: eventId }]
+      );
+      if (!teamsResult.success || !teamsResult.data) return;
+
+      // 2. participations 조회 (participationId → userId 매핑)
+      const participationsResult = await queryDocuments<Participation>(
+        'participations',
+        [{ field: 'eventId', operator: '==', value: eventId }]
+      );
+      const participationMap = new Map<string, Participation>();
+      if (participationsResult.success && participationsResult.data) {
+        participationsResult.data.forEach(p => participationMap.set(p.id, p));
+      }
+
+      // 3. members 조회 (userId → User 매핑)
+      const membersResult = await getDocuments<User>('members');
+      const membersMap = new Map<string, User>();
+      if (membersResult.success && membersResult.data) {
+        membersResult.data.forEach(m => membersMap.set(m.id, m));
+      }
+
+      // 4. 조장/조원 정보 보강 (participationId → userId → member)
+      const enrichedTeams = teamsResult.data.map(team => {
+        // 조장: leaderId가 participationId일 수 있으므로 매핑 후 조회
+        const leaderParticipation = participationMap.get(team.leaderId);
+        const leaderUserId = leaderParticipation?.userId || team.leaderId;
+        const leaderMember = membersMap.get(leaderUserId);
+
+        return {
+          ...team,
+          leaderName: leaderParticipation?.userName || team.leaderName,
+          leaderCompany: leaderMember?.company || team.leaderCompany || '',
+          leaderPosition: leaderMember?.position || team.leaderPosition || '',
+          members: (team.members || []).map(member => {
+            // 조원: member.id가 participationId일 수 있음
+            const memberParticipation = participationMap.get(member.id);
+            const memberUserId = memberParticipation?.userId || member.id;
+            const memberInfo = membersMap.get(memberUserId);
+            return {
+              ...member,
+              name: memberParticipation?.userName || member.name,
+              company: memberInfo?.company || member.company || '',
+              position: memberInfo?.position || member.position || '',
+            };
+          }),
+        };
+      });
+
+      setTeams(prev => ({ ...prev, [eventId]: enrichedTeams }));
+    } catch (err: any) {
+      logError(err, ErrorLevel.ERROR, ErrorCategory.DATABASE, { eventId });
+    }
+  }, []);
+
   // 이벤트 새로고침
   const refreshEvents = useCallback(async () => {
     try {
@@ -513,6 +579,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     updateParticipantStatus,
     getTeamsByEventId,
     setTeamsForEvent,
+    refreshTeams,
     refreshEvents,
     refreshParticipants,
     updateEventWeather,
@@ -534,6 +601,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     updateParticipantStatus,
     getTeamsByEventId,
     setTeamsForEvent,
+    refreshTeams,
     refreshEvents,
     refreshParticipants,
     updateEventWeather,

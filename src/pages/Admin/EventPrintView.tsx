@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
@@ -11,7 +11,14 @@ import { formatPhoneNumber } from '../../utils/format';
 const EventPrintView = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const { events, getEventById, getTeamsByEventId, isLoading } = useEvents();
+  const { events, getEventById, getTeamsByEventId, refreshTeams, isLoading } = useEvents();
+
+  // 페이지 로드 시 최신 조편성 데이터를 Firestore에서 즉시 새로고침
+  useEffect(() => {
+    if (eventId) {
+      refreshTeams(eventId);
+    }
+  }, [eventId]);
   const { getMembersByPosition } = useMembers();
   const { getPoemByMonth, getCurrentMonthPoem } = usePoems();
   const { payments, getPaymentsByEvent } = usePayments();

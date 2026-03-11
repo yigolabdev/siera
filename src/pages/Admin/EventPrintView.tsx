@@ -286,7 +286,9 @@ const EventPrintView = () => {
       <div className="no-print fixed top-4 right-4 z-50 flex gap-2">
         <button
           onClick={() => {
-            if (window.history.length > 1) {
+            if (window.opener) {
+              window.close();
+            } else if (window.history.length > 1) {
               navigate(-1);
             } else {
               navigate('/admin/events');
@@ -407,7 +409,10 @@ const EventPrintView = () => {
                       <span className="team-label">조장</span>
                     </div>
                     <div className="team-leader">
-                      <div className="leader-name">{team.leaderName || '조장 미배정'}</div>
+                      <div className="leader-name">
+                        {team.leaderName || '조장 미배정'}
+                        {(team as any).leaderIsGuest && <span className="guest-badge">게스트</span>}
+                      </div>
                       {team.leaderName && (team.leaderCompany || team.leaderPosition) && (
                         <div className="leader-detail">
                           {team.leaderCompany || ''}{team.leaderCompany && team.leaderPosition ? ' · ' : ''}{team.leaderPosition || ''}
@@ -431,7 +436,10 @@ const EventPrintView = () => {
                           
                           return (
                             <div key={idx} className="member-item-inline">
-                              <span className="member-name">{member.name}</span>
+                              <span className="member-name">
+                                {member.name}
+                                {member.isGuest && <span className="guest-badge">게스트</span>}
+                              </span>
                               {displayInfo && <span className={infoClass}>{displayInfo}</span>}
                             </div>
                           );
@@ -1005,6 +1013,20 @@ const EventPrintView = () => {
           color: #1a1a1a;
           font-size: 13px;
           flex-shrink: 0;
+        }
+
+        .guest-badge {
+          display: inline-block;
+          margin-left: 3px;
+          font-size: 8px;
+          font-weight: 700;
+          color: #b45309;
+          background: #fef3c7;
+          border: 0.5px solid #d97706;
+          border-radius: 2px;
+          padding: 0 3px;
+          vertical-align: middle;
+          line-height: 1.5;
         }
 
         .member-info {

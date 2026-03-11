@@ -19,27 +19,33 @@ const EventPrintView = () => {
   let event = getEventById(eventId || '');
   let teams = getTeamsByEventId(eventId || '');
   
-  // 환불된 사용자 필터링
+  // 환불된 사용자 필터링 + 번호 오름차순 정렬
   const filteredTeams = useMemo(() => {
-    if (!eventId) return teams;
-    
+    if (!eventId) return [...teams].sort((a, b) => {
+      const numA = (a as any).number ?? parseInt(a.name) ?? 0;
+      const numB = (b as any).number ?? parseInt(b.name) ?? 0;
+      return numA - numB;
+    });
+
     const eventPayments = getPaymentsByEvent(eventId);
     const refundedUserIds = new Set(
       eventPayments
         .filter(payment => payment.refundStatus === 'completed')
         .map(payment => payment.userId)
     );
-    
-    // 각 팀에서 환불된 멤버 제거
+
+    // 각 팀에서 환불된 멤버 제거 후 번호 오름차순 정렬
     return teams.map(team => ({
       ...team,
       members: team.members?.filter(member => {
-        // member.id는 participationId이므로, userId를 찾아야 함
-        // participationId를 통해 payment를 찾고, 해당 userId가 환불 목록에 있는지 확인
         const payment = eventPayments.find(p => p.participationId === member.id);
         return payment ? !refundedUserIds.has(payment.userId) : true;
       }) || []
-    }));
+    })).sort((a, b) => {
+      const numA = (a as any).number ?? parseInt(a.name) ?? 0;
+      const numB = (b as any).number ?? parseInt(b.name) ?? 0;
+      return numA - numB;
+    });
   }, [teams, eventId, payments]);
   
   // 🔥 임시 데이터: 이벤트가 없으면 샘플 데이터 생성
@@ -340,7 +346,7 @@ const EventPrintView = () => {
                 {filteredTeams.map((team, index) => (
                   <div key={team.id} className="team-box">
                     <div className="team-header">
-                      <span className="team-num">{team.number || (index + 1)}조</span>
+                      <span className="team-num">{team.name || `${(team as any).number || (index + 1)}조`}</span>
                       <span className="team-label">조장</span>
                     </div>
                     <div className="team-leader">

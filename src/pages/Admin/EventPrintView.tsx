@@ -4,6 +4,7 @@ import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePoems } from '../../contexts/PoemContext';
 import { usePayments } from '../../contexts/PaymentContext';
+import { useParticipations } from '../../contexts/ParticipationContext';
 import { Team, TeamMember } from '../../types';
 import { X, Download } from 'lucide-react';
 import { formatPhoneNumber } from '../../utils/format';
@@ -24,17 +25,39 @@ const EventPrintView = () => {
   const { getMembersByPosition } = useMembers();
   const { getPoemByMonth, getCurrentMonthPoem } = usePoems();
   const { payments, getPaymentsByEvent } = usePayments();
+  const { getParticipationsByEvent } = useParticipations();
   
   let event = getEventById(eventId || '');
   let teams = getTeamsByEventId(eventId || '');
   
-  // 환불된 사용자 필터링 + 번호 오름차순 정렬
+  // 환불된 사용자 필터링 + 번호 오름차순 정렬 + 게스트 정보 보강
   const filteredTeams = useMemo(() => {
-    if (!eventId) return [...teams].sort((a, b) => {
+    const sortFn = (a: any, b: any) => {
       const numA = (a as any).number ?? parseInt(a.name) ?? 0;
       const numB = (b as any).number ?? parseInt(b.name) ?? 0;
       return numA - numB;
-    });
+    };
+
+    // 참가 데이터로 게스트 여부 맵 구성 (participationId → isGuest)
+    const eventParticipations = eventId ? getParticipationsByEvent(eventId) : [];
+    const participationGuestMap = new Map<string, boolean>(
+      eventParticipations.map(p => [p.id, p.isGuest === true])
+    );
+    // leaderId(userId) 기준으로도 맵 구성 (조장 매칭용)
+    const userIdGuestMap = new Map<string, boolean>(
+      eventParticipations.map(p => [p.userId, p.isGuest === true])
+    );
+
+    if (!eventId) {
+      return [...teams].sort(sortFn).map(team => ({
+        ...team,
+        leaderIsGuest: (team as any).leaderIsGuest || userIdGuestMap.get(team.leaderId || '') || false,
+        members: (team.members || []).map(member => ({
+          ...member,
+          isGuest: member.isGuest || participationGuestMap.get(member.id) || false,
+        })),
+      }));
+    }
 
     const eventPayments = getPaymentsByEvent(eventId);
     const refundedUserIds = new Set(
@@ -43,19 +66,19 @@ const EventPrintView = () => {
         .map(payment => payment.userId)
     );
 
-    // 각 팀에서 환불된 멤버 제거 후 번호 오름차순 정렬
+    // 각 팀에서 환불된 멤버 제거 후 번호 오름차순 정렬 + isGuest 보강
     return teams.map(team => ({
       ...team,
-      members: team.members?.filter(member => {
+      leaderIsGuest: (team as any).leaderIsGuest || userIdGuestMap.get(team.leaderId || '') || false,
+      members: (team.members?.filter(member => {
         const payment = eventPayments.find(p => p.participationId === member.id);
         return payment ? !refundedUserIds.has(payment.userId) : true;
-      }) || []
-    })).sort((a, b) => {
-      const numA = (a as any).number ?? parseInt(a.name) ?? 0;
-      const numB = (b as any).number ?? parseInt(b.name) ?? 0;
-      return numA - numB;
-    });
-  }, [teams, eventId, payments]);
+      }) || []).map(member => ({
+        ...member,
+        isGuest: member.isGuest || participationGuestMap.get(member.id) || false,
+      })),
+    })).sort(sortFn);
+  }, [teams, eventId, payments, getParticipationsByEvent]);
   
   // 🔥 임시 데이터: 이벤트가 없으면 샘플 데이터 생성
   if (!event && !isLoading) {

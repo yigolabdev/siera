@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Save, X, Users, Shield, CheckCircle, Calendar, MapPin, AlertCircle, Copy, Check } from 'lucide-react';
+import { Plus, Edit, Save, X, Users, Shield, CheckCircle, Calendar, MapPin, AlertCircle, Copy, Check, Trash2 } from 'lucide-react';
 import { useEvents } from '../../contexts/EventContext';
 import { useMembers } from '../../contexts/MemberContext';
 import { usePayments } from '../../contexts/PaymentContext';
@@ -371,12 +371,35 @@ const TeamManagement = () => {
   };
 
   const handleDeleteTeam = async (id: string) => {
-    if (confirm('이 조를 삭제하시겠습니까?')) {
+    const teamToDelete = teams.find(t => t.id === id);
+    const memberCount = teamToDelete ? (teamToDelete.members.length + (teamToDelete.leaderId ? 1 : 0)) : 0;
+    const confirmMsg = memberCount > 0
+      ? `이 조를 삭제하시겠습니까?\n\n조장과 조원 ${memberCount}명의 조 배정 정보도 함께 삭제됩니다.`
+      : '이 조를 삭제하시겠습니까?';
+
+    if (confirm(confirmMsg)) {
       const updatedTeams = teams.filter(t => t.id !== id);
       setTeams(updatedTeams);
-      await syncTeamsToContext(updatedTeams);
-      alert('조가 삭제되었습니다.');
+      try {
+        await syncTeamsToContext(updatedTeams);
+        alert('조가 삭제되었습니다.');
+      } catch (err: any) {
+        // 롤백
+        setTeams(teams);
+        alert(`삭제 실패: ${err.message}`);
+      }
     }
+  };
+
+  const handleRemoveLeader = () => {
+    setTeamFormData({
+      ...teamFormData,
+      leaderId: '',
+      leaderName: '',
+      leaderCompany: '',
+      leaderPosition: '',
+      leaderOccupation: '',
+    });
   };
 
   const handleSaveTeam = async () => {
@@ -542,15 +565,24 @@ const TeamManagement = () => {
                           : teamFormData.leaderOccupation || '소속/직책 미등록'}
                       </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setIsSelectingLeader(true);
-                        setShowMemberSelectModal(true);
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      변경
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsSelectingLeader(true);
+                          setShowMemberSelectModal(true);
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        변경
+                      </button>
+                      <button
+                        onClick={handleRemoveLeader}
+                        className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                        title="조장 삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <button
@@ -720,8 +752,16 @@ const TeamManagement = () => {
                             <button
                               onClick={() => handleEditTeam(team)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="조 편성 수정"
                             >
                               <Edit className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTeam(team.id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="조 삭제"
+                            >
+                              <Trash2 className="h-5 w-5" />
                             </button>
                           </div>
                         </div>

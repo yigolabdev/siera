@@ -21,7 +21,7 @@ const TeamManagement = () => {
   } = useEvents();
   const { members } = useMembers();
   const { payments, getPaymentsByEvent } = usePayments();
-  const { getParticipationsByEvent } = useParticipations();
+  const { participations, getParticipationsByEvent } = useParticipations();
   
   // 산행 목록 (오늘 이후만)
   const [events, setEvents] = useState<HikingEvent[]>([]);
@@ -173,7 +173,7 @@ const TeamManagement = () => {
         setTeams(newTeams);
       }
     }
-  }, [selectedEventIdForTeam, contextTeams, events, refreshParticipants, members]);
+  }, [selectedEventIdForTeam, contextTeams, events, refreshParticipants, members, participations]);
 
   // 선택된 산행의 조 편성 — 번호 오름차순 정렬
   const filteredTeams = [...teams].sort((a, b) => {

@@ -144,8 +144,14 @@ const Events = () => {
     }
   }, [refreshParticipations, refreshEventParticipants, selectedEvent?.id]);
 
-  // 조 편성 (Firebase에서 로드)
-  const teams = event ? getTeamsByEventId(event.id) : [];
+  // 조 편성 (Firebase에서 로드) — 번호 오름차순 정렬
+  const teams = event
+    ? [...getTeamsByEventId(event.id)].sort((a, b) => {
+        const numA = (a as any).number ?? parseInt(a.name) ?? 0;
+        const numB = (b as any).number ?? parseInt(b.name) ?? 0;
+        return numA - numB;
+      })
+    : [];
   
   // 현재 사용자의 신청 여부 확인
   const userParticipation = useMemo(() => {
@@ -1359,7 +1365,11 @@ const Events = () => {
                         <span className="text-xs text-slate-500 mt-0.5 min-w-[16px]">{idx + 1}</span>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-900 text-sm">{member.name}</p>
-                          <p className="text-xs text-slate-600">{member.occupation} · {member.company}</p>
+                          <p className="text-xs text-slate-600">
+                            {member.company && member.position
+                              ? `${member.company} · ${member.position}`
+                              : member.company || member.position || member.occupation || ''}
+                          </p>
                         </div>
                       </div>
                     ))}

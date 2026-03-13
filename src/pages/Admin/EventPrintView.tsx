@@ -428,32 +428,32 @@ const EventPrintView = () => {
                 {filteredTeams.map((team, index) => {
                   const leaderCompany = team.leaderCompany || '';
                   const leaderPosition = team.leaderPosition || '';
-                  const leaderInfo = leaderCompany && leaderPosition
-                    ? `(${leaderCompany} · ${leaderPosition})`
-                    : leaderCompany ? `(${leaderCompany})`
-                    : leaderPosition ? `(${leaderPosition})`
-                    : '';
-                  const leaderInfoLen = leaderInfo.length;
-                  const leaderInfoClass = leaderInfoLen > 20 ? 'member-info-small' : leaderInfoLen > 15 ? 'member-info-medium' : 'member-info';
+                  const leaderDetail = leaderCompany && leaderPosition
+                    ? `${leaderCompany} · ${leaderPosition}`
+                    : leaderCompany || leaderPosition || '';
 
                   return (
                     <div key={team.id} className="team-box">
+                      {/* 헤더: 조 번호(좌) + 조장 정보(우) */}
                       <div className="team-header">
                         <span className="team-num">{team.name || `${(team as any).number || (index + 1)}조`}</span>
-                      </div>
-                      <div className="team-members">
-                        {/* 조장 */}
-                        <div className="member-item-inline">
-                          <span className="member-name">
-                            {team.leaderName || '조장 미배정'}
+                        <div className="team-leader-header">
+                          <div className="team-leader-name-row">
                             <span className="leader-badge">조장</span>
-                            {(team as any).leaderIsGuest && <span className="guest-badge">게스트</span>}
-                          </span>
-                          {leaderInfo && team.leaderName && <span className={leaderInfoClass}>{leaderInfo}</span>}
+                            <span className="leader-header-name">
+                              {team.leaderName || '미배정'}
+                              {(team as any).leaderIsGuest && <span className="guest-badge">게스트</span>}
+                            </span>
+                          </div>
+                          {leaderDetail && team.leaderName && (
+                            <div className="leader-header-detail">{leaderDetail}</div>
+                          )}
                         </div>
-                        {/* 조원 */}
-                        {team.members && team.members.length > 0 ? (
-                          team.members.map((member, idx) => {
+                      </div>
+                      {/* 조원 목록 */}
+                      {team.members && team.members.length > 0 && (
+                        <div className="team-members">
+                          {team.members.map((member, idx) => {
                             const companyInfo = member.company || '';
                             const positionInfo = member.position || member.occupation || '';
                             const displayInfo = companyInfo && positionInfo
@@ -472,9 +472,9 @@ const EventPrintView = () => {
                                 {displayInfo && <span className={infoClass}>{displayInfo}</span>}
                               </div>
                             );
-                          })
-                        ) : null}
-                      </div>
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -965,29 +965,80 @@ const EventPrintView = () => {
           font-size: 17px;
         }
 
+        .teams-grid-3col .leader-header-name {
+          font-size: 15px;
+        }
+
+        .teams-grid-3col .leader-header-detail {
+          font-size: 10px;
+        }
+
+        .teams-grid-3col .leader-badge {
+          font-size: 9px;
+        }
+
+        .teams-grid-3col .team-header {
+          margin: -12px -12px 10px -12px;
+          padding: 8px 12px 8px 12px;
+        }
+
         .team-header {
-          margin-bottom: 6px;
-          padding-bottom: 4px;
-          border-bottom: 1px solid #555;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 6px;
+          margin-bottom: 7px;
+          padding-bottom: 6px;
+          border-bottom: 1.5px solid #333;
+          background: #f4f4f4;
+          margin: -10px -10px 8px -10px;
+          padding: 7px 10px 7px 10px;
         }
 
         .team-num {
           font-weight: 900;
           font-size: 15px;
           color: #1a1a1a;
+          white-space: nowrap;
+          padding-top: 1px;
+        }
+
+        .team-leader-header {
+          text-align: right;
+          min-width: 0;
+        }
+
+        .team-leader-name-row {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 4px;
+        }
+
+        .leader-header-name {
+          font-weight: 800;
+          font-size: 13px;
+          color: #1a1a1a;
+        }
+
+        .leader-header-detail {
+          font-size: 9px;
+          color: #555;
+          font-weight: 600;
+          margin-top: 1px;
         }
 
         .leader-badge {
           display: inline-block;
-          margin-left: 4px;
           font-size: 8px;
           font-weight: 700;
           color: #fff;
-          background: #374151;
+          background: #1a1a1a;
           border-radius: 2px;
-          padding: 0 4px;
+          padding: 1px 4px;
           vertical-align: middle;
-          line-height: 1.6;
+          line-height: 1.5;
+          flex-shrink: 0;
         }
 
         .team-members {

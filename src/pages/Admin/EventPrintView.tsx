@@ -287,11 +287,11 @@ const EventPrintView = () => {
         canvases.push(canvas);
       }
       // 각 페이지를 별도 파일로 다운로드
-      const eventTitle = event?.title?.replace(/\s+/g, '_') || 'event';
-      const eventDate = event?.date?.replace(/-/g, '') || 'date';
+      const eventRound = event?.eventNumber ? `제${event.eventNumber}회` : '';
+      const baseFileName = `시애라${eventRound ? `_${eventRound}` : ''}_조편성표`;
       canvases.forEach((canvas, idx) => {
         const link = document.createElement('a');
-        link.download = `${eventTitle}_${eventDate}_${idx + 1}페이지.png`;
+        link.download = canvases.length > 1 ? `${baseFileName}_${idx + 1}페이지.png` : `${baseFileName}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       });

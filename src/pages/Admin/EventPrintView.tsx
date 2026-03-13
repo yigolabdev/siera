@@ -425,56 +425,59 @@ const EventPrintView = () => {
             <div className="section">
               <h2 className="section-title">조편성</h2>
               <div className={`teams-grid ${filteredTeams.length <= 6 ? 'teams-grid-3col' : 'teams-grid-4col'}`}>
-                {filteredTeams.map((team, index) => (
-                  <div key={team.id} className="team-box">
-                    <div className="team-header">
-                      <span className="team-num">{team.name || `${(team as any).number || (index + 1)}조`}</span>
-                      <span className="team-label">조장</span>
-                    </div>
-                    <div className="team-leader">
-                      <div className="leader-name">
-                        {team.leaderName || '조장 미배정'}
-                        {(team as any).leaderIsGuest && <span className="guest-badge">게스트</span>}
+                {filteredTeams.map((team, index) => {
+                  const leaderCompany = team.leaderCompany || '';
+                  const leaderPosition = team.leaderPosition || '';
+                  const leaderInfo = leaderCompany && leaderPosition
+                    ? `(${leaderCompany} · ${leaderPosition})`
+                    : leaderCompany ? `(${leaderCompany})`
+                    : leaderPosition ? `(${leaderPosition})`
+                    : '';
+                  const leaderInfoLen = leaderInfo.length;
+                  const leaderInfoClass = leaderInfoLen > 20 ? 'member-info-small' : leaderInfoLen > 15 ? 'member-info-medium' : 'member-info';
+
+                  return (
+                    <div key={team.id} className="team-box">
+                      <div className="team-header">
+                        <span className="team-num">{team.name || `${(team as any).number || (index + 1)}조`}</span>
                       </div>
-                      {team.leaderName && (team.leaderCompany || team.leaderPosition) && (
-                        <div className="leader-detail">
-                          {team.leaderCompany || ''}{team.leaderCompany && team.leaderPosition ? ' · ' : ''}{team.leaderPosition || ''}
-                        </div>
-                      )}
-                    </div>
-                    <div className="team-members">
-                      {team.members && team.members.length > 0 ? (
-                        team.members.map((member, idx) => {
-                          const companyInfo = member.company || '';
-                          const positionInfo = member.position || member.occupation || '';
-                          const displayInfo = companyInfo && positionInfo 
-                            ? `(${companyInfo} · ${positionInfo})` 
-                            : companyInfo ? `(${companyInfo})` 
-                            : positionInfo ? `(${positionInfo})`
-                            : '';
-                          
-                          // 소속 정보 길이에 따라 폰트 크기 조정
-                          const infoLength = displayInfo.length;
-                          const infoClass = infoLength > 20 ? 'member-info-small' : infoLength > 15 ? 'member-info-medium' : 'member-info';
-                          
-                          return (
-                            <div key={idx} className="member-item-inline">
-                              <span className="member-name">
-                                {member.name}
-                                {member.isGuest && <span className="guest-badge">게스트</span>}
-                              </span>
-                              {displayInfo && <span className={infoClass}>{displayInfo}</span>}
-                            </div>
-                          );
-                        })
-                      ) : (
+                      <div className="team-members">
+                        {/* 조장 */}
                         <div className="member-item-inline">
-                          <span className="member-name" style={{ color: '#999' }}>조원 없음</span>
+                          <span className="member-name">
+                            {team.leaderName || '조장 미배정'}
+                            <span className="leader-badge">조장</span>
+                            {(team as any).leaderIsGuest && <span className="guest-badge">게스트</span>}
+                          </span>
+                          {leaderInfo && team.leaderName && <span className={leaderInfoClass}>{leaderInfo}</span>}
                         </div>
-                      )}
+                        {/* 조원 */}
+                        {team.members && team.members.length > 0 ? (
+                          team.members.map((member, idx) => {
+                            const companyInfo = member.company || '';
+                            const positionInfo = member.position || member.occupation || '';
+                            const displayInfo = companyInfo && positionInfo
+                              ? `(${companyInfo} · ${positionInfo})`
+                              : companyInfo ? `(${companyInfo})`
+                              : positionInfo ? `(${positionInfo})`
+                              : '';
+                            const infoLength = displayInfo.length;
+                            const infoClass = infoLength > 20 ? 'member-info-small' : infoLength > 15 ? 'member-info-medium' : 'member-info';
+                            return (
+                              <div key={idx} className="member-item-inline">
+                                <span className="member-name">
+                                  {member.name}
+                                  {member.isGuest && <span className="guest-badge">게스트</span>}
+                                </span>
+                                {displayInfo && <span className={infoClass}>{displayInfo}</span>}
+                              </div>
+                            );
+                          })
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -961,23 +964,8 @@ const EventPrintView = () => {
         .teams-grid-3col .team-num {
           font-size: 17px;
         }
-        
-        .teams-grid-3col .team-label {
-          font-size: 13px;
-        }
-        
-        .teams-grid-3col .leader-name {
-          font-size: 16px;
-        }
-        
-        .teams-grid-3col .leader-detail {
-          font-size: 12px;
-        }
 
         .team-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
           margin-bottom: 6px;
           padding-bottom: 4px;
           border-bottom: 1px solid #555;
@@ -989,30 +977,17 @@ const EventPrintView = () => {
           color: #1a1a1a;
         }
 
-        .team-label {
+        .leader-badge {
+          display: inline-block;
+          margin-left: 4px;
+          font-size: 8px;
           font-weight: 700;
-          font-size: 12px;
-          color: #555;
-        }
-
-        .team-leader {
-          margin-bottom: 6px;
-          padding-bottom: 6px;
-          border-bottom: 1px solid #ddd;
-        }
-
-        .leader-name {
-          font-weight: 800;
-          font-size: 14px;
-          color: #1a1a1a;
-          line-height: 1.4;
-        }
-
-        .leader-detail {
-          font-weight: 600;
-          font-size: 10px;
-          color: #666;
-          margin-top: 2px;
+          color: #fff;
+          background: #374151;
+          border-radius: 2px;
+          padding: 0 4px;
+          vertical-align: middle;
+          line-height: 1.6;
         }
 
         .team-members {
